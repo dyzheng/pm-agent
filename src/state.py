@@ -88,6 +88,15 @@ class DecisionType(Enum):
     PAUSE = "pause"
 
 
+class TaskStatus(Enum):
+    """Status of a task in the execution pipeline."""
+
+    PENDING = "pending"
+    IN_PROGRESS = "in_progress"
+    DONE = "done"
+    FAILED = "failed"
+
+
 # -- Dataclasses -----------------------------------------------------------
 
 
@@ -105,6 +114,8 @@ class Task:
     files_to_touch: list[str]
     estimated_scope: Scope
     specialist: str
+    gates: list[GateType] = field(default_factory=list)
+    status: TaskStatus = TaskStatus.PENDING
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -118,6 +129,8 @@ class Task:
             "files_to_touch": self.files_to_touch,
             "estimated_scope": self.estimated_scope.value,
             "specialist": self.specialist,
+            "gates": [g.value for g in self.gates],
+            "status": self.status.value,
         }
 
     @classmethod
@@ -133,6 +146,8 @@ class Task:
             files_to_touch=data["files_to_touch"],
             estimated_scope=Scope(data["estimated_scope"]),
             specialist=data["specialist"],
+            gates=[GateType(g) for g in data.get("gates", [])],
+            status=TaskStatus(data.get("status", "pending")),
         )
 
 
@@ -265,6 +280,47 @@ class Decision:
             task_id=data["task_id"],
             type=DecisionType(data["type"]),
             feedback=data.get("feedback"),
+        )
+
+
+@dataclass
+class TaskBrief:
+    """Context package assembled for a specialist agent."""
+
+    task: Task
+    audit_context: list[AuditItem]
+    dependency_outputs: dict[str, Draft]
+    revision_feedback: str | None = None
+    previous_draft: Draft | None = None
+
+
+@dataclass
+class IntegrationTest:
+    """A cross-component integration test definition."""
+
+    id: str
+    description: str
+    tasks_covered: list[str]
+    command: str
+    reference: dict[str, Any]
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "id": self.id,
+            "description": self.description,
+            "tasks_covered": self.tasks_covered,
+            "command": self.command,
+            "reference": self.reference,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> IntegrationTest:
+        return cls(
+            id=data["id"],
+            description=data["description"],
+            tasks_covered=data["tasks_covered"],
+            command=data["command"],
+            reference=data["reference"],
         )
 
 

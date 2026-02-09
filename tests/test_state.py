@@ -17,11 +17,14 @@ from src.state import (
     GateStatus,
     GateType,
     IntegrationResult,
+    IntegrationTest,
     Layer,
     Phase,
     ProjectState,
     Scope,
     Task,
+    TaskBrief,
+    TaskStatus,
     TaskType,
 )
 
@@ -429,3 +432,163 @@ class TestProjectState:
         # Should not raise
         json_str = json.dumps(d)
         assert isinstance(json_str, str)
+
+
+# -- New enum and dataclass tests ------------------------------------------
+
+
+class TestTaskStatusEnum:
+    def test_task_status_enum_values(self) -> None:
+        assert TaskStatus.PENDING.value == "pending"
+        assert TaskStatus.IN_PROGRESS.value == "in_progress"
+        assert TaskStatus.DONE.value == "done"
+        assert TaskStatus.FAILED.value == "failed"
+        assert len(TaskStatus) == 4
+
+
+class TestTaskWithNewFields:
+    def test_gates_default_empty(self) -> None:
+        task = Task(
+            id="T-010",
+            title="Test task",
+            layer=Layer.CORE,
+            type=TaskType.NEW,
+            description="A task",
+            dependencies=[],
+            acceptance_criteria=["Pass"],
+            files_to_touch=["src/foo.py"],
+            estimated_scope=Scope.SMALL,
+            specialist="core-agent",
+        )
+        assert task.gates == []
+        assert task.status == TaskStatus.PENDING
+
+    def test_gates_and_status_serialization_roundtrip(self) -> None:
+        task = Task(
+            id="T-011",
+            title="Task with gates",
+            layer=Layer.ALGORITHM,
+            type=TaskType.EXTEND,
+            description="Extend algorithm",
+            dependencies=["T-010"],
+            acceptance_criteria=["Tests pass"],
+            files_to_touch=["src/algo.py"],
+            estimated_scope=Scope.MEDIUM,
+            specialist="algo-agent",
+            gates=[GateType.UNIT, GateType.LINT],
+            status=TaskStatus.IN_PROGRESS,
+        )
+        d = task.to_dict()
+        assert d["gates"] == ["unit", "lint"]
+        assert d["status"] == "in_progress"
+
+        restored = Task.from_dict(d)
+        assert restored.gates == [GateType.UNIT, GateType.LINT]
+        assert restored.status == TaskStatus.IN_PROGRESS
+
+    def test_from_dict_defaults_for_missing_gates_and_status(self) -> None:
+        """Ensure from_dict works with dicts that lack gates/status keys."""
+        data = {
+            "id": "T-012",
+            "title": "Legacy task",
+            "layer": "core",
+            "type": "fix",
+            "description": "Fix something",
+            "dependencies": [],
+            "acceptance_criteria": ["Fixed"],
+            "files_to_touch": ["src/fix.py"],
+            "estimated_scope": "small",
+            "specialist": "core-agent",
+        }
+        task = Task.from_dict(data)
+        assert task.gates == []
+        assert task.status == TaskStatus.PENDING
+
+
+class TestTaskBrief:
+    def _make_task(self) -> Task:
+        return Task(
+            id="T-020",
+            title="Brief task",
+            layer=Layer.WORKFLOW,
+            type=TaskType.NEW,
+            description="Workflow task",
+            dependencies=[],
+            acceptance_criteria=["Done"],
+            files_to_touch=["src/wf.py"],
+            estimated_scope=Scope.SMALL,
+            specialist="wf-agent",
+        )
+
+    def test_task_brief_creation(self) -> None:
+        task = self._make_task()
+        audit = AuditItem(
+            component="wf.py",
+            status=AuditStatus.MISSING,
+            description="Not yet created",
+        )
+        brief = TaskBrief(
+            task=task,
+            audit_context=[audit],
+            dependency_outputs={},
+        )
+        assert brief.task.id == "T-020"
+        assert len(brief.audit_context) == 1
+        assert brief.dependency_outputs == {}
+        assert brief.revision_feedback is None
+        assert brief.previous_draft is None
+
+    def test_task_brief_with_revision_feedback(self) -> None:
+        task = self._make_task()
+        draft = Draft(
+            task_id="T-020",
+            files={"src/wf.py": "pass"},
+            test_files={},
+            explanation="First attempt",
+        )
+        brief = TaskBrief(
+            task=task,
+            audit_context=[],
+            dependency_outputs={},
+            revision_feedback="Needs error handling",
+            previous_draft=draft,
+        )
+        assert brief.revision_feedback == "Needs error handling"
+        assert brief.previous_draft is not None
+        assert brief.previous_draft.task_id == "T-020"
+
+
+class TestIntegrationTest:
+    def test_integration_test_creation(self) -> None:
+        it = IntegrationTest(
+            id="IT-001",
+            description="End-to-end pipeline test",
+            tasks_covered=["T-001", "T-002"],
+            command="pytest tests/integration/",
+            reference={"expected_exit": 0},
+        )
+        assert it.id == "IT-001"
+        assert it.description == "End-to-end pipeline test"
+        assert it.tasks_covered == ["T-001", "T-002"]
+        assert it.command == "pytest tests/integration/"
+        assert it.reference == {"expected_exit": 0}
+
+    def test_integration_test_serialization_roundtrip(self) -> None:
+        it = IntegrationTest(
+            id="IT-002",
+            description="Smoke test",
+            tasks_covered=["T-003"],
+            command="python -m smoke",
+            reference={"timeout": 30, "retries": 2},
+        )
+        d = it.to_dict()
+        assert d["id"] == "IT-002"
+        assert d["tasks_covered"] == ["T-003"]
+        assert d["reference"] == {"timeout": 30, "retries": 2}
+
+        restored = IntegrationTest.from_dict(d)
+        assert restored.id == it.id
+        assert restored.description == it.description
+        assert restored.tasks_covered == it.tasks_covered
+        assert restored.command == it.command
+        assert restored.reference == it.reference
