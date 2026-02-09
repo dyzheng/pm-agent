@@ -9,6 +9,7 @@ from __future__ import annotations
 from src.state import (
     AuditItem,
     AuditStatus,
+    GateType,
     Layer,
     Phase,
     ProjectState,
@@ -70,6 +71,7 @@ def run_decompose(state: ProjectState) -> ProjectState:
             files_to_touch=[f"integration_tests/{prefix}/"],
             estimated_scope=Scope.MEDIUM,
             specialist="workflow_agent",
+            gates=[GateType.UNIT, GateType.NUMERIC],
         )
         tasks.append(integration_task)
 
@@ -107,6 +109,13 @@ _LAYER_TO_SPECIALIST = {
     Layer.WORKFLOW: "workflow_agent",
 }
 
+_LAYER_TO_GATES = {
+    Layer.CORE: [GateType.BUILD, GateType.UNIT, GateType.LINT, GateType.CONTRACT],
+    Layer.INFRA: [GateType.UNIT, GateType.LINT],
+    Layer.ALGORITHM: [GateType.UNIT, GateType.LINT],
+    Layer.WORKFLOW: [GateType.UNIT, GateType.LINT],
+}
+
 
 def _task_from_audit_item(
     item: AuditItem, prefix: str, counter: int, task_type: TaskType
@@ -136,4 +145,5 @@ def _task_from_audit_item(
         files_to_touch=[],
         estimated_scope=scope,
         specialist=_LAYER_TO_SPECIALIST.get(layer, "workflow_agent"),
+        gates=_LAYER_TO_GATES.get(layer, [GateType.UNIT, GateType.LINT]),
     )

@@ -3,7 +3,9 @@ from src.state import (
     Phase,
     AuditItem,
     AuditStatus,
+    GateType,
     Layer,
+    TaskStatus,
     TaskType,
 )
 from src.phases.decompose import run_decompose
@@ -89,3 +91,66 @@ def test_decompose_sets_dependencies():
     for task in result.tasks:
         all_deps.extend(task.dependencies)
     assert len(all_deps) > 0, "Expected at least one task dependency"
+
+
+def _make_state_with_audit(items):
+    """Helper to create state with specific audit items."""
+    audit = []
+    for component, status, desc in items:
+        audit.append(AuditItem(
+            component=component,
+            status=status,
+            description=desc,
+            details={"matched_term": component},
+        ))
+    return ProjectState(
+        request="test request",
+        parsed_intent={"domain": ["test"], "keywords": ["test"]},
+        audit_results=audit,
+        phase=Phase.DECOMPOSE,
+    )
+
+
+class TestDecomposeGateAssignment:
+    def test_core_tasks_get_build_unit_lint_contract(self):
+        state = _make_state_with_audit(
+            [("abacus_core", AuditStatus.MISSING, "missing feature")]
+        )
+        state = run_decompose(state)
+        core_tasks = [t for t in state.tasks if t.layer == Layer.CORE]
+        assert len(core_tasks) >= 1
+        for t in core_tasks:
+            assert GateType.BUILD in t.gates
+            assert GateType.UNIT in t.gates
+            assert GateType.LINT in t.gates
+            assert GateType.CONTRACT in t.gates
+
+    def test_workflow_tasks_get_unit_lint(self):
+        state = _make_state_with_audit(
+            [("pyabacus", AuditStatus.EXTENSIBLE, "needs extension")]
+        )
+        state = run_decompose(state)
+        wf_tasks = [t for t in state.tasks if t.layer == Layer.WORKFLOW and t.type != TaskType.INTEGRATION]
+        assert len(wf_tasks) >= 1
+        for t in wf_tasks:
+            assert GateType.UNIT in t.gates
+            assert GateType.LINT in t.gates
+            assert GateType.BUILD not in t.gates
+
+    def test_integration_tasks_get_unit_numeric(self):
+        state = _make_state_with_audit(
+            [("pyabacus", AuditStatus.MISSING, "missing")]
+        )
+        state = run_decompose(state)
+        int_tasks = [t for t in state.tasks if t.type == TaskType.INTEGRATION]
+        assert len(int_tasks) == 1
+        assert GateType.UNIT in int_tasks[0].gates
+        assert GateType.NUMERIC in int_tasks[0].gates
+
+    def test_all_tasks_start_pending(self):
+        state = _make_state_with_audit(
+            [("pyabacus", AuditStatus.MISSING, "missing")]
+        )
+        state = run_decompose(state)
+        for t in state.tasks:
+            assert t.status == TaskStatus.PENDING
