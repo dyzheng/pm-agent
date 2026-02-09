@@ -8,6 +8,7 @@ from src.state import (
     TaskStatus,
     TaskType,
 )
+from src.registry import CapabilityRegistry
 from src.phases.decompose import run_decompose
 
 
@@ -59,7 +60,7 @@ def test_decompose_tasks_have_required_fields():
         assert task.layer in (Layer.WORKFLOW, Layer.ALGORITHM, Layer.INFRA, Layer.CORE)
         assert task.type in (
             TaskType.NEW, TaskType.EXTEND, TaskType.FIX,
-            TaskType.TEST, TaskType.INTEGRATION,
+            TaskType.TEST, TaskType.INTEGRATION, TaskType.EXTERNAL_DEPENDENCY,
         )
         assert len(task.acceptance_criteria) > 0
         assert task.specialist != ""
@@ -154,3 +155,96 @@ class TestDecomposeGateAssignment:
         state = run_decompose(state)
         for t in state.tasks:
             assert t.status == TaskStatus.PENDING
+
+
+def test_decompose_skips_in_progress():
+    """IN_PROGRESS audit items should not generate any tasks."""
+    state = ProjectState(
+        request="test request",
+        parsed_intent={"domain": ["test"], "keywords": ["test"]},
+        audit_results=[
+            AuditItem(
+                component="pyabacus",
+                status=AuditStatus.IN_PROGRESS,
+                description="neb workflow already in progress",
+                details={"matched_term": "neb", "branch": "feature/neb"},
+            ),
+        ],
+        phase=Phase.DECOMPOSE,
+    )
+    result = run_decompose(state)
+    assert result.phase == Phase.EXECUTE
+    # No tasks generated because the only item is IN_PROGRESS
+    assert len(result.tasks) == 0
+
+
+def test_decompose_external_dependency():
+    """MISSING item on a non-developable component creates EXTERNAL_DEPENDENCY task."""
+    registry = CapabilityRegistry(
+        components={
+            "third_party_lib": {"developable": False, "features": ["some_feature"]},
+        }
+    )
+    state = ProjectState(
+        request="test request",
+        parsed_intent={"domain": ["test"], "keywords": ["test"]},
+        audit_results=[
+            AuditItem(
+                component="third_party_lib",
+                status=AuditStatus.MISSING,
+                description="feature X not found in third_party_lib",
+                details={"matched_term": "feature_x"},
+            ),
+        ],
+        phase=Phase.DECOMPOSE,
+    )
+    result = run_decompose(state, registry=registry)
+    # Should have one external dep task + one integration task
+    non_integration = [t for t in result.tasks if t.type != TaskType.INTEGRATION]
+    assert len(non_integration) == 1
+    task = non_integration[0]
+    assert task.type == TaskType.EXTERNAL_DEPENDENCY
+    assert task.specialist == "human"
+    assert "not developable" in task.description
+
+
+def test_decompose_mixed_developable_and_not():
+    """Developable MISSING -> NEW task; non-developable MISSING -> EXTERNAL_DEPENDENCY."""
+    registry = CapabilityRegistry(
+        components={
+            "pyabacus": {"developable": True, "workflows": ["LCAOWorkflow"]},
+            "vendor_lib": {"developable": False, "features": ["solver"]},
+        }
+    )
+    state = ProjectState(
+        request="test request",
+        parsed_intent={"domain": ["test"], "keywords": ["test"]},
+        audit_results=[
+            AuditItem(
+                component="pyabacus",
+                status=AuditStatus.MISSING,
+                description="neb missing in pyabacus",
+                details={"matched_term": "neb"},
+            ),
+            AuditItem(
+                component="vendor_lib",
+                status=AuditStatus.MISSING,
+                description="solver missing in vendor_lib",
+                details={"matched_term": "solver"},
+            ),
+        ],
+        phase=Phase.DECOMPOSE,
+    )
+    result = run_decompose(state, registry=registry)
+    non_integration = [t for t in result.tasks if t.type != TaskType.INTEGRATION]
+    assert len(non_integration) == 2
+
+    new_tasks = [t for t in non_integration if t.type == TaskType.NEW]
+    ext_tasks = [t for t in non_integration if t.type == TaskType.EXTERNAL_DEPENDENCY]
+
+    assert len(new_tasks) == 1
+    assert new_tasks[0].specialist != "human"
+
+    assert len(ext_tasks) == 1
+    assert ext_tasks[0].specialist == "human"
+    assert ext_tasks[0].type == TaskType.EXTERNAL_DEPENDENCY

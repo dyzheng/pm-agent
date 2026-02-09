@@ -41,6 +41,13 @@ class CapabilityRegistry:
             return None
         return comp.get(category)
 
+    def is_developable(self, component: str) -> bool:
+        """Check if a component is developable (defaults to True for backward compat)."""
+        comp = self.components.get(component)
+        if comp is None:
+            return False
+        return comp.get("developable", True)
+
     def search(self, keyword: str) -> list[dict[str, Any]]:
         """Search for a keyword across all components and categories."""
         results = []

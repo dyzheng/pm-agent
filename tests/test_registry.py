@@ -68,3 +68,43 @@ def test_search():
 
     results = reg.search("nonexistent_thing")
     assert len(results) == 0
+
+
+def test_is_developable_true():
+    reg = CapabilityRegistry(
+        components={
+            "abacus_core": {
+                "developable": True,
+                "calculations": ["scf", "relax"],
+            }
+        }
+    )
+    assert reg.is_developable("abacus_core") is True
+
+
+def test_is_developable_false():
+    reg = CapabilityRegistry(
+        components={
+            "external_lib": {
+                "developable": False,
+                "calculations": ["scf"],
+            }
+        }
+    )
+    assert reg.is_developable("external_lib") is False
+
+
+def test_is_developable_unknown_component():
+    reg = CapabilityRegistry(components={})
+    assert reg.is_developable("nonexistent") is False
+
+
+def test_is_developable_defaults_true_when_missing():
+    reg = CapabilityRegistry(
+        components={
+            "legacy_component": {
+                "calculations": ["scf", "relax"],
+            }
+        }
+    )
+    assert reg.is_developable("legacy_component") is True

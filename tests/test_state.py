@@ -16,11 +16,13 @@ from src.state import (
     GateResult,
     GateStatus,
     GateType,
+    HumanApproval,
     IntegrationResult,
     IntegrationTest,
     Layer,
     Phase,
     ProjectState,
+    ReviewResult,
     Scope,
     Task,
     TaskBrief,
@@ -59,7 +61,8 @@ class TestTaskTypeEnum:
         assert TaskType.FIX.value == "fix"
         assert TaskType.TEST.value == "test"
         assert TaskType.INTEGRATION.value == "integration"
-        assert len(TaskType) == 5
+        assert TaskType.EXTERNAL_DEPENDENCY.value == "external_dependency"
+        assert len(TaskType) == 6
 
 
 class TestScopeEnum:
@@ -75,7 +78,8 @@ class TestAuditStatusEnum:
         assert AuditStatus.AVAILABLE.value == "available"
         assert AuditStatus.EXTENSIBLE.value == "extensible"
         assert AuditStatus.MISSING.value == "missing"
-        assert len(AuditStatus) == 3
+        assert AuditStatus.IN_PROGRESS.value == "in_progress"
+        assert len(AuditStatus) == 4
 
 
 class TestGateTypeEnum:
@@ -253,6 +257,8 @@ class TestProjectState:
         assert state.integration_results == []
         assert state.phase == Phase.INTAKE
         assert state.human_decisions == []
+        assert state.review_results == []
+        assert state.human_approvals == []
         assert state.blocked_reason is None
 
     def test_project_state_with_values(self) -> None:
@@ -592,3 +598,126 @@ class TestIntegrationTest:
         assert restored.tasks_covered == it.tasks_covered
         assert restored.command == it.command
         assert restored.reference == it.reference
+
+
+# -- ReviewResult, HumanApproval, and new enum value tests ------------------
+
+
+class TestReviewResult:
+    def test_review_result_roundtrip(self) -> None:
+        rr = ReviewResult(
+            hook_name="post-decompose",
+            approved=False,
+            issues=["Missing error handling", "No retry logic"],
+            suggestions=["Add try/except blocks"],
+        )
+        d = rr.to_dict()
+        assert d["hook_name"] == "post-decompose"
+        assert d["approved"] is False
+        assert d["issues"] == ["Missing error handling", "No retry logic"]
+        assert d["suggestions"] == ["Add try/except blocks"]
+
+        restored = ReviewResult.from_dict(d)
+        assert restored.hook_name == rr.hook_name
+        assert restored.approved == rr.approved
+        assert restored.issues == rr.issues
+        assert restored.suggestions == rr.suggestions
+
+    def test_review_result_defaults(self) -> None:
+        rr = ReviewResult(hook_name="pre-execute", approved=True)
+        assert rr.issues == []
+        assert rr.suggestions == []
+
+        d = rr.to_dict()
+        restored = ReviewResult.from_dict(d)
+        assert restored.issues == []
+        assert restored.suggestions == []
+
+    def test_review_result_from_dict_missing_optional_keys(self) -> None:
+        data = {"hook_name": "post-audit", "approved": True}
+        restored = ReviewResult.from_dict(data)
+        assert restored.hook_name == "post-audit"
+        assert restored.approved is True
+        assert restored.issues == []
+        assert restored.suggestions == []
+
+
+class TestHumanApproval:
+    def test_human_approval_roundtrip(self) -> None:
+        ha = HumanApproval(
+            hook_name="post-decompose",
+            approved=True,
+            feedback="Looks good to proceed",
+            timestamp="2025-01-15T10:30:00Z",
+        )
+        d = ha.to_dict()
+        assert d["hook_name"] == "post-decompose"
+        assert d["approved"] is True
+        assert d["feedback"] == "Looks good to proceed"
+        assert d["timestamp"] == "2025-01-15T10:30:00Z"
+
+        restored = HumanApproval.from_dict(d)
+        assert restored.hook_name == ha.hook_name
+        assert restored.approved == ha.approved
+        assert restored.feedback == ha.feedback
+        assert restored.timestamp == ha.timestamp
+
+    def test_human_approval_defaults(self) -> None:
+        ha = HumanApproval(hook_name="pre-execute", approved=False)
+        assert ha.feedback is None
+        assert ha.timestamp == ""
+
+    def test_human_approval_from_dict_missing_optional_keys(self) -> None:
+        data = {"hook_name": "post-audit", "approved": False}
+        restored = HumanApproval.from_dict(data)
+        assert restored.hook_name == "post-audit"
+        assert restored.approved is False
+        assert restored.feedback is None
+        assert restored.timestamp == ""
+
+
+class TestNewEnumValues:
+    def test_audit_status_in_progress_exists(self) -> None:
+        assert AuditStatus.IN_PROGRESS.value == "in_progress"
+
+    def test_task_type_external_dependency_exists(self) -> None:
+        assert TaskType.EXTERNAL_DEPENDENCY.value == "external_dependency"
+
+
+class TestProjectStateWithNewFields:
+    def test_project_state_with_review_results_and_human_approvals(self) -> None:
+        rr = ReviewResult(
+            hook_name="post-decompose",
+            approved=True,
+            issues=[],
+            suggestions=["Consider adding more tests"],
+        )
+        ha = HumanApproval(
+            hook_name="post-decompose",
+            approved=True,
+            feedback="Approved",
+            timestamp="2025-01-15T10:30:00Z",
+        )
+        state = ProjectState(
+            request="Build NEB workflow",
+            review_results=[rr],
+            human_approvals=[ha],
+        )
+
+        d = state.to_dict()
+        assert len(d["review_results"]) == 1
+        assert d["review_results"][0]["hook_name"] == "post-decompose"
+        assert len(d["human_approvals"]) == 1
+        assert d["human_approvals"][0]["feedback"] == "Approved"
+
+        json_str = json.dumps(d)
+        restored = ProjectState.from_dict(json.loads(json_str))
+        assert len(restored.review_results) == 1
+        assert restored.review_results[0].hook_name == "post-decompose"
+        assert restored.review_results[0].approved is True
+        assert restored.review_results[0].suggestions == ["Consider adding more tests"]
+        assert len(restored.human_approvals) == 1
+        assert restored.human_approvals[0].hook_name == "post-decompose"
+        assert restored.human_approvals[0].approved is True
+        assert restored.human_approvals[0].feedback == "Approved"
+        assert restored.human_approvals[0].timestamp == "2025-01-15T10:30:00Z"

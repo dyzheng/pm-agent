@@ -43,6 +43,7 @@ class TaskType(Enum):
     FIX = "fix"
     TEST = "test"
     INTEGRATION = "integration"
+    EXTERNAL_DEPENDENCY = "external_dependency"
 
 
 class Scope(Enum):
@@ -59,6 +60,7 @@ class AuditStatus(Enum):
     AVAILABLE = "available"
     EXTENSIBLE = "extensible"
     MISSING = "missing"
+    IN_PROGRESS = "in_progress"
 
 
 class GateType(Enum):
@@ -324,6 +326,58 @@ class IntegrationTest:
         )
 
 
+@dataclass
+class ReviewResult:
+    """Result of an AI review check at a hook point."""
+    hook_name: str
+    approved: bool
+    issues: list[str] = field(default_factory=list)
+    suggestions: list[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "hook_name": self.hook_name,
+            "approved": self.approved,
+            "issues": self.issues,
+            "suggestions": self.suggestions,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> ReviewResult:
+        return cls(
+            hook_name=data["hook_name"],
+            approved=data["approved"],
+            issues=data.get("issues", []),
+            suggestions=data.get("suggestions", []),
+        )
+
+
+@dataclass
+class HumanApproval:
+    """Record of a human approval/rejection at a hook point."""
+    hook_name: str
+    approved: bool
+    feedback: str | None = None
+    timestamp: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "hook_name": self.hook_name,
+            "approved": self.approved,
+            "feedback": self.feedback,
+            "timestamp": self.timestamp,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> HumanApproval:
+        return cls(
+            hook_name=data["hook_name"],
+            approved=data["approved"],
+            feedback=data.get("feedback"),
+            timestamp=data.get("timestamp", ""),
+        )
+
+
 # -- Top-level project state -----------------------------------------------
 
 
@@ -344,6 +398,8 @@ class ProjectState:
     integration_results: list[IntegrationResult] = field(default_factory=list)
     phase: Phase = Phase.INTAKE
     human_decisions: list[Decision] = field(default_factory=list)
+    review_results: list[ReviewResult] = field(default_factory=list)
+    human_approvals: list[HumanApproval] = field(default_factory=list)
     blocked_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -359,6 +415,8 @@ class ProjectState:
             "integration_results": [ir.to_dict() for ir in self.integration_results],
             "phase": self.phase.value,
             "human_decisions": [d.to_dict() for d in self.human_decisions],
+            "review_results": [r.to_dict() for r in self.review_results],
+            "human_approvals": [h.to_dict() for h in self.human_approvals],
             "blocked_reason": self.blocked_reason,
         }
 
@@ -387,6 +445,12 @@ class ProjectState:
             phase=Phase(data.get("phase", "intake")),
             human_decisions=[
                 Decision.from_dict(d) for d in data.get("human_decisions", [])
+            ],
+            review_results=[
+                ReviewResult.from_dict(r) for r in data.get("review_results", [])
+            ],
+            human_approvals=[
+                HumanApproval.from_dict(h) for h in data.get("human_approvals", [])
             ],
             blocked_reason=data.get("blocked_reason"),
         )

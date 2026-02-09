@@ -7,6 +7,7 @@ for deeper inspection.
 
 from __future__ import annotations
 
+from src.branches import BranchRegistry
 from src.registry import CapabilityRegistry
 from src.state import AuditItem, AuditStatus, Phase, ProjectState
 
@@ -16,10 +17,14 @@ def run_audit(
     *,
     registry: CapabilityRegistry | None = None,
     registry_path: str = "capabilities.yaml",
+    branch_registry: BranchRegistry | None = None,
+    branch_registry_path: str = "branches.yaml",
 ) -> ProjectState:
     """Audit capabilities against parsed intent, advance to DECOMPOSE phase."""
     if registry is None:
         registry = CapabilityRegistry.load(registry_path)
+    if branch_registry is None:
+        branch_registry = BranchRegistry.load(branch_registry_path)
 
     keywords = state.parsed_intent.get("keywords", [])
     domain = state.parsed_intent.get("domain", [])
@@ -29,6 +34,18 @@ def run_audit(
     audit_items: list[AuditItem] = []
 
     for term in sorted(all_terms):
+        # Check if capability is being developed in a branch
+        if branch_registry.has_in_progress(term):
+            audit_items.append(
+                AuditItem(
+                    component=_find_branch_component(branch_registry, term),
+                    status=AuditStatus.IN_PROGRESS,
+                    description=f"'{term}' is being developed in an active branch",
+                    details={"matched_term": term},
+                )
+            )
+            continue
+
         matches = registry.search(term)
         if matches:
             for match in matches:
@@ -48,6 +65,10 @@ def run_audit(
                 )
         else:
             status = _classify_missing(term, registry)
+            # Check if the component is non-developable
+            comp = status["component"]
+            if comp != "unknown" and not registry.is_developable(comp):
+                status["description"] = f"'{term}': external dependency gap in {comp} (not developable)"
             audit_items.append(
                 AuditItem(
                     component=status["component"],
@@ -112,3 +133,14 @@ def _classify_missing(
         "status": AuditStatus.MISSING,
         "description": f"'{term}': no matching capability found in registry",
     }
+
+
+def _find_branch_component(branch_registry: BranchRegistry, keyword: str) -> str:
+    """Find which component has the in-progress branch for a keyword."""
+    keyword_lower = keyword.lower()
+    for comp, entries in branch_registry.branches.items():
+        for entry in entries:
+            if entry.status in ("in_progress", "ready_to_merge"):
+                if any(keyword_lower in cap.lower() for cap in entry.target_capabilities):
+                    return comp
+    return "unknown"

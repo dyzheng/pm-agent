@@ -6,6 +6,7 @@ Algorithm -> Workflow) with explicit dependencies and acceptance criteria.
 
 from __future__ import annotations
 
+from src.registry import CapabilityRegistry
 from src.state import (
     AuditItem,
     AuditStatus,
@@ -22,17 +23,31 @@ from src.state import (
 _LAYER_ORDER = {Layer.CORE: 0, Layer.INFRA: 1, Layer.ALGORITHM: 2, Layer.WORKFLOW: 3}
 
 
-def run_decompose(state: ProjectState) -> ProjectState:
+def run_decompose(
+    state: ProjectState,
+    *,
+    registry: CapabilityRegistry | None = None,
+    registry_path: str = "capabilities.yaml",
+) -> ProjectState:
     """Generate ordered task list from audit results, advance to EXECUTE."""
+    if registry is None:
+        registry = CapabilityRegistry.load(registry_path)
+
     tasks: list[Task] = []
     prefix = _make_prefix(state.parsed_intent)
     counter = 1
 
     missing = [a for a in state.audit_results if a.status == AuditStatus.MISSING]
     extensible = [a for a in state.audit_results if a.status == AuditStatus.EXTENSIBLE]
+    # IN_PROGRESS items are already being developed in branches - skip them
+    in_progress = [a for a in state.audit_results if a.status == AuditStatus.IN_PROGRESS]
 
     for item in missing:
-        task = _task_from_audit_item(item, prefix, counter, TaskType.NEW)
+        comp = item.component
+        if comp != "unknown" and not registry.is_developable(comp):
+            task = _external_dep_task(item, prefix, counter)
+        else:
+            task = _task_from_audit_item(item, prefix, counter, TaskType.NEW)
         tasks.append(task)
         counter += 1
 
@@ -146,4 +161,27 @@ def _task_from_audit_item(
         estimated_scope=scope,
         specialist=_LAYER_TO_SPECIALIST.get(layer, "workflow_agent"),
         gates=_LAYER_TO_GATES.get(layer, [GateType.UNIT, GateType.LINT]),
+    )
+
+
+def _external_dep_task(item: AuditItem, prefix: str, counter: int) -> Task:
+    """Create an EXTERNAL_DEPENDENCY task for a non-developable component."""
+    term = item.details.get("matched_term", "unknown")
+    return Task(
+        id=f"{prefix}-{counter:03d}",
+        title=f"External dependency: {term} in {item.component}",
+        layer=_COMPONENT_TO_LAYER.get(item.component, Layer.ALGORITHM),
+        type=TaskType.EXTERNAL_DEPENDENCY,
+        description=(
+            f"{item.description}. "
+            f"Component {item.component} is not developable — requires human resolution."
+        ),
+        dependencies=[],
+        acceptance_criteria=[
+            f"External dependency for {term} resolved or alternative found",
+        ],
+        files_to_touch=[],
+        estimated_scope=Scope.MEDIUM,
+        specialist="human",
+        gates=[],
     )

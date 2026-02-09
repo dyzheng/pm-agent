@@ -1,0 +1,27 @@
+# Review hook configuration for PM Agent pipeline
+# Each hook runs after its named phase: ai_review first, then human_check
+
+hooks:
+  after_audit:
+    ai_review:
+      enabled: true
+      checks:
+        - completeness
+        - branch_awareness
+        - developable_respect
+    human_check:
+      enabled: true
+      mode: interactive
+      file_path: state/audit_review.json
+
+  after_decompose:
+    ai_review:
+      enabled: true
+      checks:
+        - dependency_order
+        - scope_sanity
+        - no_frozen_mutation
+    human_check:
+      enabled: true
+      mode: interactive
+      file_path: state/decompose_review.json

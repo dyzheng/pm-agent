@@ -3,6 +3,7 @@
 # -- DFT / Electronic Structure --
 
 abacus_core:
+  developable: true
   basis_types: [pw, lcao, lcao_in_pw]
   esolver_types: [ksdft_pw, ksdft_lcao, sdft_pw, ofdft, lj_pot, dp_pot]
   hardware: [cpu, cuda, rocm]
@@ -11,6 +12,7 @@ abacus_core:
   source_path: /root/abacus-develop
 
 pyabacus:
+  developable: true
   workflows: [LCAOWorkflow, PWWorkflow]
   ase_calculator: true
   callbacks: [before_scf, after_iter, before_after_scf, after_scf]
@@ -20,6 +22,7 @@ pyabacus:
   source_path: /root/abacus-develop/python/pyabacus
 
 abacustest:
+  developable: true
   models: [eos, phonon, band, elastic, vacancy, bec]
   submission: [bohrium, dflow, local]
   result_extraction: [abacus, vasp, qe, cp2k]
@@ -29,6 +32,7 @@ abacustest:
 # -- Machine Learning Potentials --
 
 deepmd_kit:
+  developable: true
   models: [dp, se_e2_a, se_e3, dpa1, dpa2]
   training: [energy, force, virial, dipole, polarizability]
   inference: [lammps, ase, i_pi, gromacs, amber, cp2k, abacus]
@@ -40,6 +44,7 @@ deepmd_kit:
 # -- ML Tight-Binding --
 
 deeptb:
+  developable: true
   models: [deeptb_sk, deeptb_e3]
   calculations: [band_structure, dos, hamiltonian, density_matrix, fat_band]
   features: [soc, structural_perturbation, transfer_learning, md_integration]
@@ -49,6 +54,7 @@ deeptb:
 # -- Band Topology / Transport --
 
 pyatb:
+  developable: true
   calculations:
     - band_structure
     - pdos
@@ -67,6 +73,7 @@ pyatb:
 # -- Agent / LLM Integration --
 
 abacus_agent_tools:
+  developable: true
   mcp_tools: true
   structure_generation: [cif, poscar, stru, wyckoff]
   input_preparation: [input, stru, kpt, pseudopotential, orbital]
