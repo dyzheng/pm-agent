@@ -73,11 +73,23 @@ def run_audit(
 
 _EXTENSION_HINTS = {
     "neb": ("pyabacus", "Workflow extension: NEB not in current workflows"),
-    "mlp": ("pyabacus", "New feature: MLP potential interface not available"),
-    "machine learning potential": ("pyabacus", "New feature: ML potential not available"),
-    "polarization": ("abacus_core", "Calculation extension: polarization not listed"),
+    "mlp": ("deepmd_kit", "Feature: MLP potential via DeePMD-kit"),
+    "machine learning potential": ("deepmd_kit", "Feature: ML potential via DeePMD-kit"),
+    "deep potential": ("deepmd_kit", "Feature: DP model via DeePMD-kit"),
+    "dpgen": ("deepmd_kit", "Feature: active learning via DP-GEN"),
+    "tight binding": ("deeptb", "Feature: ML tight-binding via DeePTB"),
+    "tb hamiltonian": ("deeptb", "Feature: TB Hamiltonian via DeePTB"),
+    "berry phase": ("pyatb", "Feature: Berry phase calculation via PYATB"),
+    "berry curvature": ("pyatb", "Feature: Berry curvature via PYATB"),
+    "chern number": ("pyatb", "Feature: Chern number via PYATB"),
+    "anomalous hall": ("pyatb", "Feature: anomalous Hall conductivity via PYATB"),
+    "wilson loop": ("pyatb", "Feature: Wilson loop via PYATB"),
+    "weyl point": ("pyatb", "Feature: Weyl point detection via PYATB"),
+    "polarization": ("pyatb", "Feature: electric polarization via PYATB"),
     "sycl": ("abacus_core", "Hardware extension: SYCL backend not available"),
     "hip": ("abacus_core", "Hardware extension: HIP backend not available"),
+    "mcp": ("abacus_agent_tools", "Feature: MCP tools for LLM integration"),
+    "structure generation": ("abacus_agent_tools", "Feature: structure file generation"),
 }
 
 

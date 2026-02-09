@@ -93,6 +93,10 @@ _COMPONENT_TO_LAYER = {
     "abacus_core": Layer.CORE,
     "pyabacus": Layer.WORKFLOW,
     "abacustest": Layer.WORKFLOW,
+    "deepmd_kit": Layer.ALGORITHM,
+    "deeptb": Layer.ALGORITHM,
+    "pyatb": Layer.ALGORITHM,
+    "abacus_agent_tools": Layer.INFRA,
     "unknown": Layer.ALGORITHM,
 }
 

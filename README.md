@@ -1,8 +1,8 @@
 # PM Agent
 
-LangGraph-based multi-agent orchestrator for scientific computing workflow development on [ABACUS](https://github.com/deepmodeling/abacus-develop).
+LangGraph-based multi-agent orchestrator for scientific computing workflow development on the [deepmodeling](https://github.com/deepmodeling) ecosystem.
 
-Takes high-level feature requests like *"Develop an NEB calculation workflow with hybrid MLP acceleration and DFT verification"*, audits existing capabilities across the ABACUS ecosystem, and produces an ordered, dependency-aware task list ready for human-AI collaborative implementation.
+Takes high-level feature requests like *"Develop an NEB calculation workflow with hybrid MLP acceleration and DFT verification"*, audits existing capabilities across the deepmodeling ecosystem, and produces an ordered, dependency-aware task list ready for human-AI collaborative implementation.
 
 ## Features
 
@@ -53,15 +53,19 @@ Each phase is a pure function taking and returning `ProjectState`. The state mod
 | Audit | `src/phases/audit.py` | Capability gap analysis |
 | Decompose | `src/phases/decompose.py` | Task generation with layer ordering |
 
-## ABACUS Ecosystem
+## deepmodeling Ecosystem
 
-PM Agent understands three repositories:
+PM Agent understands these repositories:
 
 | Repo | Description |
 |------|-------------|
-| [abacus-develop](https://github.com/deepmodeling/abacus-develop) | C++ DFT electronic structure package (PW, LCAO, multi-GPU) |
-| pyabacus | Python bindings via pybind11, ASE Calculator, SCF workflows |
+| [ABACUS](https://github.com/deepmodeling/abacus-develop) | C++ DFT electronic structure package (PW, LCAO, multi-GPU) |
+| PyABACUS | Python bindings via pybind11, ASE Calculator, SCF workflows |
 | [abacustest](https://github.com/pxlxingliang/abacus-test) | Workflow management for job submission and result collection |
+| [DeePMD-kit](https://github.com/deepmodeling/DeePMD) | Deep learning interatomic potentials and molecular dynamics |
+| [DeePTB](https://github.com/deepmodeling/DeePTB) | ML tight-binding Hamiltonians with ab initio accuracy |
+| [PYATB](https://github.com/dyzheng/pyatb) | Ab initio tight-binding band topology and transport properties |
+| [abacus-agent-tools](https://github.com/deepmodeling/abacus-agent-tools) | MCP tools connecting LLMs to ABACUS workflows |
 
 Capabilities are registered in `capabilities.yaml` and queried during the audit phase.
 

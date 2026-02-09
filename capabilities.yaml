@@ -1,3 +1,7 @@
+# deepmodeling ecosystem capability registry
+
+# -- DFT / Electronic Structure --
+
 abacus_core:
   basis_types: [pw, lcao, lcao_in_pw]
   esolver_types: [ksdft_pw, ksdft_lcao, sdft_pw, ofdft, lj_pot, dp_pot]
@@ -21,3 +25,50 @@ abacustest:
   result_extraction: [abacus, vasp, qe, cp2k]
   reporting: true
   source_path: /root/abacus-test
+
+# -- Machine Learning Potentials --
+
+deepmd_kit:
+  models: [dp, se_e2_a, se_e3, dpa1, dpa2]
+  training: [energy, force, virial, dipole, polarizability]
+  inference: [lammps, ase, i_pi, gromacs, amber, cp2k, abacus]
+  md_engines: [lammps, gromacs, amber]
+  features: [model_deviation, dpgen, active_learning, transfer_learning]
+  hardware: [cpu, cuda, rocm]
+  source_path: /root/deepmd-kit
+
+# -- ML Tight-Binding --
+
+deeptb:
+  models: [deeptb_sk, deeptb_e3]
+  calculations: [band_structure, dos, hamiltonian, density_matrix, fat_band]
+  features: [soc, structural_perturbation, transfer_learning, md_integration]
+  training_data: [abacus, vasp, siesta, openmx]
+  source_path: /root/DeePTB
+
+# -- Band Topology / Transport --
+
+pyatb:
+  calculations:
+    - band_structure
+    - pdos
+    - fat_band
+    - fermi_surface
+    - berry_phase
+    - berry_curvature
+    - electric_polarization
+    - wilson_loop
+    - chern_number
+    - anomalous_hall_conductivity
+    - weyl_point_detection
+  input_from: [abacus]
+  source_path: /root/pyatb
+
+# -- Agent / LLM Integration --
+
+abacus_agent_tools:
+  mcp_tools: true
+  structure_generation: [cif, poscar, stru, wyckoff]
+  input_preparation: [input, stru, kpt, pseudopotential, orbital]
+  features: [crystal_rotation, ieee_orientation, llm_bridge]
+  source_path: /root/abacus-agent-tools

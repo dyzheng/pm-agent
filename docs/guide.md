@@ -1,6 +1,6 @@
 # PM Agent User Guide
 
-PM Agent is a project planner for scientific computing workflow development on the ABACUS ecosystem. It takes a high-level feature request, audits what already exists, and produces an ordered task list ready for implementation.
+PM Agent is a project planner for scientific computing workflow development on the deepmodeling ecosystem. It takes a high-level feature request, audits what already exists, and produces an ordered task list ready for implementation.
 
 ## Quick Start
 
@@ -85,7 +85,7 @@ print(state.parsed_intent)
 
 Checks the parsed intent against the capability registry and classifies each requirement as:
 
-- **AVAILABLE** — Already exists in the ABACUS ecosystem
+- **AVAILABLE** — Already exists in the deepmodeling ecosystem
 - **EXTENSIBLE** — A related component exists but needs modification
 - **MISSING** — Must be built from scratch
 
@@ -130,7 +130,7 @@ Generates an ordered task list from audit results.
 
 ## Capability Registry
 
-The registry (`capabilities.yaml`) describes what the ABACUS ecosystem can do. It is the source of truth for the audit phase.
+The registry (`capabilities.yaml`) describes what the deepmodeling ecosystem can do. It is the source of truth for the audit phase.
 
 ### Structure
 
@@ -154,6 +154,28 @@ abacustest:
   submission: [bohrium, dflow, local]
   result_extraction: [abacus, vasp, qe, cp2k]
   source_path: /root/abacus-test
+
+deepmd_kit:
+  models: [dp, se_e2_a, se_e3, dpa1, dpa2]
+  training: [energy, force, virial, dipole, polarizability]
+  inference: [lammps, ase, i_pi, gromacs, amber, cp2k, abacus]
+  source_path: /root/deepmd-kit
+
+deeptb:
+  models: [deeptb_sk, deeptb_e3]
+  calculations: [band_structure, dos, hamiltonian, density_matrix]
+  source_path: /root/DeePTB
+
+pyatb:
+  calculations: [band_structure, berry_phase, chern_number, ...]
+  input_from: [abacus]
+  source_path: /root/pyatb
+
+abacus_agent_tools:
+  mcp_tools: true
+  structure_generation: [cif, poscar, stru, wyckoff]
+  input_preparation: [input, stru, kpt, pseudopotential, orbital]
+  source_path: /root/abacus-agent-tools
 ```
 
 ### Querying the Registry

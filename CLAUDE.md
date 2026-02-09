@@ -4,9 +4,9 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-PM Agent is a domain-aware project planner for scientific computing workflow development on top of the ABACUS ecosystem. It takes high-level feature requests (e.g., "NEB workflow with MLP acceleration and DFT verification"), audits existing capabilities, decomposes the request into deliverable tasks, and drives a human-AI collaborative execution loop.
+PM Agent is a domain-aware project planner for scientific computing workflow development on the deepmodeling ecosystem. It takes high-level feature requests (e.g., "NEB workflow with MLP acceleration and DFT verification"), audits existing capabilities, decomposes the request into deliverable tasks, and drives a human-AI collaborative execution loop.
 
-**Target domain:** ABACUS (DFT electronic structure package), PyABACUS (Python bindings), abacustest (workflow management).
+**Target domain:** deepmodeling ecosystem — ABACUS, PyABACUS, DeePMD-kit, DeePTB, PYATB, abacustest, abacus-agent-tools.
 
 ## Working Style
 
@@ -19,7 +19,7 @@ PM Agent is a domain-aware project planner for scientific computing workflow dev
 
 ```
 pm-agent/
-├── capabilities.yaml            # Static capability registry (ABACUS ecosystem)
+├── capabilities.yaml            # Static capability registry (deepmodeling ecosystem)
 ├── pyproject.toml               # Project config
 ├── src/
 │   ├── state.py                 # ProjectState + all dataclasses/enums
@@ -80,7 +80,7 @@ Each phase is a pure function: `(ProjectState) -> ProjectState`. This signature 
 
 ### Capability Registry (`src/registry.py` + `capabilities.yaml`)
 
-Static YAML registry of ABACUS ecosystem capabilities. Methods:
+Static YAML registry of deepmodeling ecosystem capabilities. Methods:
 - `CapabilityRegistry.load(path)` — Load from YAML
 - `registry.has(component, category, value)` — Check specific capability
 - `registry.get(component, category)` — Get all values in a category
@@ -126,6 +126,10 @@ component_name:
 - `/root/abacus-develop` — ABACUS C++ DFT package (see its CLAUDE.md for architecture)
 - `/root/abacus-develop/python/pyabacus` — Python bindings (pybind11, ASE Calculator)
 - `/root/abacus-test` — abacustest workflow management tool
+- `/root/deepmd-kit` — DeePMD-kit: deep learning interatomic potentials and MD
+- `/root/DeePTB` — DeePTB: ML tight-binding Hamiltonians
+- `/root/pyatb` — PYATB: ab initio tight-binding band topology and transport
+- `/root/abacus-agent-tools` — MCP tools connecting LLMs to ABACUS workflows
 
 ## Not Yet Implemented
 

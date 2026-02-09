@@ -2,7 +2,7 @@
 
 ## Overview
 
-The PM Agent is a domain-aware project planner for scientific computing workflow development on top of ABACUS. It takes high-level feature requests (e.g., "NEB workflow with MLP acceleration and DFT verification"), audits existing capabilities across the ABACUS ecosystem, decomposes the request into deliverable tasks, and drives an execution loop where AI agents draft implementations that human developers review and approve.
+The PM Agent is a domain-aware project planner for scientific computing workflow development on the deepmodeling ecosystem. It takes high-level feature requests (e.g., "NEB workflow with MLP acceleration and DFT verification"), audits existing capabilities across the deepmodeling ecosystem, decomposes the request into deliverable tasks, and drives an execution loop where AI agents draft implementations that human developers review and approve.
 
 **Design principles:**
 - Human-AI collaborative: AI drafts code and tests, humans review and approve

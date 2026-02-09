@@ -1,4 +1,4 @@
-"""Capability registry for ABACUS ecosystem components.
+"""Capability registry for deepmodeling ecosystem components.
 
 Loads from capabilities.yaml and provides query methods for the audit phase.
 """
