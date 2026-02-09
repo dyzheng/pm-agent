@@ -1,0 +1,23 @@
+abacus_core:
+  basis_types: [pw, lcao, lcao_in_pw]
+  esolver_types: [ksdft_pw, ksdft_lcao, sdft_pw, ofdft, lj_pot, dp_pot]
+  hardware: [cpu, cuda, rocm]
+  calculations: [scf, relax, cell_relax, md, tddft]
+  features: [dft_plus_u, vdw, deepks, exx, implicit_solvation]
+  source_path: /root/abacus-develop
+
+pyabacus:
+  workflows: [LCAOWorkflow, PWWorkflow]
+  ase_calculator: true
+  callbacks: [before_scf, after_iter, before_after_scf, after_scf]
+  data_access: [energy, force, stress, charge, hamiltonian, density_matrix]
+  position_update: true
+  cell_update: true
+  source_path: /root/abacus-develop/python/pyabacus
+
+abacustest:
+  models: [eos, phonon, band, elastic, vacancy, bec]
+  submission: [bohrium, dflow, local]
+  result_extraction: [abacus, vasp, qe, cp2k]
+  reporting: true
+  source_path: /root/abacus-test
