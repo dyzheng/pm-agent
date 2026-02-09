@@ -1,8 +1,12 @@
-from src.state import ProjectState, Phase, AuditStatus, TaskType, Layer
+from src.state import ProjectState, Phase, AuditStatus, TaskType, Layer, DecisionType, TaskStatus
 from src.registry import CapabilityRegistry
 from src.phases.intake import run_intake
 from src.phases.audit import run_audit
 from src.phases.decompose import run_decompose
+from src.phases.execute import run_execute_verify
+from src.phases.verify import GateRegistry, MockGateRunner, MockIntegrationRunner
+from src.review import MockReviewer
+from src.specialist import MockSpecialist
 
 
 def _make_registry() -> CapabilityRegistry:
@@ -85,3 +89,61 @@ def test_pipeline_state_persistence_roundtrip(tmp_path):
     assert loaded.phase == state.phase
     assert len(loaded.tasks) == len(state.tasks)
     assert loaded.parsed_intent == state.parsed_intent
+
+
+def test_intake_to_integrate():
+    """Full pipeline: intake -> audit -> decompose -> execute -> verify -> integrate."""
+    state = ProjectState(
+        request="Develop an NEB calculation workflow for molecular reactions "
+        "utilizing hybrid Machine Learning Potential acceleration with DFT verification"
+    )
+
+    # Phase 1-3: Intake -> Audit -> Decompose
+    state = run_intake(state)
+    state = run_audit(state, registry=_make_registry())
+    state = run_decompose(state)
+    assert state.phase == Phase.EXECUTE
+    assert len(state.tasks) >= 2
+
+    # Phase 4-6: Execute -> Verify -> Integrate
+    num_tasks = len(state.tasks)
+    specialist = MockSpecialist()
+    gate_registry = GateRegistry(default_runner=MockGateRunner())
+    reviewer = MockReviewer(decisions=[DecisionType.APPROVE] * num_tasks)
+    integration_runner = MockIntegrationRunner()
+
+    state = run_execute_verify(state, specialist, gate_registry, reviewer, integration_runner)
+
+    assert state.phase == Phase.INTEGRATE
+    assert all(t.status == TaskStatus.DONE for t in state.tasks)
+    assert len(state.drafts) == num_tasks
+    assert len(state.human_decisions) == num_tasks
+
+
+def test_full_pipeline_with_revision():
+    """Full pipeline where the first task gets a REVISE before APPROVE."""
+    state = ProjectState(
+        request="Develop an NEB calculation workflow for molecular reactions "
+        "utilizing hybrid Machine Learning Potential acceleration with DFT verification"
+    )
+
+    # Phase 1-3: Intake -> Audit -> Decompose
+    state = run_intake(state)
+    state = run_audit(state, registry=_make_registry())
+    state = run_decompose(state)
+    assert state.phase == Phase.EXECUTE
+
+    # First task gets REVISE then APPROVE; remaining tasks get APPROVE
+    num_tasks = len(state.tasks)
+    decisions = [DecisionType.REVISE, DecisionType.APPROVE] + [DecisionType.APPROVE] * (num_tasks - 1)
+    feedback = ["add error handling"] + [None] * (num_tasks)
+    specialist = MockSpecialist()
+    gate_registry = GateRegistry(default_runner=MockGateRunner())
+    reviewer = MockReviewer(decisions=decisions, feedback=feedback)
+    integration_runner = MockIntegrationRunner()
+
+    state = run_execute_verify(state, specialist, gate_registry, reviewer, integration_runner)
+
+    assert state.phase == Phase.INTEGRATE
+    assert all(t.status == TaskStatus.DONE for t in state.tasks)
+    assert state.human_decisions[0].type == DecisionType.REVISE
