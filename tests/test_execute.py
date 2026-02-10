@@ -1,6 +1,9 @@
 """Tests for src.phases.execute -- execute/verify orchestrator."""
 from __future__ import annotations
 
+from unittest.mock import MagicMock
+
+from src.hooks import HookConfig, HookStepConfig
 from src.phases.execute import run_execute_verify, select_next_task, assemble_brief
 from src.phases.verify import GateRegistry, MockGateRunner, MockIntegrationRunner
 from src.review import MockReviewer
@@ -215,3 +218,149 @@ class TestRunExecuteVerifyIntegration:
         )
         assert result.phase == Phase.DECOMPOSE
         assert len(result.integration_results) > 0
+
+
+# -- Parallel execution path tests -------------------------------------------
+
+
+def _make_mock_worktree_mgr() -> MagicMock:
+    """Create a mock WorktreeManager that returns plausible data."""
+    mgr = MagicMock()
+    mgr.resolve_repo.return_value = "/fake/repo"
+    mgr.get_diff.return_value = "+new line\n"
+    mgr.get_commit_hash.return_value = "abc123"
+    return mgr
+
+
+class TestParallelHappyPath:
+    def test_single_task_parallel(self) -> None:
+        """Parallel path with one task, no hooks."""
+        task = _make_task("T-001")
+        state = _make_state([task])
+        mgr = _make_mock_worktree_mgr()
+        result = run_execute_verify(
+            state, MockSpecialist(), GateRegistry(MockGateRunner()),
+            MockReviewer([DecisionType.APPROVE]), MockIntegrationRunner(),
+            worktree_mgr=mgr,
+        )
+        assert task.status == TaskStatus.DONE
+        assert "T-001" in result.drafts
+        assert result.phase == Phase.INTEGRATE
+
+    def test_independent_tasks_parallel(self) -> None:
+        """Two independent tasks should both complete."""
+        t1 = _make_task("T-001")
+        t2 = _make_task("T-002")
+        state = _make_state([t1, t2])
+        mgr = _make_mock_worktree_mgr()
+        result = run_execute_verify(
+            state, MockSpecialist(), GateRegistry(MockGateRunner()),
+            MockReviewer([DecisionType.APPROVE] * 2), MockIntegrationRunner(),
+            worktree_mgr=mgr,
+        )
+        assert t1.status == TaskStatus.DONE
+        assert t2.status == TaskStatus.DONE
+        assert result.phase == Phase.INTEGRATE
+
+    def test_chain_tasks_parallel(self) -> None:
+        """Sequential dependency chain via parallel path."""
+        t1 = _make_task("T-001")
+        t2 = _make_task("T-002", deps=["T-001"])
+        t3 = _make_task("T-003", deps=["T-002"])
+        state = _make_state([t1, t2, t3])
+        mgr = _make_mock_worktree_mgr()
+        result = run_execute_verify(
+            state, MockSpecialist(), GateRegistry(MockGateRunner()),
+            MockReviewer([DecisionType.APPROVE] * 3), MockIntegrationRunner(),
+            worktree_mgr=mgr,
+        )
+        assert all(t.status == TaskStatus.DONE for t in [t1, t2, t3])
+        assert result.phase == Phase.INTEGRATE
+
+
+class TestParallelWithHooks:
+    def test_hooks_approve_all(self) -> None:
+        """Per-task hooks that auto-approve (human_check disabled)."""
+        task = _make_task("T-001")
+        state = _make_state([task])
+        mgr = _make_mock_worktree_mgr()
+        hook_config = HookConfig(hooks={
+            "after_task_complete": {
+                "ai_review": HookStepConfig(
+                    enabled=True,
+                    checks=["commit_exists", "diff_size"],
+                ),
+                "human_check": HookStepConfig(
+                    enabled=False,
+                ),
+            }
+        })
+        result = run_execute_verify(
+            state, MockSpecialist(), GateRegistry(MockGateRunner()),
+            MockReviewer([DecisionType.APPROVE]), MockIntegrationRunner(),
+            worktree_mgr=mgr, hook_config=hook_config,
+        )
+        assert task.status == TaskStatus.DONE
+        assert len(result.review_results) == 1
+        assert len(result.human_approvals) == 1
+        assert result.human_approvals[0].approved
+
+    def test_hooks_human_reject_triggers_revision(self) -> None:
+        """Human rejects in hook -> falls into revision loop."""
+        task = _make_task("T-001")
+        state = _make_state([task])
+        mgr = _make_mock_worktree_mgr()
+        hook_config = HookConfig(hooks={
+            "after_task_complete": {
+                "ai_review": HookStepConfig(
+                    enabled=True,
+                    checks=["diff_size"],
+                ),
+                "human_check": HookStepConfig(
+                    enabled=True, mode="interactive",
+                ),
+            }
+        })
+        # Human rejects in hook, then approves in revision loop
+        responses = iter(["n", "needs fix"])
+        result = run_execute_verify(
+            state, MockSpecialist(), GateRegistry(MockGateRunner()),
+            MockReviewer([DecisionType.APPROVE]), MockIntegrationRunner(),
+            worktree_mgr=mgr, hook_config=hook_config,
+            input_fn=lambda _prompt: next(responses),
+        )
+        assert task.status == TaskStatus.DONE
+        assert result.phase == Phase.INTEGRATE
+
+
+class TestParallelWithBranchRegistry:
+    def test_branch_registered_on_completion(self) -> None:
+        """After task completes, branch is registered."""
+        task = _make_task("T-001")
+        task.branch_name = "pm-agent/T-001"  # Set as WorktreeSpecialist would
+        state = _make_state([task])
+        mgr = _make_mock_worktree_mgr()
+        branch_reg = MagicMock()
+        result = run_execute_verify(
+            state, MockSpecialist(), GateRegistry(MockGateRunner()),
+            MockReviewer([DecisionType.APPROVE]), MockIntegrationRunner(),
+            worktree_mgr=mgr, branch_registry=branch_reg,
+        )
+        assert task.status == TaskStatus.DONE
+        branch_reg.register_branch.assert_called_once()
+        call_args = branch_reg.register_branch.call_args
+        assert call_args[0][0] == "algorithm_agent"  # component
+
+
+class TestParallelGateFailure:
+    def test_gate_fail_retries_in_parallel_path(self) -> None:
+        task = _make_task("T-001", gates=[GateType.UNIT])
+        state = _make_state([task])
+        mgr = _make_mock_worktree_mgr()
+        result = run_execute_verify(
+            state, MockSpecialist(),
+            GateRegistry(MockGateRunner(fail_gates={GateType.UNIT}, fail_count=1)),
+            MockReviewer([DecisionType.APPROVE]), MockIntegrationRunner(),
+            worktree_mgr=mgr,
+        )
+        assert task.status == TaskStatus.DONE

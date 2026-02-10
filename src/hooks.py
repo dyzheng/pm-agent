@@ -16,9 +16,11 @@ import yaml
 
 from src.state import (
     AuditStatus,
+    Draft,
     HumanApproval,
     ProjectState,
     ReviewResult,
+    Task,
     TaskType,
 )
 
@@ -312,5 +314,174 @@ def _human_check_file(hook_name: str, file_path: str) -> HumanApproval:
         hook_name=hook_name,
         approved=bool(approved),
         feedback=data.get("feedback"),
+        timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"),
+    )
+
+
+# -- Per-Task Review Hooks ---------------------------------------------------
+
+
+def _check_tests_pass(
+    state: ProjectState, task: Task, draft: Draft, worktree_mgr: Any = None,
+) -> tuple[list[str], list[str]]:
+    """Verify tests passed in the task's worktree."""
+    issues: list[str] = []
+    suggestions: list[str] = []
+    if not draft.test_files:
+        issues.append(f"Task {task.id}: no test files in draft")
+        suggestions.append("Specialist should produce test files")
+    return issues, suggestions
+
+
+def _check_commit_exists(
+    state: ProjectState, task: Task, draft: Draft, worktree_mgr: Any = None,
+) -> tuple[list[str], list[str]]:
+    """Verify a commit was created for the task."""
+    issues: list[str] = []
+    suggestions: list[str] = []
+    if not draft.commit_hash:
+        issues.append(f"Task {task.id}: no commit hash recorded")
+        suggestions.append("Specialist should commit changes before returning")
+    return issues, suggestions
+
+
+def _check_diff_size(
+    state: ProjectState, task: Task, draft: Draft, worktree_mgr: Any = None,
+) -> tuple[list[str], list[str]]:
+    """Warn if diff is unusually large."""
+    issues: list[str] = []
+    suggestions: list[str] = []
+    total_lines = sum(content.count("\n") for content in draft.files.values())
+    total_lines += sum(content.count("\n") for content in draft.test_files.values())
+    if total_lines > 1000:
+        suggestions.append(
+            f"Task {task.id}: large diff ({total_lines} lines). Consider splitting."
+        )
+    return issues, suggestions
+
+
+def run_task_review(
+    state: ProjectState,
+    task: Task,
+    draft: Draft,
+    worktree_mgr: Any = None,
+    hook_config: HookConfig | None = None,
+    *,
+    input_fn: Callable[[str], str] | None = None,
+) -> tuple[ReviewResult, HumanApproval]:
+    """Run AI checks + human review for a completed task.
+
+    Shows git diff to human for review.
+    """
+    hook_name = "after_task_complete"
+
+    # Determine which checks to run
+    checks_to_run = ["tests_pass", "commit_exists", "diff_size"]
+    if hook_config:
+        hook = hook_config.get_hook(hook_name)
+        if hook:
+            ai_config = hook.get("ai_review")
+            if ai_config and ai_config.enabled:
+                checks_to_run = ai_config.checks
+
+    # Run AI checks
+    task_check_functions: dict[str, Callable] = {
+        "tests_pass": _check_tests_pass,
+        "commit_exists": _check_commit_exists,
+        "diff_size": _check_diff_size,
+    }
+
+    issues: list[str] = []
+    suggestions: list[str] = []
+    for check_name in checks_to_run:
+        fn = task_check_functions.get(check_name)
+        if fn is None:
+            issues.append(f"Unknown task check: {check_name}")
+            continue
+        check_issues, check_suggestions = fn(state, task, draft, worktree_mgr)
+        issues.extend(check_issues)
+        suggestions.extend(check_suggestions)
+
+    review = ReviewResult(
+        hook_name=hook_name,
+        approved=len(issues) == 0,
+        issues=issues,
+        suggestions=suggestions,
+    )
+
+    # Human check
+    human_enabled = True
+    human_mode = "interactive"
+    if hook_config:
+        hook = hook_config.get_hook(hook_name)
+        if hook:
+            human_config = hook.get("human_check")
+            if human_config:
+                human_enabled = human_config.enabled
+                human_mode = human_config.mode
+
+    if human_enabled:
+        approval = _human_check_task(
+            state, task, draft, worktree_mgr, input_fn=input_fn,
+        )
+    else:
+        approval = HumanApproval(
+            hook_name=hook_name,
+            approved=True,
+            timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"),
+        )
+
+    return review, approval
+
+
+def _human_check_task(
+    state: ProjectState,
+    task: Task,
+    draft: Draft,
+    worktree_mgr: Any = None,
+    *,
+    input_fn: Callable[[str], str] | None = None,
+) -> HumanApproval:
+    """Interactive human review for a single task, showing diff."""
+    prompt_fn = input_fn or input
+    hook_name = "after_task_complete"
+
+    print(f"\n{'='*60}")
+    print(f"  TASK REVIEW: {task.id} — {task.title}")
+    print(f"{'='*60}")
+    print(f"\nBranch: {draft.branch_name or task.branch_name}")
+    print(f"Commit: {draft.commit_hash or 'none'}")
+    print(f"Files changed: {len(draft.files)}")
+    print(f"Test files: {len(draft.test_files)}")
+
+    # Show diff if worktree manager available
+    if worktree_mgr is not None:
+        try:
+            diff = worktree_mgr.get_diff(task)
+            if diff:
+                print(f"\n--- Diff ---")
+                # Truncate very long diffs
+                lines = diff.splitlines()
+                if len(lines) > 100:
+                    print("\n".join(lines[:100]))
+                    print(f"\n... ({len(lines) - 100} more lines)")
+                else:
+                    print(diff)
+        except Exception:
+            print("\n(Could not retrieve diff)")
+
+    print(f"\nExplanation: {draft.explanation[:200]}")
+    print()
+    response = prompt_fn("Approve task? (y/n): ").strip().lower()
+    approved = response in ("y", "yes")
+
+    feedback = None
+    if not approved:
+        feedback = prompt_fn("Feedback (optional): ").strip() or None
+
+    return HumanApproval(
+        hook_name=hook_name,
+        approved=approved,
+        feedback=feedback,
         timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"),
     )

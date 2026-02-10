@@ -25,3 +25,14 @@ hooks:
       enabled: true
       mode: interactive
       file_path: state/decompose_review.json
+
+  after_task_complete:
+    ai_review:
+      enabled: true
+      checks:
+        - tests_pass
+        - commit_exists
+        - diff_size
+    human_check:
+      enabled: true
+      mode: interactive

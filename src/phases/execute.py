@@ -2,11 +2,18 @@
 
 Coordinates: task selection -> specialist dispatch -> human review ->
 gate verification -> integration validation, with retry loops.
+
+Supports parallel execution across git worktrees when a WorktreeManager
+is provided, falling back to sequential execution otherwise.
 """
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+from src.hooks import HookConfig, run_task_review
 from src.phases.verify import GateRegistry, IntegrationRunner
 from src.review import Reviewer
+from src.scheduler import TaskScheduler
 from src.specialist import SpecialistBackend
 from src.state import (
     DecisionType,
@@ -68,19 +75,48 @@ def run_execute_verify(
     gate_registry: GateRegistry,
     reviewer: Reviewer,
     integration_runner: IntegrationRunner,
+    worktree_mgr: object | None = None,
+    hook_config: HookConfig | None = None,
+    branch_registry: object | None = None,
+    input_fn: object | None = None,
 ) -> ProjectState:
-    """Main orchestrator loop: execute tasks, verify gates, run integration."""
+    """Main orchestrator loop: execute tasks, verify gates, run integration.
+
+    When worktree_mgr is provided, uses parallel batch execution via
+    TaskScheduler + ThreadPoolExecutor. Otherwise falls back to the
+    original sequential loop.
+    """
+    if worktree_mgr is not None:
+        return _run_parallel(
+            state, specialist, gate_registry, reviewer,
+            integration_runner, worktree_mgr, hook_config,
+            branch_registry, input_fn,
+        )
+    return _run_sequential(
+        state, specialist, gate_registry, reviewer, integration_runner,
+    )
+
+
+# -- Sequential path (original, backward-compatible) -------------------------
+
+
+def _run_sequential(
+    state: ProjectState,
+    specialist: SpecialistBackend,
+    gate_registry: GateRegistry,
+    reviewer: Reviewer,
+    integration_runner: IntegrationRunner,
+) -> ProjectState:
+    """Original sequential loop for backward compatibility."""
     while True:
         task = select_next_task(state)
 
         if task is None:
-            # All tasks done -> run integration
             return _run_integration(state, integration_runner)
 
         state.current_task_id = task.id
         task.status = TaskStatus.IN_PROGRESS
 
-        # Specialist dispatch + human review loop
         result = _execute_task(state, task, specialist, reviewer)
         if result == "pause":
             return state
@@ -89,7 +125,6 @@ def run_execute_verify(
             state.phase = Phase.DECOMPOSE
             return state
 
-        # result == "approve" -> run gates
         draft = state.drafts[task.id]
         gate_ok = _run_gates_with_retry(
             state, task, draft, gate_registry, specialist, reviewer
@@ -101,13 +136,162 @@ def run_execute_verify(
         state.current_task_id = None
 
 
+# -- Parallel path (worktree-based) ------------------------------------------
+
+
+def _run_parallel(
+    state: ProjectState,
+    specialist: SpecialistBackend,
+    gate_registry: GateRegistry,
+    reviewer: Reviewer,
+    integration_runner: IntegrationRunner,
+    worktree_mgr: object,
+    hook_config: HookConfig | None,
+    branch_registry: object | None,
+    input_fn: object | None,
+) -> ProjectState:
+    """Parallel batch execution with per-task review."""
+    scheduler = TaskScheduler(state.tasks)
+
+    while not scheduler.all_done():
+        batch = scheduler.get_ready_batch()
+        if not batch:
+            # No tasks ready but not all done — blocked by failures
+            state.blocked_reason = "No tasks ready; dependencies may have failed"
+            return state
+
+        # Parallel dispatch
+        drafts = _dispatch_batch(state, batch, specialist)
+
+        # Sequential review per task
+        for task in batch:
+            draft = drafts.get(task.id)
+            if draft is None:
+                scheduler.mark_failed(task.id)
+                continue
+
+            state.drafts[task.id] = draft
+            if draft.branch_name:
+                task.branch_name = draft.branch_name
+            if draft.commit_hash:
+                task.commit_hash = draft.commit_hash
+            state.current_task_id = task.id
+
+            # Per-task hook: AI review + human review
+            if hook_config is not None:
+                review, approval = run_task_review(
+                    state, task, draft, worktree_mgr,
+                    hook_config, input_fn=input_fn,
+                )
+                state.review_results.append(review)
+                state.human_approvals.append(approval)
+
+                if not approval.approved:
+                    # Try revision loop
+                    result = _execute_task(state, task, specialist, reviewer)
+                    if result != "approve":
+                        scheduler.mark_failed(task.id)
+                        if result == "reject":
+                            state.phase = Phase.DECOMPOSE
+                            return state
+                        if result == "pause":
+                            return state
+                        continue
+                    draft = state.drafts[task.id]
+
+            # Gate verification
+            gate_ok = _run_gates_with_retry(
+                state, task, draft, gate_registry, specialist, reviewer
+            )
+            if gate_ok == "pause":
+                return state
+
+            task.status = TaskStatus.DONE
+            scheduler.mark_done(task.id)
+            state.current_task_id = None
+
+            # Register branch if branch_registry provided
+            if branch_registry is not None:
+                _register_branch(task, draft, worktree_mgr, branch_registry)
+
+    return _run_integration(state, integration_runner)
+
+
+def _dispatch_batch(
+    state: ProjectState,
+    batch: list[Task],
+    specialist: SpecialistBackend,
+) -> dict[str, Draft]:
+    """Dispatch a batch of tasks in parallel, return {task_id: Draft}."""
+    results: dict[str, Draft] = {}
+
+    if len(batch) == 1:
+        # No need for thread pool for single task
+        task = batch[0]
+        brief = assemble_brief(state, task)
+        results[task.id] = specialist.execute(brief)
+        return results
+
+    with ThreadPoolExecutor(max_workers=min(len(batch), 4)) as pool:
+        futures = {}
+        for task in batch:
+            brief = assemble_brief(state, task)
+            future = pool.submit(specialist.execute, brief)
+            futures[future] = task
+
+        for future in as_completed(futures):
+            task = futures[future]
+            try:
+                results[task.id] = future.result()
+            except Exception:
+                # Task dispatch failed — will be marked failed by caller
+                pass
+
+    return results
+
+
+def _register_branch(
+    task: Task,
+    draft: Draft,
+    worktree_mgr: object,
+    branch_registry: object,
+) -> None:
+    """Register a completed task's branch in the BranchRegistry."""
+    from src.branches import BranchEntry
+
+    branch_name = draft.branch_name or task.branch_name
+    if not branch_name:
+        return
+
+    try:
+        repo = worktree_mgr.resolve_repo(task.specialist)  # type: ignore[union-attr]
+    except (ValueError, AttributeError):
+        return
+
+    entry = BranchEntry(
+        branch=branch_name,
+        repo=str(repo),
+        target_capabilities=[task.title],
+        created_by="subagent",
+        task_id=task.id,
+        status="ready_to_merge",
+    )
+    branch_registry.register_branch(task.specialist, entry)  # type: ignore[union-attr]
+
+
+# -- Shared helpers -----------------------------------------------------------
+
+
 def _execute_task(
     state: ProjectState,
     task: Task,
     specialist: SpecialistBackend,
     reviewer: Reviewer,
 ) -> str:
-    """Run specialist dispatch + human review loop. Returns 'approve', 'reject', or 'pause'."""
+    """Run specialist dispatch + human review loop.
+
+    Returns 'approve', 'reject', or 'pause'.
+    """
     revision_feedback = None
     previous_draft = None
 
@@ -131,7 +315,6 @@ def _execute_task(
             previous_draft = draft
             continue
 
-    # Exhausted revisions
     state.blocked_reason = f"Max revisions ({MAX_REVISIONS}) reached for {task.id}"
     return "pause"
 
@@ -155,8 +338,9 @@ def _run_gates_with_retry(
             return True
 
         if attempt < MAX_GATE_RETRIES:
-            # Retry: re-dispatch to specialist with failure info
-            failure_info = "; ".join(f"{r.gate_type.value}: {r.output}" for r in failed)
+            failure_info = "; ".join(
+                f"{r.gate_type.value}: {r.output}" for r in failed
+            )
             brief = assemble_brief(
                 state, task,
                 revision_feedback=f"Gate failures: {failure_info}",
@@ -165,13 +349,13 @@ def _run_gates_with_retry(
             draft = specialist.execute(brief)
             state.drafts[task.id] = draft
         else:
-            # Exhausted retries, ask human
             decision = reviewer.review_gate_failure(state, task)
             state.human_decisions.append(decision)
             if decision.type == DecisionType.PAUSE:
-                state.blocked_reason = f"Gate failures for {task.id} after {MAX_GATE_RETRIES} retries"
+                state.blocked_reason = (
+                    f"Gate failures for {task.id} after {MAX_GATE_RETRIES} retries"
+                )
                 return "pause"
-            # APPROVE override
             return True
 
     return True

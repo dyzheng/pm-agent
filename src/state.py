@@ -118,6 +118,9 @@ class Task:
     specialist: str
     gates: list[GateType] = field(default_factory=list)
     status: TaskStatus = TaskStatus.PENDING
+    branch_name: str = ""
+    commit_hash: str = ""
+    worktree_path: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -133,6 +136,9 @@ class Task:
             "specialist": self.specialist,
             "gates": [g.value for g in self.gates],
             "status": self.status.value,
+            "branch_name": self.branch_name,
+            "commit_hash": self.commit_hash,
+            "worktree_path": self.worktree_path,
         }
 
     @classmethod
@@ -150,6 +156,9 @@ class Task:
             specialist=data["specialist"],
             gates=[GateType(g) for g in data.get("gates", [])],
             status=TaskStatus(data.get("status", "pending")),
+            branch_name=data.get("branch_name", ""),
+            commit_hash=data.get("commit_hash", ""),
+            worktree_path=data.get("worktree_path", ""),
         )
 
 
@@ -188,6 +197,8 @@ class Draft:
     files: dict[str, str]
     test_files: dict[str, str]
     explanation: str
+    commit_hash: str = ""
+    branch_name: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -195,6 +206,8 @@ class Draft:
             "files": self.files,
             "test_files": self.test_files,
             "explanation": self.explanation,
+            "commit_hash": self.commit_hash,
+            "branch_name": self.branch_name,
         }
 
     @classmethod
@@ -204,6 +217,8 @@ class Draft:
             files=data["files"],
             test_files=data["test_files"],
             explanation=data["explanation"],
+            commit_hash=data.get("commit_hash", ""),
+            branch_name=data.get("branch_name", ""),
         )
 
 
