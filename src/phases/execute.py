@@ -5,10 +5,12 @@ gate verification -> integration validation, with retry loops.
 
 Supports parallel execution across git worktrees when a WorktreeManager
 is provided, falling back to sequential execution otherwise.
+Auto-saves checkpoints via optional StateManager.
 """
 from __future__ import annotations
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import TYPE_CHECKING
 
 from src.hooks import HookConfig, run_task_review
 from src.phases.verify import GateRegistry, IntegrationRunner
@@ -26,6 +28,15 @@ from src.state import (
     TaskBrief,
     TaskStatus,
 )
+
+if TYPE_CHECKING:
+    from src.persistence import StateManager
+
+
+def _checkpoint(state_mgr: StateManager | None, label: str) -> None:
+    """Save a checkpoint if a StateManager is provided."""
+    if state_mgr is not None:
+        state_mgr.save_checkpoint(label)
 
 MAX_REVISIONS = 3
 MAX_GATE_RETRIES = 2
@@ -79,6 +90,7 @@ def run_execute_verify(
     hook_config: HookConfig | None = None,
     branch_registry: object | None = None,
     input_fn: object | None = None,
+    state_mgr: StateManager | None = None,
 ) -> ProjectState:
     """Main orchestrator loop: execute tasks, verify gates, run integration.
 
@@ -90,10 +102,11 @@ def run_execute_verify(
         return _run_parallel(
             state, specialist, gate_registry, reviewer,
             integration_runner, worktree_mgr, hook_config,
-            branch_registry, input_fn,
+            branch_registry, input_fn, state_mgr,
         )
     return _run_sequential(
         state, specialist, gate_registry, reviewer, integration_runner,
+        state_mgr,
     )
 
 
@@ -106,23 +119,26 @@ def _run_sequential(
     gate_registry: GateRegistry,
     reviewer: Reviewer,
     integration_runner: IntegrationRunner,
+    state_mgr: StateManager | None = None,
 ) -> ProjectState:
     """Original sequential loop for backward compatibility."""
     while True:
         task = select_next_task(state)
 
         if task is None:
-            return _run_integration(state, integration_runner)
+            return _run_integration(state, integration_runner, state_mgr)
 
         state.current_task_id = task.id
         task.status = TaskStatus.IN_PROGRESS
 
         result = _execute_task(state, task, specialist, reviewer)
         if result == "pause":
+            _checkpoint(state_mgr, f"task_{task.id}_paused")
             return state
         if result == "reject":
             task.status = TaskStatus.FAILED
             state.phase = Phase.DECOMPOSE
+            _checkpoint(state_mgr, f"task_{task.id}_rejected")
             return state
 
         draft = state.drafts[task.id]
@@ -130,10 +146,12 @@ def _run_sequential(
             state, task, draft, gate_registry, specialist, reviewer
         )
         if gate_ok == "pause":
+            _checkpoint(state_mgr, f"task_{task.id}_gate_paused")
             return state
 
         task.status = TaskStatus.DONE
         state.current_task_id = None
+        _checkpoint(state_mgr, f"task_{task.id}_done")
 
 
 # -- Parallel path (worktree-based) ------------------------------------------
@@ -149,6 +167,7 @@ def _run_parallel(
     hook_config: HookConfig | None,
     branch_registry: object | None,
     input_fn: object | None,
+    state_mgr: StateManager | None = None,
 ) -> ProjectState:
     """Parallel batch execution with per-task review."""
     scheduler = TaskScheduler(state.tasks)
@@ -158,6 +177,7 @@ def _run_parallel(
         if not batch:
             # No tasks ready but not all done — blocked by failures
             state.blocked_reason = "No tasks ready; dependencies may have failed"
+            _checkpoint(state_mgr, "blocked_no_ready_tasks")
             return state
 
         # Parallel dispatch
@@ -168,6 +188,7 @@ def _run_parallel(
             draft = drafts.get(task.id)
             if draft is None:
                 scheduler.mark_failed(task.id)
+                _checkpoint(state_mgr, f"task_{task.id}_failed")
                 continue
 
             state.drafts[task.id] = draft
@@ -193,8 +214,10 @@ def _run_parallel(
                         scheduler.mark_failed(task.id)
                         if result == "reject":
                             state.phase = Phase.DECOMPOSE
+                            _checkpoint(state_mgr, f"task_{task.id}_rejected")
                             return state
                         if result == "pause":
+                            _checkpoint(state_mgr, f"task_{task.id}_paused")
                             return state
                         continue
                     draft = state.drafts[task.id]
@@ -204,17 +227,19 @@ def _run_parallel(
                 state, task, draft, gate_registry, specialist, reviewer
             )
             if gate_ok == "pause":
+                _checkpoint(state_mgr, f"task_{task.id}_gate_paused")
                 return state
 
             task.status = TaskStatus.DONE
             scheduler.mark_done(task.id)
             state.current_task_id = None
+            _checkpoint(state_mgr, f"task_{task.id}_done")
 
             # Register branch if branch_registry provided
             if branch_registry is not None:
                 _register_branch(task, draft, worktree_mgr, branch_registry)
 
-    return _run_integration(state, integration_runner)
+    return _run_integration(state, integration_runner, state_mgr)
 
 
 def _dispatch_batch(
@@ -364,6 +389,7 @@ def _run_gates_with_retry(
 def _run_integration(
     state: ProjectState,
     integration_runner: IntegrationRunner,
+    state_mgr: StateManager | None = None,
 ) -> ProjectState:
     """Run integration tests after all tasks complete."""
     test = IntegrationTest(
@@ -379,7 +405,9 @@ def _run_integration(
 
     if result.passed:
         state.phase = Phase.INTEGRATE
+        _checkpoint(state_mgr, "integration_passed")
     else:
         state.phase = Phase.DECOMPOSE
+        _checkpoint(state_mgr, "integration_failed")
 
     return state
