@@ -404,6 +404,7 @@ class ProjectState:
     """
 
     request: str
+    project_id: str = ""
     parsed_intent: dict[str, Any] = field(default_factory=dict)
     audit_results: list[AuditItem] = field(default_factory=list)
     tasks: list[Task] = field(default_factory=list)
@@ -421,6 +422,7 @@ class ProjectState:
         """Serialize the full state to a JSON-compatible dict."""
         return {
             "request": self.request,
+            "project_id": self.project_id,
             "parsed_intent": self.parsed_intent,
             "audit_results": [a.to_dict() for a in self.audit_results],
             "tasks": [t.to_dict() for t in self.tasks],
@@ -440,6 +442,7 @@ class ProjectState:
         """Deserialize a dict (e.g. from JSON) back into a ProjectState."""
         return cls(
             request=data["request"],
+            project_id=data.get("project_id", ""),
             parsed_intent=data.get("parsed_intent", {}),
             audit_results=[
                 AuditItem.from_dict(a) for a in data.get("audit_results", [])

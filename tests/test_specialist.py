@@ -255,6 +255,107 @@ class TestPlanWriter:
         assert "## Commit Message" in content
         assert "feat:" in content
 
+    def test_plan_md_with_annotation_brief(self, tmp_path: Path) -> None:
+        """PlanWriter injects detailed spec from annotations/{id}-brief.json."""
+        # Set up project dir with annotation
+        project_dir = tmp_path / "project"
+        annotations_dir = project_dir / "annotations"
+        annotations_dir.mkdir(parents=True)
+
+        brief_data = {
+            "task_id": "T-001",
+            "goal": "Detailed goal from annotation",
+            "context": {
+                "problem": "The system lacks feature X",
+                "approach": "Use tmpdir strategy",
+                "known_constraints": [
+                    "Do NOT modify C++ files",
+                    "Read the actual source of write_stru() BEFORE implementing",
+                ],
+            },
+            "stru_format": {
+                "description": "Dict format for write_stru()",
+                "fields": {"label": "List[str]", "cell": "List[List[float]]"},
+                "note": "Use these exact field names",
+            },
+            "deliverables": [
+                {
+                    "action": "create",
+                    "path": "src/builder.py",
+                    "spec": "Create builder module with build() function.",
+                },
+                {
+                    "action": "modify",
+                    "path": "src/feature.py",
+                    "spec": "Add from_python() classmethod.",
+                },
+            ],
+            "test_command": "pytest tests/test_builder.py -v",
+            "commit_message": "feat: add builder module",
+            "scope_guard": [
+                "Do NOT modify C++ files",
+                "Read the actual source of write_stru() BEFORE implementing",
+            ],
+        }
+        import json
+        (annotations_dir / "T-001-brief.json").write_text(
+            json.dumps(brief_data)
+        )
+
+        writer = PlanWriter(project_dir=project_dir)
+        out_dir = tmp_path / "output"
+        out_dir.mkdir()
+        writer.write_plan(_make_brief(), out_dir)
+
+        content = (out_dir / "PLAN.md").read_text()
+
+        # Annotation goal replaces generic description
+        assert "Detailed goal from annotation" in content
+        # Context sections injected
+        assert "## Problem" in content
+        assert "The system lacks feature X" in content
+        assert "## Approach" in content
+        assert "tmpdir strategy" in content
+        assert "## Known Constraints" in content
+        assert "Do NOT modify C++ files" in content
+        # Data format reference
+        assert "stru_format reference" in content
+        assert "label: List[str]" in content
+        assert "Use these exact field names" in content
+        # Deliverables with action tags
+        assert "[CREATE] `src/builder.py`" in content
+        assert "[MODIFY] `src/feature.py`" in content
+        assert "Add from_python() classmethod" in content
+        # Custom commit message
+        assert "feat: add builder module" in content
+        # Scope guard
+        assert "## Scope Guard" in content
+        # Test command
+        assert "pytest tests/test_builder.py -v" in content
+
+    def test_plan_md_without_annotation_falls_back(self, tmp_path: Path) -> None:
+        """Without annotation file, PlanWriter uses generic template."""
+        project_dir = tmp_path / "project"
+        (project_dir / "annotations").mkdir(parents=True)
+        # No brief file written
+
+        writer = PlanWriter(project_dir=project_dir)
+        out_dir = tmp_path / "output"
+        out_dir.mkdir()
+        writer.write_plan(_make_brief(), out_dir)
+
+        content = (out_dir / "PLAN.md").read_text()
+        # Falls back to task.description
+        assert "Build the feature" in content
+        assert "src/feature.py" in content
+
+    def test_plan_md_no_project_dir(self, tmp_path: Path) -> None:
+        """PlanWriter with no project_dir uses generic template."""
+        writer = PlanWriter()
+        writer.write_plan(_make_brief(), tmp_path)
+        content = (tmp_path / "PLAN.md").read_text()
+        assert "Build the feature" in content
+
 
 # ---------------------------------------------------------------------------
 # WorktreeSpecialist — parse helpers

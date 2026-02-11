@@ -105,7 +105,14 @@ class PlanWriter:
 
     CLAUDE.md contains the execution workflow + result schema (generic)
     plus specialist-specific domain knowledge rendered from src/prompts/.
+
+    If a project_dir is provided, the writer will look for detailed task
+    briefs in {project_dir}/annotations/{task_id}-brief.json and inject
+    the structured spec (deliverables, formats, scope guards) into PLAN.md.
     """
+
+    def __init__(self, project_dir: Path | None = None) -> None:
+        self._project_dir = project_dir
 
     def write_plan(self, brief: TaskBrief, worktree_path: Path) -> None:
         """Write CLAUDE.md and PLAN.md into the worktree."""
@@ -119,26 +126,104 @@ class PlanWriter:
         content = CLAUDE_MD_TEMPLATE + "\n---\n\n" + specialist_section
         (path / "CLAUDE.md").write_text(content)
 
+    def _load_brief_annotation(self, task_id: str) -> dict | None:
+        """Load detailed brief from annotations/{task_id}-brief.json."""
+        if not self._project_dir:
+            return None
+        brief_path = self._project_dir / "annotations" / f"{task_id}-brief.json"
+        if not brief_path.exists():
+            return None
+        try:
+            return json.loads(brief_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            return None
+
     def _write_plan_md(self, brief: TaskBrief, path: Path) -> None:
         task = brief.task
+        annotation = self._load_brief_annotation(task.id)
         parts: list[str] = [f"# Task: {task.title}\n"]
 
-        # Goal
-        parts.append(f"## Goal\n\n{task.description}\n")
+        # Goal — use annotation goal if available (richer)
+        goal = annotation["goal"] if annotation else task.description
+        parts.append(f"## Goal\n\n{goal}\n")
+
+        # Context & constraints from annotation
+        if annotation and "context" in annotation:
+            ctx = annotation["context"]
+            if "problem" in ctx:
+                parts.append(f"## Problem\n\n{ctx['problem']}\n")
+            if "approach" in ctx:
+                parts.append(f"## Approach\n\n{ctx['approach']}\n")
+            if "known_constraints" in ctx:
+                parts.append("## Known Constraints\n")
+                for c in ctx["known_constraints"]:
+                    parts.append(f"- {c}")
+                parts.append("")
 
         # Step 1: Read existing code
-        if task.files_to_touch:
+        read_files = []
+        if annotation and "deliverables" in annotation:
+            # For files to modify, read them first; for new files, read siblings
+            for d in annotation["deliverables"]:
+                if d["action"] == "modify":
+                    read_files.append(d["path"])
+        # Also add prepare module sources the agent must read
+        if annotation and "scope_guard" in annotation:
+            for rule in annotation["scope_guard"]:
+                if "Read the actual source" in rule:
+                    read_files.extend([
+                        "python/pyabacus/src/pyabacus/prepare/input_parser.py",
+                        "python/pyabacus/src/pyabacus/prepare/stru_parser.py",
+                        "python/pyabacus/src/pyabacus/prepare/kpt_parser.py",
+                    ])
+        if not read_files:
+            read_files = list(task.files_to_touch)
+        if read_files:
             parts.append("## Step 1: Read existing code\n")
-            for f in task.files_to_touch:
+            parts.append(
+                "IMPORTANT: Read these files BEFORE writing any code. "
+                "The dict formats may differ from what you expect.\n"
+            )
+            for f in read_files:
                 parts.append(f"- Read and understand: `{f}`")
             parts.append("")
 
-        # Step 2: Implement changes
+        # Data format specs from annotation
+        for fmt_key in ("stru_format", "kpt_format"):
+            if annotation and fmt_key in annotation:
+                fmt = annotation[fmt_key]
+                parts.append(f"### {fmt_key} reference\n")
+                if "description" in fmt:
+                    parts.append(f"{fmt['description']}\n")
+                if "fields" in fmt:
+                    parts.append("```")
+                    for k, v in fmt["fields"].items():
+                        parts.append(f"  {k}: {v}")
+                    parts.append("```\n")
+                if "note" in fmt:
+                    parts.append(f"**Note:** {fmt['note']}\n")
+                # Sub-dicts (e.g. gamma_mp)
+                for sub_key, sub_val in fmt.items():
+                    if sub_key in ("description", "fields", "note"):
+                        continue
+                    if isinstance(sub_val, dict):
+                        parts.append(f"**{sub_key}:**\n```")
+                        for k, v in sub_val.items():
+                            parts.append(f"  {k}: {v}")
+                        parts.append("```\n")
+
+        # Step 2: Deliverables (detailed per-file spec)
         parts.append("## Step 2: Implement changes\n")
-        parts.append("Modify the following files according to the goal:\n")
-        for f in task.files_to_touch:
-            parts.append(f"- `{f}`")
-        parts.append("")
+        if annotation and "deliverables" in annotation:
+            for d in annotation["deliverables"]:
+                action = d["action"].upper()
+                parts.append(f"### [{action}] `{d['path']}`\n")
+                parts.append(f"{d['spec']}\n")
+        else:
+            parts.append("Modify the following files according to the goal:\n")
+            for f in task.files_to_touch:
+                parts.append(f"- `{f}`")
+            parts.append("")
 
         # Audit context
         if brief.audit_context:
@@ -164,22 +249,46 @@ class PlanWriter:
 
         # Step 3: Write tests
         parts.append("## Step 3: Write tests\n")
-        parts.append(
-            "Add or update tests to cover the changes. "
-            "Ensure all acceptance criteria are testable.\n"
-        )
+        test_deliverables = [
+            d for d in (annotation or {}).get("deliverables", [])
+            if "test" in d["path"].lower()
+        ]
+        if test_deliverables:
+            for d in test_deliverables:
+                parts.append(f"### `{d['path']}`\n")
+                parts.append(f"{d['spec']}\n")
+        else:
+            parts.append(
+                "Add or update tests to cover the changes. "
+                "Ensure all acceptance criteria are testable.\n"
+            )
 
         # Step 4: Run tests
         parts.append("## Step 4: Run tests and verify\n")
-        parts.append(
-            "Run the relevant test suite and verify all tests pass. "
-            "Record the command and output.\n"
-        )
+        test_cmd = (annotation or {}).get("test_command", "")
+        if test_cmd:
+            parts.append(f"```bash\n{test_cmd}\n```\n")
+        else:
+            parts.append(
+                "Run the relevant test suite and verify all tests pass. "
+                "Record the command and output.\n"
+            )
 
         # Commit message
-        safe_title = task.title.lower().replace(" ", "-")[:50]
-        parts.append(f"## Commit Message\n")
-        parts.append(f"```\nfeat: {safe_title}\n```\n")
+        commit_msg = (annotation or {}).get("commit_message", "")
+        if not commit_msg:
+            safe_title = task.title.lower().replace(" ", "-")[:50]
+            commit_msg = f"feat: {safe_title}"
+        parts.append("## Commit Message\n")
+        parts.append(f"```\n{commit_msg}\n```\n")
+
+        # Scope guard
+        scope_guard = (annotation or {}).get("scope_guard", [])
+        if scope_guard:
+            parts.append("## Scope Guard\n")
+            for rule in scope_guard:
+                parts.append(f"- {rule}")
+            parts.append("")
 
         # Acceptance criteria
         parts.append("## Acceptance Criteria\n")
