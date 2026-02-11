@@ -101,15 +101,23 @@ You are an independent agent executing a task for the PM Agent orchestrator.
 
 
 class PlanWriter:
-    """Generates CLAUDE.md + PLAN.md for independent agent execution."""
+    """Generates CLAUDE.md + PLAN.md for independent agent execution.
+
+    CLAUDE.md contains the execution workflow + result schema (generic)
+    plus specialist-specific domain knowledge rendered from src/prompts/.
+    """
 
     def write_plan(self, brief: TaskBrief, worktree_path: Path) -> None:
         """Write CLAUDE.md and PLAN.md into the worktree."""
-        self._write_claude_md(worktree_path)
+        self._write_claude_md(brief, worktree_path)
         self._write_plan_md(brief, worktree_path)
 
-    def _write_claude_md(self, path: Path) -> None:
-        (path / "CLAUDE.md").write_text(CLAUDE_MD_TEMPLATE)
+    def _write_claude_md(self, brief: TaskBrief, path: Path) -> None:
+        from src.prompts import render_prompt
+
+        specialist_section = render_prompt(brief)
+        content = CLAUDE_MD_TEMPLATE + "\n---\n\n" + specialist_section
+        (path / "CLAUDE.md").write_text(content)
 
     def _write_plan_md(self, brief: TaskBrief, path: Path) -> None:
         task = brief.task
