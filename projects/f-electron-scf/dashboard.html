@@ -467,6 +467,7 @@
             const tasks = projectState.tasks || [];
 
             const phases = {
+                'PR 重构任务': tasks.filter(t => t.id.startsWith('PR-')),
                 'Phase 0': tasks.filter(t => t.id.startsWith('T0-')),
                 'Phase 1': tasks.filter(t => t.id.startsWith('T1-')),
                 'Phase 2': tasks.filter(t => t.id.startsWith('T2-')),
@@ -526,6 +527,7 @@
             const tasks = projectState.tasks || [];
 
             const phases = [
+                { name: 'PR 重构任务: zdy-tmp 合并', prefix: 'PR-' },
                 { name: 'Phase 0: 代码集成', prefix: 'T0-' },
                 { name: 'Phase 1: 基础收敛', prefix: 'T1-' },
                 { name: 'Phase 2: DFT+U策略', prefix: 'T2-' },

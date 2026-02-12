@@ -83,7 +83,12 @@ def main():
 
     # Print task summary
     print("\n=== Task Summary ===")
-    print("\nPhase 0 (Code Integration):")
+    print("\nPhase 0 (Code Integration - PR Tasks):")
+    for t in all_tasks:
+        if t.id.startswith("PR-"):
+            print(f"  {t.id}: {t.title} [{t.status.value}]")
+
+    print("\nPhase 0 (Code Integration - T0 Tasks):")
     for t in all_tasks:
         if t.id.startswith("T0-"):
             print(f"  {t.id}: {t.title} [{t.status.value}]")
