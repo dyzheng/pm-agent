@@ -435,8 +435,11 @@
         // Load project state
         async function loadProjectState() {
             try {
-                const response = await fetch('state/project_state.json');
+                // Add timestamp to prevent caching
+                const timestamp = new Date().getTime();
+                const response = await fetch(`state/project_state.json?v=${timestamp}`);
                 projectState = await response.json();
+                console.log(`Loaded ${projectState.tasks.length} tasks from project_state.json`);
                 renderDashboard();
             } catch (error) {
                 console.error('Failed to load project state:', error);
