@@ -1,0 +1,190 @@
+{
+  "phase3_tasks": [
+    {
+      "id": "T3-1",
+      "title": "用户需求调研",
+      "layer": "workflow",
+      "type": "external_dependency",
+      "description": "调研实际用户的稀土计算需求，收集3-5个具体体系和性质要求，识别真实痛点",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "收集至少3个实际研究项目的计算需求",
+        "记录：元素、结构、目标性质、当前痛点",
+        "覆盖不同应用场景（氧化物/合金/催化等）",
+        "形成需求文档"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/user_requirements.md"
+      ],
+      "estimated_scope": "small",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "risk_level": "low"
+    },
+    {
+      "id": "T3-2",
+      "title": "选择2-3个代表性验证体系",
+      "layer": "workflow",
+      "type": "test",
+      "description": "基于用户需求，选择2-3个代表性体系作为验证目标，必须覆盖：简单氧化物基线、磁序、一个应用场景",
+      "dependencies": ["T3-1"],
+      "acceptance_criteria": [
+        "选择标准：覆盖关键物理（f电子、磁性、化学环境）",
+        "示例组合：CeO2（基线）+ GdN（磁性）+ CeO2(111)表面（催化）",
+        "或：CeO2 + NdFeB（合金磁性）+ 稀土MOF（分子）",
+        "每个体系有明确的参考数据来源"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation_systems.md"
+      ],
+      "estimated_scope": "small",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "risk_level": "low"
+    },
+    {
+      "id": "T3-3",
+      "title": "跨代码验证（ABACUS vs VASP）",
+      "layer": "workflow",
+      "type": "test",
+      "description": "对选定的验证体系，运行ABACUS和VASP计算，对比晶格常数、磁矩、带隙、形成能等关键性质",
+      "dependencies": ["T1-1", "T1-2", "T1-3", "T1-4", "T2-1", "T3-2"],
+      "acceptance_criteria": [
+        "ABACUS vs VASP结构性质误差<2%",
+        "能量误差<10%",
+        "磁矩误差<0.1 μB",
+        "如果误差>5%且可追溯到赝势，触发D-A1"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/",
+        "projects/f-electron-scf/validation/comparison_report.md"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": ["numeric"],
+      "status": "pending",
+      "risk_level": "medium"
+    },
+    {
+      "id": "T3-4",
+      "title": "收敛可靠性测试",
+      "layer": "workflow",
+      "type": "test",
+      "description": "对每个验证体系运行10次不同随机种子的计算，统计收敛率和能量一致性",
+      "dependencies": ["T3-3"],
+      "acceptance_criteria": [
+        "每个体系运行10次（不同随机种子）",
+        "收敛率>90%",
+        "收敛结果能量标准差<1 meV",
+        "记录失败案例的诊断信息"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/reliability_test.py",
+        "projects/f-electron-scf/validation/reliability_report.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "workflow",
+      "gates": ["numeric"],
+      "status": "pending",
+      "risk_level": "low"
+    }
+  ],
+  "phase4_tasks": [
+    {
+      "id": "T4-1",
+      "title": "自动参数选择",
+      "layer": "workflow",
+      "type": "new",
+      "description": "实现自动参数选择工具：输入结构文件+元素列表，输出推荐的mixing_beta、Kerker参数、U值、占据策略",
+      "dependencies": ["T3-3", "T3-4"],
+      "acceptance_criteria": [
+        "检测f元素并应用最佳实践参数",
+        "输出推荐INPUT文件",
+        "Python脚本或ABACUS预处理器",
+        "文档说明参数选择逻辑"
+      ],
+      "files_to_touch": [
+        "tools/rare_earth_auto_setup.py",
+        "tools/rare_earth_auto_setup_README.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "workflow",
+      "gates": ["unit"],
+      "status": "pending",
+      "risk_level": "low"
+    },
+    {
+      "id": "T4-2",
+      "title": "失败诊断+自动重试",
+      "layer": "workflow",
+      "type": "new",
+      "description": "实现SCF失败自动诊断和重试机制：监控收敛模式（震荡/发散/慢收敛），自动调整参数重试",
+      "dependencies": ["T4-1"],
+      "acceptance_criteria": [
+        "识别失败模式（震荡/发散/慢收敛）",
+        "自动调整策略：减小beta/切换退火/尝试随机初始化",
+        "最多3次重试策略",
+        "输出诊断日志",
+        "失败后给出明确错误信息和建议"
+      ],
+      "files_to_touch": [
+        "tools/scf_auto_retry.py",
+        "source/source_estate/module_esolver/esolver_ks.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": ["unit"],
+      "status": "pending",
+      "risk_level": "medium"
+    },
+    {
+      "id": "T4-3",
+      "title": "abacustest工作流集成",
+      "layer": "workflow",
+      "type": "extend",
+      "description": "将稀土收敛工作流集成到abacustest，提供预配置模板和自动化VASP对比",
+      "dependencies": ["T4-1"],
+      "acceptance_criteria": [
+        "添加稀土DFT+U工作流模板到abacustest",
+        "预配置INPUT文件（常见场景）",
+        "自动VASP对比（如果有参考数据）",
+        "集成到abacustest文档"
+      ],
+      "files_to_touch": [
+        "abacustest/workflows/rare_earth_dftu/",
+        "abacustest/workflows/rare_earth_dftu/README.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-test",
+      "gates": ["unit"],
+      "status": "pending",
+      "risk_level": "low"
+    },
+    {
+      "id": "T4-4",
+      "title": "文档与示例",
+      "layer": "workflow",
+      "type": "new",
+      "description": "编写完整的用户文档和示例：教程、示例库、故障排除指南",
+      "dependencies": ["T4-1"],
+      "acceptance_criteria": [
+        "教程：《ABACUS稀土DFT+U计算指南》",
+        "示例库：5-10个收敛体系的INPUT文件和分析",
+        "故障排除指南：常见失败模式和解决方案",
+        "发布到ABACUS文档网站"
+      ],
+      "files_to_touch": [
+        "docs/advanced/rare_earth_dftu_tutorial.md",
+        "examples/rare_earth/",
+        "docs/troubleshooting/rare_earth_convergence.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "risk_level": "low"
+    }
+  ]
+}

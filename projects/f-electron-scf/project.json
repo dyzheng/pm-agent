@@ -1,0 +1,8 @@
+{
+  "project_id": "f-electron-scf",
+  "name": "Rare-Earth f-electron Norm-Conserving Pseudopotential SCF Convergence",
+  "request": "Solve f_in_valence rare-earth element norm-conserving pseudopotential SCF convergence problems in ABACUS: pseudopotential testing/generation, orbital optimization, DFT+U convergence, high ecutwfc performance, AI-guided initial charge guess, damped charge constraint, and cross-validation with VASP/all-electron codes across alloys, magnetic compounds, surface catalysis, and molecular catalysis scenarios.",
+  "created": "2026-02-11T12:00:00Z",
+  "phase": "intake",
+  "task_summary": ""
+}

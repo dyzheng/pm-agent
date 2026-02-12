@@ -1,0 +1,97 @@
+{
+  "task_id": "FE-101",
+  "title": "赝势质量验证（原子测试 + 简单化合物）",
+  "specialist": "validation_agent",
+
+  "goal": "对FE-100生成的赝势进行系统质量验证，通过原子计算和简单化合物的ABACUS vs VASP对比，确认赝势的精度和可迁移性。",
+
+  "validation_matrix": [
+    {
+      "level": "原子测试",
+      "systems": ["Ce atom", "Gd atom", "La atom"],
+      "properties": ["原子能级（与NIST参考对比）", "电子构型（f电子数）"],
+      "reference": "NIST原子数据库 / 全电子计算",
+      "tolerance": "能级误差 < 0.1 eV"
+    },
+    {
+      "level": "简单氧化物",
+      "systems": [
+        {"formula": "CeO2", "structure": "fluorite (Fm-3m)", "a_exp": "5.411 Å"},
+        {"formula": "Gd2O3", "structure": "bixbyite (Ia-3)", "a_exp": "10.813 Å"},
+        {"formula": "La2O3", "structure": "hexagonal (P-3m1)", "a_exp": "3.937 Å, c=6.129 Å"}
+      ],
+      "properties": ["晶格常数", "体模量", "带隙（PBE）", "磁矩（如适用）"],
+      "reference": "VASP PAW (PBE) + 实验值",
+      "tolerance": {
+        "lattice_constant": "< 1% vs VASP",
+        "bulk_modulus": "< 10% vs VASP",
+        "band_gap": "定性一致（同为绝缘体/金属）",
+        "magnetic_moment": "< 0.5 μB vs VASP"
+      }
+    },
+    {
+      "level": "DFT+U验证",
+      "systems": [
+        {"formula": "CeO2", "U_Ce": "4.5 eV", "expected": "f^0, insulator, gap ~3 eV"},
+        {"formula": "Ce2O3", "U_Ce": "4.5 eV", "expected": "f^1, insulator, gap ~2 eV"}
+      ],
+      "properties": ["f电子占据数", "带隙", "总能量差 E(Ce2O3) - E(CeO2)"],
+      "reference": "VASP PAW + DFT+U (Dudarev)",
+      "tolerance": {
+        "f_occupation": "< 0.2 vs VASP",
+        "energy_diff": "< 0.1 eV/formula unit vs VASP"
+      }
+    }
+  ],
+
+  "vasp_reference_setup": {
+    "description": "VASP参考计算的标准设置",
+    "common": {
+      "PREC": "Accurate",
+      "ENCUT": "520 eV",
+      "EDIFF": "1E-6",
+      "ISMEAR": "0 (Gaussian) for insulators, 1 (MP) for metals",
+      "SIGMA": "0.05",
+      "KPOINTS": "与ABACUS一致的k网格"
+    },
+    "paw_datasets": "使用VASP推荐的PAW数据集（含f电子版本）",
+    "dftu": {
+      "LDAU": ".TRUE.",
+      "LDAUTYPE": "2 (Dudarev)",
+      "LDAUL": "3 (f channel)",
+      "LDAUU": "与ABACUS一致",
+      "LDAUJ": "0.0",
+      "LMAXMIX": "6 (for f electrons)"
+    }
+  },
+
+  "abacus_setup": {
+    "common": {
+      "ecutwfc": "100 Ry (需要测试收敛性)",
+      "scf_thr": "1e-7",
+      "basis_type": "pw (先用PW验证赝势，再测LCAO)",
+      "smearing_method": "gaussian",
+      "smearing_sigma": "0.01 Ry"
+    },
+    "dftu": {
+      "dft_plus_u": "1",
+      "orbital_corr": "对应元素的l=3",
+      "hubbard_u": "与VASP一致"
+    }
+  },
+
+  "ecutwfc_convergence_test": {
+    "description": "在正式验证前，先对CeO2做ecutwfc收敛性测试",
+    "ecutwfc_values": [60, 80, 100, 120, 150, 200],
+    "convergence_criterion": "总能量变化 < 1 meV/atom",
+    "expected_result": "f_in_valence赝势可能需要100-150 Ry才能收敛"
+  },
+
+  "acceptance_criteria": [
+    "至少CeO2, Gd2O3, La2O3三种化合物的ABACUS vs VASP对比完成",
+    "晶格常数误差 < 1%",
+    "CeO2 DFT+U的f电子占据数与VASP一致（Ce4+ → f^0）",
+    "ecutwfc收敛性测试完成，确定推荐截断能",
+    "验证报告包含所有数值数据和对比图表"
+  ]
+}

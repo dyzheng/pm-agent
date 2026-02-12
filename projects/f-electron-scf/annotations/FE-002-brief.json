@@ -1,0 +1,66 @@
+{
+  "task_id": "FE-002",
+  "title": "ABACUS DFT+U代码深度审计",
+  "specialist": "algorithm_agent",
+  "repo": "/root/abacus-develop",
+
+  "goal": "对ABACUS的DFT+U实现进行完整代码审计，重点关注f电子(l=3)的处理路径，输出数据流图和修改点清单，为Phase 2的算法改进提供精确的代码级指导。",
+
+  "context": {
+    "problem": "Phase 2需要修改DFT+U的占据矩阵初始化、mixing、退火等逻辑，但这些修改必须精确理解现有代码的数据流和约束条件。盲目修改可能引入回归bug或破坏已有功能。",
+    "approach": "逐文件审计module_dftu/下的所有源文件，绘制数据流图，标注f电子特殊处理路径，识别扩展点。"
+  },
+
+  "audit_targets": [
+    {
+      "file": "source/source_lcao/module_dftu/dftu.h",
+      "focus": "DFTU类定义：成员变量（占据矩阵存储格式、U/J参数）、公共接口"
+    },
+    {
+      "file": "source/source_lcao/module_dftu/dftu.cpp",
+      "focus": "主逻辑：cal_occup_m()占据矩阵计算、U-ramping调度、omc初始化流程、SCF循环中的调用时序"
+    },
+    {
+      "file": "source/source_lcao/module_dftu/dftu_occup.cpp",
+      "focus": "占据矩阵mixing：当前阻尼策略、mixing参数、是否区分不同l通道"
+    },
+    {
+      "file": "source/source_lcao/module_dftu/dftu_hamilt.cpp",
+      "focus": "DFT+U哈密顿量贡献：V_U的构造方式、与KS哈密顿量的耦合点"
+    },
+    {
+      "file": "source/source_lcao/module_dftu/dftu_yukawa.cpp",
+      "focus": "Yukawa自动U/J：是否支持f轨道、计算精度"
+    },
+    {
+      "file": "source/source_lcao/module_dftu/dftu_io.cpp",
+      "focus": "I/O：initial_onsite.dm格式、占据矩阵输出格式、omc读取逻辑"
+    },
+    {
+      "file": "source/source_lcao/module_dftu/dftu_force.cpp",
+      "focus": "力/应力：Pulay修正是否对f轨道正确"
+    },
+    {
+      "file": "source/source_lcao/module_dftu/dftu_pw.cpp",
+      "focus": "PW基组限制：为什么只支持nspin=4？能否扩展到nspin=1/2？"
+    },
+    {
+      "file": "source/source_io/module_parameter/read_input_item_exx_dftu.cpp",
+      "focus": "输入参数：所有DFT+U相关参数的定义和验证逻辑"
+    }
+  ],
+
+  "deliverables": [
+    "数据流图：SCF循环中DFT+U的调用时序",
+    "占据矩阵存储格式文档（维度、索引约定、l=3时的大小）",
+    "f电子处理路径分析（哪些代码路径对l=3有特殊处理或限制）",
+    "扩展点清单：每个Phase 2任务需要修改的精确代码位置",
+    "已知bug/限制列表"
+  ],
+
+  "scope_guard": [
+    "只读审计，不修改任何代码",
+    "重点关注LCAO路径（module_dftu），PW路径（dftu_pw.cpp）作为参考",
+    "不需要审计EXX相关代码"
+  ]
+}

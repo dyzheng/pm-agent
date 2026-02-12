@@ -1,0 +1,47 @@
+{
+  "request": "Solve f_in_valence rare-earth element norm-conserving pseudopotential SCF convergence problems in ABACUS: pseudopotential testing/generation, orbital optimization, DFT+U convergence, high ecutwfc performance, AI-guided initial charge guess, damped charge constraint, and cross-validation with VASP/all-electron codes across alloys, magnetic compounds, surface catalysis, and molecular catalysis scenarios.",
+  "project_id": "f-electron-scf",
+  "phase": "decompose",
+  "parsed_intent": {
+    "domain": "rare-earth DFT+U convergence",
+    "method": "SCF algorithm improvements + pseudopotential optimization",
+    "validation": "VASP and all-electron cross-validation",
+    "keywords": [
+      "f_in_valence",
+      "norm-conserving pseudopotential",
+      "SCF convergence",
+      "DFT+U",
+      "orbital optimization",
+      "AI-guided initial guess",
+      "constrained DFT",
+      "rare-earth elements"
+    ]
+  },
+  "audit_results": [],
+  "tasks": [],
+  "current_task_id": null,
+  "drafts": {},
+  "gate_results": {},
+  "integration_results": [],
+  "human_decisions": [],
+  "review_results": [],
+  "human_approvals": [],
+  "brainstorm_results": [],
+  "blocked_reason": null,
+  "metadata": {
+    "created": "2026-02-11T12:00:00Z",
+    "brainstorm_applied": "2026-02-11T15:30:00Z",
+    "strategy": "defer-by-default with trigger-based promotion",
+    "timeline": "5-6 months",
+    "milestones": {
+      "M1": "End of Month 1 - Architecture ready + basic convergence",
+      "M2": "End of Month 2 - Occupation strategies working",
+      "M3": "End of Month 3 - Use cases validated",
+      "M4": "End of Month 5 - Production ready",
+      "M5": "End of Month 6 - Release"
+    },
+    "active_task_count": 18,
+    "deferred_task_count": 8,
+    "total_task_count": 26
+  }
+}

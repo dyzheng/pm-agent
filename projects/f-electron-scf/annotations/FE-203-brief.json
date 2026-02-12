@@ -1,0 +1,59 @@
+{
+  "task_id": "FE-203",
+  "title": "占据矩阵退火策略",
+  "specialist": "algorithm_agent",
+  "repo": "/root/abacus-develop",
+
+  "goal": "实现占据矩阵退火（occupation annealing）：从高smearing温度开始使占据矩阵平滑化，逐步降温到目标值，帮助SCF跨越局域极小值之间的能量壁垒，找到全局最优电子态。",
+
+  "context": {
+    "problem": "DFT+U的多极小值问题本质上是一个组合优化问题——f电子在7个轨道上的分布有大量可能的排列。高温smearing使占据矩阵接近均匀分布（所有轨道部分占据），消除了局域极小值之间的壁垒。逐步降温让系统自然落入全局最低能量态。这与模拟退火的思想完全一致。",
+    "relation_to_uramping": "U-ramping（从小U到大U）解决的是'U太大导致不收敛'的问题。退火解决的是'收敛到错误极小值'的问题。两者互补：先U-ramping确保收敛，再退火确保收敛到正确态。或者联合使用：同时增大U和降低温度。",
+    "current_smearing": "ABACUS的smearing在source/source_estate/occupy.cpp中实现，支持gaussian/mp/fd/mv方法。smearing_sigma是固定参数，SCF过程中不变。"
+  },
+
+  "deliverables": [
+    {
+      "action": "modify",
+      "path": "source/source_lcao/module_dftu/dftu.cpp",
+      "spec": "添加退火调度逻辑：\n1. 新方法 void anneal_schedule(int istep)：根据当前SCF步数更新smearing_sigma\n2. 退火策略：\n   - 线性：sigma(step) = sigma_init - (sigma_init - sigma_final) * step / anneal_steps\n   - 指数：sigma(step) = sigma_final + (sigma_init - sigma_final) * exp(-step / tau)\n3. 在每步SCF开始时调用anneal_schedule()\n4. 当sigma达到sigma_final后停止退火，继续正常SCF直到收敛\n5. 退火过程中的能量不用于收敛判断（因为smearing能量在变化）"
+    },
+    {
+      "action": "modify",
+      "path": "source/source_lcao/module_dftu/dftu_occup.cpp",
+      "spec": "在占据矩阵mixing中考虑退火状态：\n1. 退火阶段（sigma > sigma_final * 1.5）使用更大的mixing_beta（更激进的更新，因为高温下landscape平滑）\n2. 接近目标温度时逐步减小mixing_beta（更保守，避免跳出正确极小值）\n3. 添加日志：输出当前sigma值和占据矩阵的本征值分布"
+    },
+    {
+      "action": "modify",
+      "path": "source/source_io/module_parameter/input_parameter.h",
+      "spec": "添加退火参数：\n1. bool occup_annealing = false — 是否启用退火\n2. double anneal_sigma_init = 0.1 — 初始smearing (Ry)\n3. double anneal_sigma_final = -1.0 — 最终smearing，-1表示使用smearing_sigma\n4. int anneal_steps = 30 — 退火步数\n5. std::string anneal_mode = \"exponential\" — linear/exponential\n6. bool anneal_with_uramping = false — 是否与U-ramping联合"
+    },
+    {
+      "action": "modify",
+      "path": "source/source_io/module_parameter/read_input_item_exx_dftu.cpp",
+      "spec": "添加上述参数的读取和验证逻辑。验证：anneal_sigma_init > anneal_sigma_final > 0。"
+    }
+  ],
+
+  "implementation_notes": {
+    "smearing_modification": "退火需要在SCF循环中动态修改smearing_sigma。这个参数在PARAM.inp.smearing_sigma中，被occupy.cpp读取。最简单的实现：在dftu.cpp的anneal_schedule()中直接修改PARAM.inp.smearing_sigma。更干净的实现：在occupy.cpp中添加一个override接口。",
+    "uramping_synergy": "联合退火+U-ramping的调度：\n- Phase 1 (step 0-N/3): U从0增到U_target，sigma保持sigma_init\n- Phase 2 (step N/3-2N/3): U保持U_target，sigma从sigma_init降到sigma_final\n- Phase 3 (step 2N/3-N): 正常SCF收敛\n这样先建立U势场，再在U势场下退火找最优占据。",
+    "convergence_criterion": "退火阶段不应使用正常的drho收敛判据（因为smearing在变化，电荷密度必然在变化）。应该在退火完成后（sigma=sigma_final）才开始检查收敛。实现方式：在退火阶段设置一个flag跳过收敛检查。",
+    "energy_output": "退火过程中输出的总能量应该是自由能F=E-TS（包含smearing熵贡献），而不是外推到T=0的能量。这样能量变化才能正确反映退火过程。"
+  },
+
+  "test_plan": [
+    "单元测试：anneal_schedule()对线性/指数模式返回正确的sigma序列",
+    "单元测试：联合退火+U-ramping的调度时序正确",
+    "集成测试：EuO DFT+U with退火，收敛到正确磁序（与VASP一致）",
+    "集成测试：退火关闭时行为完全不变",
+    "对比测试：退火 vs 无退火 vs 多起点，在10个f电子体系上的成功率对比"
+  ],
+
+  "acceptance_criteria": [
+    "退火机制正常工作，sigma按预期从高到低变化",
+    "EuO等多极小值体系的收敛成功率提升 > 50%",
+    "退火完成后能正常收敛到目标精度",
+    "不影响occup_annealing=false的任何行为"
+  ]
+}

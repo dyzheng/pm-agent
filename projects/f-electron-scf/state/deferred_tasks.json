@@ -1,0 +1,197 @@
+{
+  "deferred_tasks": [
+    {
+      "id": "D-A1",
+      "title": "ONCVPSP赝势生成环境搭建",
+      "layer": "infra",
+      "type": "external_dependency",
+      "description": "搭建ONCVPSP赝势生成环境，准备自定义稀土NC赝势生成工具链",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "ONCVPSP编译安装成功",
+        "测试生成一个简单元素赝势",
+        "准备稀土元素参考构型数据",
+        "建立赝势质量检测流程（对数导数、ghost state）"
+      ],
+      "files_to_touch": [
+        "tools/pseudopotential_generation/",
+        "tools/pseudopotential_generation/README.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "deferred",
+      "risk_level": "high",
+      "defer_trigger": "T3-3:accuracy_below_threshold"
+    },
+    {
+      "id": "D-A2",
+      "title": "自定义稀土NC赝势生成",
+      "layer": "workflow",
+      "type": "external_dependency",
+      "description": "使用ONCVPSP生成稀土元素自定义模守恒赝势，优化截断半径和可迁移性",
+      "dependencies": ["D-A1"],
+      "acceptance_criteria": [
+        "生成Ce, Gd, La, Nd, Sm, Eu, Tb的f_in_valence赝势",
+        "优化4f/5s/5p/5d/6s各通道截断半径",
+        "通过ghost state检测",
+        "可迁移性测试（多构型能量差 vs 全电子）"
+      ],
+      "files_to_touch": [
+        "pseudopotentials/rare_earth_custom/",
+        "pseudopotentials/rare_earth_custom/generation_log.md"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": ["numeric"],
+      "status": "deferred",
+      "risk_level": "high",
+      "defer_trigger": "D-A1:completed"
+    },
+    {
+      "id": "D-A3",
+      "title": "新赝势全面验证",
+      "layer": "workflow",
+      "type": "test",
+      "description": "使用新生成的赝势重新运行全部验证测试，确保质量改善",
+      "dependencies": ["D-A2"],
+      "acceptance_criteria": [
+        "重新运行T3-3验证",
+        "误差降低到<2%",
+        "Delta-test框架验证",
+        "与VASP PAW对比"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/custom_pp_validation.md"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": ["numeric"],
+      "status": "deferred",
+      "risk_level": "high",
+      "defer_trigger": "D-A2:completed"
+    },
+    {
+      "id": "D-B1",
+      "title": "NAO多zeta轨道生成与测试",
+      "layer": "workflow",
+      "type": "extend",
+      "description": "使用ABACUS-orbitals生成稀土元素的多zeta数值原子轨道（DZP, TZP），系统测试对计算精度的影响",
+      "dependencies": ["T0-4"],
+      "acceptance_criteria": [
+        "生成DZP和TZP轨道文件",
+        "系统测试不同zeta数对精度的影响",
+        "LCAO vs PW对比（能量、力、带结构）",
+        "确定最优轨道组合"
+      ],
+      "files_to_touch": [
+        "orbitals/rare_earth/",
+        "orbitals/rare_earth/optimization_report.md"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": ["numeric"],
+      "status": "deferred",
+      "risk_level": "medium",
+      "defer_trigger": "T3-3:lcao_divergence_above_3pct"
+    },
+    {
+      "id": "D-B2",
+      "title": "Spillage算法f轨道调优",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "如果标准spillage优化对f轨道效果不佳，修改spillage算法以更好处理高度局域的f轨道",
+      "dependencies": ["D-B1"],
+      "acceptance_criteria": [
+        "分析f轨道spillage优化瓶颈",
+        "调整spillage权重或优化策略",
+        "改善f轨道质量指标",
+        "与PW基组一致性提升"
+      ],
+      "files_to_touch": [
+        "source/source_basis/module_nao/",
+        "tools/ABACUS-orbitals/"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": ["numeric"],
+      "status": "deferred",
+      "risk_level": "medium",
+      "defer_trigger": "D-B1:spillage_issue_detected"
+    },
+    {
+      "id": "D-C1",
+      "title": "ML训练数据收集",
+      "layer": "workflow",
+      "type": "external_dependency",
+      "description": "收集已收敛的DFT+U计算结果作为ML训练数据，包含结构和对应的占据矩阵",
+      "dependencies": ["T3-3", "T3-4"],
+      "acceptance_criteria": [
+        "收集100+个收敛的稀土体系计算",
+        "记录：结构、元素、占据矩阵、能量",
+        "覆盖不同氧化态、配位环境、磁序",
+        "数据清洗和标准化"
+      ],
+      "files_to_touch": [
+        "ml_models/training_data/",
+        "ml_models/training_data/dataset.json"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "deferred",
+      "risk_level": "high",
+      "defer_trigger": "T1-4:failure_rate_above_20pct"
+    },
+    {
+      "id": "D-C2",
+      "title": "GNN占据矩阵模型训练",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "训练图神经网络模型：输入原子结构，输出每个稀土原子的f电子占据矩阵预测",
+      "dependencies": ["D-C1"],
+      "acceptance_criteria": [
+        "设计GNN架构（结构→占据矩阵）",
+        "训练/验证/测试集划分",
+        "模型精度：占据数预测误差<0.5电子",
+        "推理速度<1秒/结构"
+      ],
+      "files_to_touch": [
+        "ml_models/occupation_predictor/",
+        "ml_models/occupation_predictor/model.py",
+        "ml_models/occupation_predictor/train.py"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": ["unit"],
+      "status": "deferred",
+      "risk_level": "high",
+      "defer_trigger": "D-C1:completed"
+    },
+    {
+      "id": "D-C3",
+      "title": "ABACUS ML集成",
+      "layer": "infra",
+      "type": "new",
+      "description": "将训练好的ML模型集成到ABACUS，通过init_chg/omc接口自动生成占据矩阵初猜",
+      "dependencies": ["D-C2"],
+      "acceptance_criteria": [
+        "模型推理接口集成到ABACUS",
+        "添加init_chg=ml选项",
+        "自动从结构预测占据矩阵",
+        "与现有omc模式兼容",
+        "性能开销<5%"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_ml_init.cpp",
+        "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": ["build", "unit"],
+      "status": "deferred",
+      "risk_level": "high",
+      "defer_trigger": "D-C2:completed"
+    }
+  ]
+}

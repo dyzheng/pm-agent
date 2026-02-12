@@ -1,0 +1,267 @@
+{
+  "phase0_tasks": [
+    {
+      "id": "T0-1",
+      "title": "合并PW+LCAO DFT+U代码到主分支",
+      "layer": "infra",
+      "type": "extend",
+      "description": "将现有的同时支持PW和LCAO的DFT+U代码合并到ABACUS主分支，确保所有测试通过",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "代码合并无冲突",
+        "现有DFT+U测试全部通过",
+        "PW和LCAO基组均可运行DFT+U计算"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/",
+        "source/source_pw/module_dftu/"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": ["build", "unit"],
+      "status": "pending",
+      "risk_level": "low"
+    },
+    {
+      "id": "T0-2",
+      "title": "重构DFT+U架构为可插拔策略",
+      "layer": "infra",
+      "type": "extend",
+      "description": "重构DFT+U代码架构，使占据矩阵初始化、mixing/阻尼策略、约束势等组件可插拔，支持快速原型开发新收敛策略",
+      "dependencies": ["T0-1"],
+      "acceptance_criteria": [
+        "占据矩阵初始化提取为策略接口",
+        "Mixing/阻尼提取为可配置策略",
+        "添加约束势钩子",
+        "保持向后兼容性",
+        "文档说明如何添加新策略"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu.cpp",
+        "source/source_lcao/module_dftu/dftu_occup.cpp",
+        "source/source_lcao/module_dftu/dftu_strategy.h"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": ["build", "unit"],
+      "status": "pending",
+      "risk_level": "low"
+    },
+    {
+      "id": "T0-3",
+      "title": "建立DFT+U回归测试套件",
+      "layer": "infra",
+      "type": "test",
+      "description": "为DFT+U功能建立回归测试套件，包含CeO2和GdN基线测试，确保后续修改不破坏现有功能",
+      "dependencies": ["T0-1"],
+      "acceptance_criteria": [
+        "CeO2 DFT+U测试（PW和LCAO）",
+        "GdN DFT+U测试（磁性）",
+        "测试覆盖U-ramping和占据矩阵控制",
+        "集成到CI流程"
+      ],
+      "files_to_touch": [
+        "tests/integrate/",
+        "examples/scf/CeO2_dftu/",
+        "examples/scf/GdN_dftu/"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-test",
+      "gates": ["unit"],
+      "status": "pending",
+      "risk_level": "low"
+    },
+    {
+      "id": "T0-4",
+      "title": "收集现有f_in_valence赝势",
+      "layer": "workflow",
+      "type": "external_dependency",
+      "description": "从SG15、PseudoDojo、PSlibrary收集稀土元素f_in_valence模守恒赝势，建立赝势库索引",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "至少覆盖Ce, Gd, La, Nd, Sm, Eu, Tb",
+        "每个元素至少1个f_in_valence赝势",
+        "记录赝势来源、参数、质量评估",
+        "建立赝势库目录结构"
+      ],
+      "files_to_touch": [
+        "pseudopotentials/rare_earth/",
+        "pseudopotentials/rare_earth/README.md"
+      ],
+      "estimated_scope": "small",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "risk_level": "low"
+    }
+  ],
+  "phase1_tasks": [
+    {
+      "id": "T1-1",
+      "title": "自适应Kerker预处理器",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "实现自适应Kerker参数调整，自动检测f电子体系并调整mixing_gg0参数以改善收敛性",
+      "dependencies": ["T0-2"],
+      "acceptance_criteria": [
+        "自动检测体系中是否含f电子",
+        "根据体系类型（金属/绝缘体/f电子）自动调整mixing_gg0",
+        "CeO2收敛步数减少>20%",
+        "不影响非f电子体系性能"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing_preconditioner.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": ["build", "unit", "numeric"],
+      "status": "pending",
+      "risk_level": "low"
+    },
+    {
+      "id": "T1-2",
+      "title": "分通道mixing_beta",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "实现分通道mixing策略，对f电子通道使用更小的mixing_beta（更保守的更新）",
+      "dependencies": ["T0-2"],
+      "acceptance_criteria": [
+        "识别f通道并单独设置mixing_beta",
+        "f通道beta可配置（默认为全局beta的0.5倍）",
+        "改善f电子体系收敛稳定性",
+        "添加输入参数mixing_beta_f"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing.cpp",
+        "source/source_io/module_parameter/input_parameter.h"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": ["build", "unit", "numeric"],
+      "status": "pending",
+      "risk_level": "low"
+    },
+    {
+      "id": "T1-3",
+      "title": "能量监控+自动回退",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "实现SCF能量监控机制，当能量上升时自动减小mixing_beta并回退到上一步状态",
+      "dependencies": ["T0-2"],
+      "acceptance_criteria": [
+        "监控SCF能量变化趋势",
+        "能量上升时自动减小mixing_beta（例如×0.5）",
+        "回退到上一步收敛的电荷密度",
+        "最多回退3次，失败后报错",
+        "输出诊断信息"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing_rho.cpp",
+        "source/source_estate/module_esolver/esolver_ks.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": ["build", "unit", "numeric"],
+      "status": "pending",
+      "risk_level": "low"
+    },
+    {
+      "id": "T1-4",
+      "title": "规则启发式占据猜测",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "实现基于化学规则的占据矩阵初始猜测：根据元素和氧化态预设f电子数（非ML方法）",
+      "dependencies": ["T0-2"],
+      "acceptance_criteria": [
+        "支持常见稀土氧化态（+2, +3, +4）",
+        "根据氧化态预设f电子数（例如Ce4+: f0, Ce3+: f1）",
+        "与omc=1模式集成",
+        "提供默认规则表，可用户自定义",
+        "改善初始猜测质量"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_occup_init.cpp",
+        "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": ["build", "unit"],
+      "status": "pending",
+      "risk_level": "low"
+    }
+  ],
+  "phase2_tasks": [
+    {
+      "id": "T2-1",
+      "title": "随机占据矩阵初始化+多起点探索",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "实现随机占据矩阵初始化和多起点并行探索策略，系统搜索多个SCF极小值并选择最低能量",
+      "dependencies": ["T0-2", "T0-3"],
+      "acceptance_criteria": [
+        "添加omc_mode=random选项",
+        "生成随机对称占据矩阵",
+        "支持多起点并行运行（N个随机种子）",
+        "自动选择最低能量结果",
+        "GdN测试：随机初始化找到更低能态"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu.cpp",
+        "source/source_lcao/module_dftu/dftu_occup.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": ["build", "unit", "numeric"],
+      "status": "pending",
+      "risk_level": "medium"
+    },
+    {
+      "id": "T2-2",
+      "title": "占据退火策略",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "实现占据矩阵退火：从高温smearing逐步冷却到目标温度，与U-ramping协同工作",
+      "dependencies": ["T2-1"],
+      "acceptance_criteria": [
+        "实现smearing温度退火（高→低）",
+        "与U-ramping协同（双重退火）",
+        "可配置退火步数和温度范围",
+        "验证：退火是否改善收敛率vs T2-1"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_occup.cpp",
+        "source/source_io/module_parameter/input_parameter.h"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": ["build", "unit", "numeric"],
+      "status": "pending",
+      "risk_level": "medium",
+      "defer_trigger": "T2-1:validation_passed"
+    },
+    {
+      "id": "T2-3",
+      "title": "Constrained DFT框架",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "实现约束DFT框架：约束特定原子的f电子数，约束强度从强到弱逐步释放",
+      "dependencies": ["T2-1"],
+      "acceptance_criteria": [
+        "实现惩罚势 V_constraint = λ(n_f - n_target)",
+        "约束强度逐步释放（类似U-ramping）",
+        "与DFT+U占据矩阵控制协同",
+        "验证：约束是否帮助T2-1/T2-2仍失败的体系"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_constraint.cpp",
+        "source/source_lcao/module_dftu/dftu.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": ["build", "unit", "numeric"],
+      "status": "pending",
+      "risk_level": "medium",
+      "defer_trigger": "T2-1:insufficient OR T2-2:insufficient"
+    }
+  ]
+}

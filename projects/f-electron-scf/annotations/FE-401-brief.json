@@ -1,0 +1,67 @@
+{
+  "task_id": "FE-401",
+  "title": "合金与磁性化合物验证",
+  "specialist": "validation_agent",
+
+  "goal": "中等难度验证：在合金和磁性化合物上测试SCF收敛算法改进的效果，验证DFT+U在复杂磁性体系中的可靠性。",
+
+  "systems": [
+    {
+      "formula": "NdFeB (Nd2Fe14B)",
+      "structure": "tetragonal (P42/mnm)",
+      "atoms_per_cell": 68,
+      "challenge": "大体系 + 多种磁性原子 + f-d杂化",
+      "properties": ["磁矩分布", "磁各向异性能", "晶格常数"],
+      "dftu": "U_Nd=6.0 eV on 4f",
+      "reference": "VASP PAW + 实验值"
+    },
+    {
+      "formula": "SmCo5",
+      "structure": "hexagonal (P6/mmm)",
+      "atoms_per_cell": 6,
+      "challenge": "Sm的f^5接近半满，多重态密集",
+      "properties": ["磁矩", "磁各向异性能", "晶格常数"],
+      "dftu": "U_Sm=6.0 eV on 4f",
+      "reference": "VASP PAW + 实验值"
+    },
+    {
+      "formula": "GdN",
+      "structure": "rocksalt (Fm-3m)",
+      "atoms_per_cell": 2,
+      "challenge": "半金属性，f-d交换耦合",
+      "properties": ["磁矩", "带结构（半金属性）", "晶格常数", "交换耦合常数"],
+      "dftu": "U_Gd=6.0 eV on 4f",
+      "reference": "VASP PAW + 实验值"
+    },
+    {
+      "formula": "EuO",
+      "structure": "rocksalt (Fm-3m)",
+      "atoms_per_cell": 2,
+      "challenge": "Eu2+(f^7)，铁磁半导体，SCF收敛困难",
+      "properties": ["磁矩", "带隙", "晶格常数"],
+      "dftu": "U_Eu=7.0 eV on 4f",
+      "reference": "VASP PAW + 实验值",
+      "special_notes": "EuO是SCF收敛最困难的体系之一。如果新算法能收敛EuO，说明算法改进有效。"
+    }
+  ],
+
+  "scf_convergence_metrics": {
+    "description": "除了物理性质对比，还要记录SCF收敛行为",
+    "metrics": [
+      "收敛步数（nscf）",
+      "是否需要自动回退（FE-204）",
+      "是否需要退火（FE-203）",
+      "是否需要多起点（FE-202）",
+      "最终drho值",
+      "能量震荡幅度（如有）"
+    ],
+    "comparison": "对比使用新算法 vs 默认设置的收敛行为"
+  },
+
+  "acceptance_criteria": [
+    "至少3/4个体系SCF成功收敛",
+    "磁矩与VASP/实验值偏差 < 10%",
+    "SCF收敛成功率 > 90%（含自动回退/退火）",
+    "收敛行为记录完整，可用于算法改进的反馈"
+  ]
+}

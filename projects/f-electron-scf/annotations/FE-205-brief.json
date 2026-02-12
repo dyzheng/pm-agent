@@ -1,0 +1,71 @@
+{
+  "task_id": "FE-205",
+  "title": "constrained DFT框架（f电子数约束）",
+  "specialist": "algorithm_agent",
+  "repo": "/root/abacus-develop",
+
+  "goal": "实现constrained DFT (cDFT)框架，允许用户约束特定原子上的f电子数目，通过惩罚势引导SCF收敛到目标电子态，然后逐步释放约束。这是确保f电子体系收敛到正确基态的最强手段。",
+
+  "context": {
+    "problem": "即使有改进的mixing和占据矩阵初始化，某些f电子体系（如混合价态Ce2O3、Eu2+/Eu3+共存）仍可能收敛到错误的电子态。cDFT通过显式约束f电子数，强制SCF在目标电子态附近搜索，是最可靠的方法。",
+    "theory": "cDFT在KS哈密顿量中添加惩罚项：H_cDFT = H_KS + Σ_i λ_i (n_f^i - n_target^i)^2，其中i遍历所有被约束的原子，n_f^i是原子i上的f电子投影数，n_target^i是目标值，λ_i是约束强度。λ从大值（强约束）逐步减小到0（释放约束），类似U-ramping的思路。",
+    "relation_to_dftu": "cDFT约束与DFT+U的omc有本质区别：omc直接固定占据矩阵（硬约束），cDFT通过惩罚势引导（软约束）。cDFT更物理，允许电子在约束附近自洽调整。两者可以协同使用：先用cDFT引导到正确电子态附近，再用DFT+U精确计算。"
+  },
+
+  "deliverables": [
+    {
+      "action": "create",
+      "path": "source/source_estate/module_charge/charge_constraint.h",
+      "spec": "新类ChargeConstraint：\n- 成员：约束列表（原子索引、目标f电子数、约束强度λ）\n- 成员：λ释放调度器（初始λ、最终λ、步数、当前λ）\n- 方法：void init(const std::vector<ConstraintSpec>& specs)\n- 方法：double compute_penalty_energy(const 占据矩阵&) — 计算惩罚能\n- 方法：void add_penalty_potential(Hamiltonian&) — 向哈密顿量添加惩罚势\n- 方法：void update_lambda(int scf_step) — 更新约束强度\n- 方法：bool is_released() — 所有约束是否已释放\n- 结构体ConstraintSpec：{int atom_idx, int l_channel, double n_target, double lambda_init, double lambda_final, int release_steps}"
+    },
+    {
+      "action": "create",
+      "path": "source/source_estate/module_charge/charge_constraint.cpp",
+      "spec": "实现ChargeConstraint：\n1. compute_penalty_energy()：E_penalty = Σ_i λ_i * (n_f^i - n_target^i)^2\n   - n_f^i通过投影到原子f轨道计算（复用DFT+U的占据矩阵计算逻辑）\n2. add_penalty_potential()：V_penalty^i = 2λ_i * (n_f^i - n_target^i) * |f><f|\n   - 这是一个局域势，作用在原子i的f轨道投影上\n   - 对LCAO基组：直接添加到H_dftu的占据矩阵相关项\n   - 对PW基组：通过非局域投影算子实现\n3. update_lambda()：线性或指数释放\n   - 线性：λ(step) = λ_init * (1 - step/release_steps)\n   - 指数：λ(step) = λ_init * exp(-step/τ)\n   - 当λ < λ_final时停止释放"
+    },
+    {
+      "action": "modify",
+      "path": "source/source_lcao/module_dftu/dftu.cpp",
+      "spec": "在DFT+U的哈密顿量构造中集成cDFT惩罚势：\n1. 在cal_occup_m()之后调用charge_constraint.compute_penalty_energy()\n2. 在构造V_U时叠加V_penalty\n3. 在能量输出中包含E_penalty\n4. 在SCF循环中调用charge_constraint.update_lambda()"
+    },
+    {
+      "action": "modify",
+      "path": "source/source_io/module_parameter/input_parameter.h",
+      "spec": "添加cDFT相关参数：\n- bool cdft_enabled = false\n- std::string cdft_constraint_file = \"\" — 约束定义文件路径\n- double cdft_lambda_init = 10.0 — 初始约束强度(eV)\n- double cdft_lambda_final = 0.0 — 最终约束强度\n- int cdft_release_steps = 50 — 释放步数\n- std::string cdft_release_mode = \"linear\" — linear/exponential"
+    },
+    {
+      "action": "create",
+      "path": "source/source_estate/module_charge/cdft_constraint.dat (示例)",
+      "spec": "约束定义文件格式：\n# atom_index  l_channel  n_target\n1  3  0.0    # Ce atom 1: f^0 (Ce4+)\n2  3  1.0    # Ce atom 2: f^1 (Ce3+)\n# 注释行以#开头"
+    }
+  ],
+
+  "implementation_notes": {
+    "reuse_dftu_projection": "cDFT的f电子数投影可以直接复用DFT+U的占据矩阵计算（dftu.cpp中的cal_occup_m()）。不需要重新实现投影逻辑。",
+    "penalty_vs_lagrange": "使用二次惩罚（penalty method）而非Lagrange乘子法，因为：(1) 实现更简单，(2) 不需要额外的自洽循环来确定λ，(3) 通过逐步释放λ可以平滑过渡到无约束解。缺点是约束不是精确满足的，但对我们的目的（引导到正确电子态）足够。",
+    "lambda_schedule": "建议默认使用指数释放：λ(step) = λ_init * exp(-step/20)。这样前20步约束较强，之后快速释放。如果释放后SCF不稳定，可以增大release_steps。",
+    "force_correction": "cDFT惩罚势对力有贡献：F_penalty = -dE_penalty/dR。对于LCAO基组，这通过Pulay力修正实现（类似DFT+U的力修正）。初始版本可以不实现力修正（仅用于单点能计算），后续再添加。"
+  },
+
+  "test_plan": [
+    "单元测试：ChargeConstraint正确计算惩罚能（给定占据矩阵和目标值）",
+    "单元测试：λ释放调度器按预期衰减",
+    "集成测试：CeO2 with cdft约束Ce为f^0，收敛后f电子数<0.1",
+    "集成测试：Ce2O3 with cdft约束一个Ce为f^1，释放后保持f^1态",
+    "集成测试：cdft_enabled=false时完全不影响现有计算"
+  ],
+
+  "acceptance_criteria": [
+    "cDFT框架可正常运行，约束→释放流程完整",
+    "Ce2O3中可通过cDFT约束实现Ce3+(f^1)态，释放后保持",
+    "惩罚能在释放过程中单调减小到~0",
+    "不影响无cDFT的任何现有计算"
+  ],
+
+  "scope_guard": [
+    "初始版本只支持LCAO基组（复用DFT+U投影）",
+    "初始版本不实现力修正（仅单点能）",
+    "不实现Lagrange乘子法（只用penalty method）",
+    "约束文件格式保持简单，不支持复杂约束（如原子间电荷转移约束）"
+  ]
+}

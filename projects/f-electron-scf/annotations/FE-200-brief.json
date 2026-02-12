@@ -1,0 +1,56 @@
+{
+  "task_id": "FE-200",
+  "title": "自适应Kerker预处理参数",
+  "specialist": "algorithm_agent",
+  "repo": "/root/abacus-develop",
+
+  "goal": "实现自适应mixing_gg0参数，使ABACUS能根据体系类型（金属/绝缘体/f电子局域化体系）自动选择最优Kerker预处理强度，消除用户手动调参的需求。",
+
+  "context": {
+    "problem": "Kerker预处理通过在倒空间对长波分量施加更强阻尼来抑制charge sloshing。参数mixing_gg0控制阻尼强度。对金属体系需要较大mixing_gg0（~1.5），对绝缘体需要较小值（~0.0），对f电子体系情况复杂——f电子极度局域化（需要弱Kerker），但f-d杂化可能导致金属性行为（需要强Kerker）。当前ABACUS使用固定mixing_gg0，用户必须手动调参。",
+    "current_code": "charge_mixing_preconditioner.cpp实现Kerker预处理。核心逻辑：对每个G向量，乘以因子 G^2/(G^2 + gg0^2)。mixing_gg0_min提供下界。对磁性分量有独立的mixing_gg0_mag。",
+    "approach": "三层自适应策略：(1) 初始值根据体系类型自动选择，(2) SCF过程中根据残差行为动态调整，(3) 对f电子通道使用独立的预处理参数。"
+  },
+
+  "deliverables": [
+    {
+      "action": "modify",
+      "path": "source/source_estate/module_charge/charge_mixing.h",
+      "spec": "添加成员：\n1. bool mixing_gg0_auto = false — 是否启用自适应\n2. double mixing_gg0_init — 自动选择的初始值\n3. std::vector<double> scf_drho_history — 残差历史（用于动态调整）\n4. int scf_oscillation_count — 震荡计数器\n5. 方法：void auto_adjust_gg0(double drho, int istep) — 动态调整逻辑\n6. 方法：double estimate_initial_gg0() — 根据体系类型估计初始值"
+    },
+    {
+      "action": "modify",
+      "path": "source/source_estate/module_charge/charge_mixing.cpp",
+      "spec": "在set_mixing()中添加自适应初始化逻辑：\n1. 如果mixing_gg0_auto=true，调用estimate_initial_gg0()设置初始值\n2. estimate_initial_gg0()的判断逻辑：\n   - 检查smearing_sigma：sigma>0.01 Ry → 金属性 → gg0=1.5\n   - 检查是否有DFT+U且含f电子 → gg0=0.5（折中值）\n   - 否则 → gg0=0.0（绝缘体，不需要Kerker）\n3. 在每步SCF后调用auto_adjust_gg0()：\n   - 如果残差连续3步上升 → gg0 *= 1.5（加强阻尼）\n   - 如果残差震荡（交替上升下降）→ gg0 *= 1.2 + mixing_beta *= 0.8\n   - 如果残差稳定下降 → 保持不变\n   - gg0上限=3.0，下限=mixing_gg0_min"
+    },
+    {
+      "action": "modify",
+      "path": "source/source_estate/module_charge/charge_mixing_preconditioner.cpp",
+      "spec": "在Kerker_screen_recip()和Kerker_screen_recip_real()中：使用动态更新后的mixing_gg0值（已通过成员变量自动生效，无需额外修改核心逻辑）。添加日志输出当前gg0值（仅在auto模式下）。"
+    },
+    {
+      "action": "modify",
+      "path": "source/source_io/module_parameter/input_parameter.h",
+      "spec": "添加：bool mixing_gg0_auto = false"
+    },
+    {
+      "action": "modify",
+      "path": "source/source_io/module_parameter/read_input_item_system.cpp",
+      "spec": "在mixing相关参数区域添加mixing_gg0_auto的读取逻辑"
+    }
+  ],
+
+  "test_plan": [
+    "单元测试：estimate_initial_gg0()对金属/绝缘体/f电子体系返回正确初始值",
+    "单元测试：auto_adjust_gg0()对上升/震荡/下降残差序列做出正确调整",
+    "集成测试：Si(金属smearing)自动选择gg0≈1.5，收敛步数与手动设置一致",
+    "集成测试：CeO2(绝缘体+f电子)自动选择gg0≈0.5，收敛步数不劣于手动最优",
+    "回归测试：mixing_gg0_auto=false时行为完全不变"
+  ],
+
+  "acceptance_criteria": [
+    "mixing_gg0_auto=true时，CeO2和GdN的SCF收敛步数不超过手动最优值的120%",
+    "不影响mixing_gg0_auto=false（默认）的任何行为",
+    "自适应调整过程有清晰的日志输出"
+  ]
+}

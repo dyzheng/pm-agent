@@ -4,4 +4,16 @@ __pycache__/
 .coverage
 .pytest_cache/
 state/*.json
-projects/
+
+# Ignore all projects by default (user's private workspace)
+projects/*
+
+# But track example/demo projects
+!projects/f-electron-scf/
+
+# Ignore temp files in tracked projects
+projects/**/.DS_Store
+projects/**/__pycache__/
+projects/**/node_modules/
+projects/**/*.pyc
+projects/**/.pytest_cache/

@@ -1,0 +1,75 @@
+{
+  "task_id": "FE-400",
+  "title": "简单氧化物验证（CeO2, Gd2O3, La2O3）",
+  "specialist": "validation_agent",
+
+  "goal": "基准验证：ABACUS vs VASP PAW对比三种简单稀土氧化物的基本性质，确认赝势+轨道+SCF算法的整体可靠性。",
+
+  "systems": [
+    {
+      "formula": "CeO2",
+      "structure": "fluorite (Fm-3m, #225)",
+      "a_exp": 5.411,
+      "atoms_per_cell": 3,
+      "kpoints": "6x6x6",
+      "functionals": ["PBE", "PBE+U (U_Ce=4.5 eV)"],
+      "properties": {
+        "lattice_constant": {"exp": 5.411, "unit": "Å", "tolerance_vs_vasp": "1%"},
+        "bulk_modulus": {"exp": 220, "unit": "GPa", "tolerance_vs_vasp": "10%"},
+        "band_gap_pbe": {"exp": "~2.0 (underestimated)", "unit": "eV", "tolerance": "qualitative"},
+        "band_gap_pbeu": {"exp": "~3.0", "unit": "eV", "tolerance_vs_vasp": "0.3 eV"},
+        "f_occupation_pbeu": {"expected": "~0.0 (Ce4+, f^0)", "tolerance_vs_vasp": "0.1"},
+        "magnetic_moment": {"expected": 0.0, "unit": "μB"}
+      },
+      "special_notes": "CeO2是最重要的基准体系。Ce4+应该是f^0，DFT+U应该打开带隙。如果f电子数>0.5，说明赝势或DFT+U有问题。"
+    },
+    {
+      "formula": "Gd2O3",
+      "structure": "bixbyite (Ia-3, #206)",
+      "a_exp": 10.813,
+      "atoms_per_cell": 40,
+      "kpoints": "3x3x3",
+      "functionals": ["PBE", "PBE+U (U_Gd=6.0 eV)"],
+      "properties": {
+        "lattice_constant": {"exp": 10.813, "unit": "Å", "tolerance_vs_vasp": "1%"},
+        "band_gap_pbeu": {"exp": "~5.0", "unit": "eV", "tolerance_vs_vasp": "0.5 eV"},
+        "f_occupation_pbeu": {"expected": "~7.0 (Gd3+, f^7 half-filled)", "tolerance_vs_vasp": "0.2"},
+        "magnetic_moment_per_gd": {"expected": 7.0, "unit": "μB", "tolerance_vs_vasp": "0.5 μB"}
+      },
+      "special_notes": "Gd3+的半满f壳层（f^7）非常稳定，是最容易收敛的磁性稀土。40原子/cell较大，测试性能。"
+    },
+    {
+      "formula": "La2O3",
+      "structure": "hexagonal (P-3m1, #164)",
+      "a_exp": 3.937,
+      "c_exp": 6.129,
+      "atoms_per_cell": 5,
+      "kpoints": "6x6x4",
+      "functionals": ["PBE"],
+      "properties": {
+        "lattice_constant_a": {"exp": 3.937, "unit": "Å", "tolerance_vs_vasp": "1%"},
+        "lattice_constant_c": {"exp": 6.129, "unit": "Å", "tolerance_vs_vasp": "1%"},
+        "band_gap_pbe": {"exp": "~3.5 (underestimated)", "unit": "eV", "tolerance": "qualitative"}
+      },
+      "special_notes": "La3+无f电子（f^0），不需要DFT+U。最简单的验证体系，主要测试赝势基本质量。"
+    }
+  ],
+
+  "workflow": [
+    "1. 准备VASP参考计算（PAW数据集，标准设置）",
+    "2. 准备ABACUS PW计算（NC赝势，ecutwfc从FE-101确定）",
+    "3. 准备ABACUS LCAO计算（NAO轨道从FE-102确定）",
+    "4. 运行所有计算",
+    "5. 提取性质，制作对比表格",
+    "6. 分析偏差来源（赝势？基组？DFT+U参数？）",
+    "7. 输出验证报告"
+  ],
+
+  "acceptance_criteria": [
+    "三种化合物的ABACUS vs VASP对比数据完整",
+    "晶格常数误差 < 1% vs VASP",
+    "CeO2 DFT+U的f电子占据数与VASP一致",
+    "Gd2O3的磁矩与VASP偏差 < 0.5 μB/Gd",
+    "所有SCF计算成功收敛"
+  ]
+}

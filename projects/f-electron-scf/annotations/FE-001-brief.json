@@ -1,0 +1,59 @@
+{
+  "task_id": "FE-001",
+  "title": "ONCVPSP赝势生成环境搭建",
+  "specialist": "infra_agent",
+
+  "goal": "搭建完整的稀土NC赝势生成工具链：ONCVPSP安装→赝势生成→UPF格式转换→ABACUS读取验证。确保工具链端到端可用。",
+
+  "steps": [
+    {
+      "step": 1,
+      "action": "安装ONCVPSP 4.0.1+",
+      "details": "从 http://www.mat-simresearch.com/ 获取源码，需要LAPACK/BLAS。编译oncvpsp.x和upfconv.x。",
+      "verify": "oncvpsp.x --version 正常输出"
+    },
+    {
+      "step": 2,
+      "action": "准备全电子参考数据",
+      "details": "从NIST原子数据库获取稀土元素的原子能级数据，用于验证赝势的原子计算结果。",
+      "verify": "至少Ce和Gd的参考能级数据就绪"
+    },
+    {
+      "step": 3,
+      "action": "Si测试赝势生成",
+      "details": "用ONCVPSP生成Si NC赝势作为工具链验证。Si的输入参数已知且简单。",
+      "input_file_template": "# Si test\n# atsym  z  nc  nv  iexc  psfile\n  Si  14  3  2  4  upf\n# n  l  f  (reference config)\n  3  0  2.0\n  3  1  2.0\n# lmax\n  2\n# l  rc  ep  ncon  nbas  qcut\n  0  1.80  0.0  4  8  6.0\n  1  2.00  0.0  4  8  6.0\n  2  2.00  0.1  4  8  6.0",
+      "verify": "生成的Si.upf可被ABACUS读取，Si晶体计算给出合理晶格常数"
+    },
+    {
+      "step": 4,
+      "action": "Ce测试赝势生成（f_in_valence）",
+      "details": "尝试生成Ce的f_in_valence赝势。这是关键测试——f通道的截断半径和参考能量选择是难点。初始参数参考PseudoDojo或文献。",
+      "key_challenges": [
+        "4f通道截断半径：太小→ghost state，太大→可迁移性差",
+        "参考构型选择：[Xe]4f1 5d1 6s2 (中性) vs [Xe]4f0 5d1 6s2 (Ce4+模拟)",
+        "局域势选择：通常选最高l通道(f)作为局域势",
+        "对数导数测试：必须在所有通道上无ghost state"
+      ],
+      "verify": "Ce.upf可被ABACUS读取，对数导数测试无ghost state"
+    },
+    {
+      "step": 5,
+      "action": "UPF格式兼容性验证",
+      "details": "确认ONCVPSP生成的UPF文件与ABACUS的read_pp_upf201.cpp兼容。检查lmax、lchi、nchi等字段是否正确解析，特别是l=3(f)通道。",
+      "verify": "ABACUS日志中正确打印f通道信息：lmax=3, 对应的lchi和oc值"
+    }
+  ],
+
+  "acceptance_criteria": [
+    "oncvpsp.x编译成功并可运行",
+    "Si测试赝势生成→ABACUS读取→晶格常数计算 端到端通过",
+    "Ce f_in_valence赝势至少能被ABACUS正确读取（SCF收敛不要求在此任务完成）"
+  ],
+
+  "scope_guard": [
+    "不需要生成所有7种元素的赝势（那是FE-100的任务）",
+    "不需要优化赝势参数（那是FE-100的任务）",
+    "重点是工具链可用性验证"
+  ]
+}

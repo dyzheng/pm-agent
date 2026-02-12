@@ -1,0 +1,63 @@
+{
+  "task_id": "FE-301",
+  "title": "AI占据矩阵预测模型",
+  "specialist": "ml_agent",
+
+  "goal": "训练轻量级ML模型，从原子结构预测稀土原子的初始f电子占据矩阵，用于替代原子叠加初猜，加速SCF收敛。",
+
+  "model_design": {
+    "approach": "渐进式，从简单到复杂",
+    "level_1": {
+      "name": "规则基方法（baseline）",
+      "description": "基于化学规则的查找表：元素+配位环境→氧化态→f电子数",
+      "features": ["element", "coordination_number", "average_bond_length", "electronegativity_of_neighbors"],
+      "output": "f_electron_count (scalar)",
+      "model": "决策树 / 查找表",
+      "training_data_needed": "~50 samples for validation",
+      "expected_accuracy": "f电子数MAE ~0.5"
+    },
+    "level_2": {
+      "name": "MLP回归",
+      "description": "多层感知机，从局部环境特征预测f电子数和轨道序",
+      "features": ["element_one_hot", "coordination_number", "bond_lengths (sorted)", "bond_angles", "neighbor_elements_one_hot", "Voronoi_features"],
+      "output": "f_electron_count + orbital_eigenvalues (7-dim vector)",
+      "model": "MLP (3 layers, 128-64-32)",
+      "training_data_needed": "~500 samples",
+      "expected_accuracy": "f电子数MAE ~0.3, 轨道序正确率 >70%"
+    },
+    "level_3": {
+      "name": "GNN（如果Level 2不够）",
+      "description": "图神经网络，考虑更远程的结构信息",
+      "features": "原子图（节点=原子，边=键）",
+      "output": "per-atom占据矩阵 (7x7)",
+      "model": "SchNet / DimeNet / PaiNN 变体",
+      "training_data_needed": "~2000 samples",
+      "expected_accuracy": "占据矩阵Frobenius范数误差 < 0.1"
+    }
+  },
+
+  "evaluation_metrics": [
+    {"metric": "f_electron_MAE", "description": "预测f电子数的平均绝对误差", "target": "< 0.3"},
+    {"metric": "orbital_order_accuracy", "description": "轨道占据序（哪些轨道被占据）的正确率", "target": "> 70%"},
+    {"metric": "scf_speedup", "description": "使用AI初猜 vs atomic初猜的SCF步数比", "target": "> 1.3x (30%减少)"},
+    {"metric": "scf_success_rate", "description": "使用AI初猜后SCF收敛到正确基态的比例", "target": "> 90%"},
+    {"metric": "inference_time", "description": "模型推理时间", "target": "< 1 second per structure"}
+  ],
+
+  "training_pipeline": [
+    "1. 数据加载与预处理（从FE-300的数据集）",
+    "2. 特征工程（局部环境描述符）",
+    "3. 训练/验证/测试划分（70/15/15）",
+    "4. 模型训练（从Level 1开始，逐步升级）",
+    "5. 超参数优化（网格搜索或Bayesian优化）",
+    "6. 模型评估（上述metrics）",
+    "7. 端到端测试（模型预测→生成initial_onsite.dm→ABACUS SCF）"
+  ],
+
+  "acceptance_criteria": [
+    "至少Level 2模型训练完成",
+    "f电子数MAE < 0.3",
+    "SCF步数减少 > 30%（在测试集上）",
+    "模型可序列化为单个文件，推理不依赖GPU"
+  ]
+}

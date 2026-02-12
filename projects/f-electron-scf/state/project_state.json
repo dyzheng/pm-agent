@@ -1,0 +1,874 @@
+{
+  "request": "Solve f_in_valence rare-earth element norm-conserving pseudopotential SCF convergence problems in ABACUS: pseudopotential testing/generation, orbital optimization, DFT+U convergence, high ecutwfc performance, AI-guided initial charge guess, damped charge constraint, and cross-validation with VASP/all-electron codes across alloys, magnetic compounds, surface catalysis, and molecular catalysis scenarios.",
+  "project_id": "f-electron-scf",
+  "parsed_intent": {
+    "domain": "rare-earth DFT+U convergence",
+    "method": "SCF algorithm improvements + pseudopotential optimization",
+    "validation": "VASP and all-electron cross-validation",
+    "keywords": [
+      "f_in_valence",
+      "norm-conserving pseudopotential",
+      "SCF convergence",
+      "DFT+U",
+      "orbital optimization",
+      "AI-guided initial guess",
+      "constrained DFT",
+      "rare-earth elements"
+    ]
+  },
+  "audit_results": [],
+  "tasks": [
+    {
+      "id": "T0-1",
+      "title": "\u5408\u5e76PW+LCAO DFT+U\u4ee3\u7801\u5230\u4e3b\u5206\u652f",
+      "layer": "infra",
+      "type": "extend",
+      "description": "\u5c06\u73b0\u6709\u7684\u540c\u65f6\u652f\u6301PW\u548cLCAO\u7684DFT+U\u4ee3\u7801\u5408\u5e76\u5230ABACUS\u4e3b\u5206\u652f\uff0c\u786e\u4fdd\u6240\u6709\u6d4b\u8bd5\u901a\u8fc7",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "\u4ee3\u7801\u5408\u5e76\u65e0\u51b2\u7a81",
+        "\u73b0\u6709DFT+U\u6d4b\u8bd5\u5168\u90e8\u901a\u8fc7",
+        "PW\u548cLCAO\u57fa\u7ec4\u5747\u53ef\u8fd0\u884cDFT+U\u8ba1\u7b97"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/",
+        "source/source_pw/module_dftu/"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T0-2",
+      "title": "\u91cd\u6784DFT+U\u67b6\u6784\u4e3a\u53ef\u63d2\u62d4\u7b56\u7565",
+      "layer": "infra",
+      "type": "extend",
+      "description": "\u91cd\u6784DFT+U\u4ee3\u7801\u67b6\u6784\uff0c\u4f7f\u5360\u636e\u77e9\u9635\u521d\u59cb\u5316\u3001mixing/\u963b\u5c3c\u7b56\u7565\u3001\u7ea6\u675f\u52bf\u7b49\u7ec4\u4ef6\u53ef\u63d2\u62d4\uff0c\u652f\u6301\u5feb\u901f\u539f\u578b\u5f00\u53d1\u65b0\u6536\u655b\u7b56\u7565",
+      "dependencies": [
+        "T0-1"
+      ],
+      "acceptance_criteria": [
+        "\u5360\u636e\u77e9\u9635\u521d\u59cb\u5316\u63d0\u53d6\u4e3a\u7b56\u7565\u63a5\u53e3",
+        "Mixing/\u963b\u5c3c\u63d0\u53d6\u4e3a\u53ef\u914d\u7f6e\u7b56\u7565",
+        "\u6dfb\u52a0\u7ea6\u675f\u52bf\u94a9\u5b50",
+        "\u4fdd\u6301\u5411\u540e\u517c\u5bb9\u6027",
+        "\u6587\u6863\u8bf4\u660e\u5982\u4f55\u6dfb\u52a0\u65b0\u7b56\u7565"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu.cpp",
+        "source/source_lcao/module_dftu/dftu_occup.cpp",
+        "source/source_lcao/module_dftu/dftu_strategy.h"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T0-3",
+      "title": "\u5efa\u7acbDFT+U\u56de\u5f52\u6d4b\u8bd5\u5957\u4ef6",
+      "layer": "infra",
+      "type": "test",
+      "description": "\u4e3aDFT+U\u529f\u80fd\u5efa\u7acb\u56de\u5f52\u6d4b\u8bd5\u5957\u4ef6\uff0c\u5305\u542bCeO2\u548cGdN\u57fa\u7ebf\u6d4b\u8bd5\uff0c\u786e\u4fdd\u540e\u7eed\u4fee\u6539\u4e0d\u7834\u574f\u73b0\u6709\u529f\u80fd",
+      "dependencies": [
+        "T0-1"
+      ],
+      "acceptance_criteria": [
+        "CeO2 DFT+U\u6d4b\u8bd5\uff08PW\u548cLCAO\uff09",
+        "GdN DFT+U\u6d4b\u8bd5\uff08\u78c1\u6027\uff09",
+        "\u6d4b\u8bd5\u8986\u76d6U-ramping\u548c\u5360\u636e\u77e9\u9635\u63a7\u5236",
+        "\u96c6\u6210\u5230CI\u6d41\u7a0b"
+      ],
+      "files_to_touch": [
+        "tests/integrate/",
+        "examples/scf/CeO2_dftu/",
+        "examples/scf/GdN_dftu/"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-test",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T0-4",
+      "title": "\u6536\u96c6\u73b0\u6709f_in_valence\u8d5d\u52bf",
+      "layer": "workflow",
+      "type": "external_dependency",
+      "description": "\u4eceSG15\u3001PseudoDojo\u3001PSlibrary\u6536\u96c6\u7a00\u571f\u5143\u7d20f_in_valence\u6a21\u5b88\u6052\u8d5d\u52bf\uff0c\u5efa\u7acb\u8d5d\u52bf\u5e93\u7d22\u5f15",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "\u81f3\u5c11\u8986\u76d6Ce, Gd, La, Nd, Sm, Eu, Tb",
+        "\u6bcf\u4e2a\u5143\u7d20\u81f3\u5c111\u4e2af_in_valence\u8d5d\u52bf",
+        "\u8bb0\u5f55\u8d5d\u52bf\u6765\u6e90\u3001\u53c2\u6570\u3001\u8d28\u91cf\u8bc4\u4f30",
+        "\u5efa\u7acb\u8d5d\u52bf\u5e93\u76ee\u5f55\u7ed3\u6784"
+      ],
+      "files_to_touch": [
+        "pseudopotentials/rare_earth/",
+        "pseudopotentials/rare_earth/README.md"
+      ],
+      "estimated_scope": "small",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T1-1",
+      "title": "\u81ea\u9002\u5e94Kerker\u9884\u5904\u7406\u5668",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "\u5b9e\u73b0\u81ea\u9002\u5e94Kerker\u53c2\u6570\u8c03\u6574\uff0c\u81ea\u52a8\u68c0\u6d4bf\u7535\u5b50\u4f53\u7cfb\u5e76\u8c03\u6574mixing_gg0\u53c2\u6570\u4ee5\u6539\u5584\u6536\u655b\u6027",
+      "dependencies": [
+        "T0-2"
+      ],
+      "acceptance_criteria": [
+        "\u81ea\u52a8\u68c0\u6d4b\u4f53\u7cfb\u4e2d\u662f\u5426\u542bf\u7535\u5b50",
+        "\u6839\u636e\u4f53\u7cfb\u7c7b\u578b\uff08\u91d1\u5c5e/\u7edd\u7f18\u4f53/f\u7535\u5b50\uff09\u81ea\u52a8\u8c03\u6574mixing_gg0",
+        "CeO2\u6536\u655b\u6b65\u6570\u51cf\u5c11>20%",
+        "\u4e0d\u5f71\u54cd\u975ef\u7535\u5b50\u4f53\u7cfb\u6027\u80fd"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing_preconditioner.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T1-2",
+      "title": "\u5206\u901a\u9053mixing_beta",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "\u5b9e\u73b0\u5206\u901a\u9053mixing\u7b56\u7565\uff0c\u5bf9f\u7535\u5b50\u901a\u9053\u4f7f\u7528\u66f4\u5c0f\u7684mixing_beta\uff08\u66f4\u4fdd\u5b88\u7684\u66f4\u65b0\uff09",
+      "dependencies": [
+        "T0-2"
+      ],
+      "acceptance_criteria": [
+        "\u8bc6\u522bf\u901a\u9053\u5e76\u5355\u72ec\u8bbe\u7f6emixing_beta",
+        "f\u901a\u9053beta\u53ef\u914d\u7f6e\uff08\u9ed8\u8ba4\u4e3a\u5168\u5c40beta\u76840.5\u500d\uff09",
+        "\u6539\u5584f\u7535\u5b50\u4f53\u7cfb\u6536\u655b\u7a33\u5b9a\u6027",
+        "\u6dfb\u52a0\u8f93\u5165\u53c2\u6570mixing_beta_f"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing.cpp",
+        "source/source_io/module_parameter/input_parameter.h"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T1-3",
+      "title": "\u80fd\u91cf\u76d1\u63a7+\u81ea\u52a8\u56de\u9000",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "\u5b9e\u73b0SCF\u80fd\u91cf\u76d1\u63a7\u673a\u5236\uff0c\u5f53\u80fd\u91cf\u4e0a\u5347\u65f6\u81ea\u52a8\u51cf\u5c0fmixing_beta\u5e76\u56de\u9000\u5230\u4e0a\u4e00\u6b65\u72b6\u6001",
+      "dependencies": [
+        "T0-2"
+      ],
+      "acceptance_criteria": [
+        "\u76d1\u63a7SCF\u80fd\u91cf\u53d8\u5316\u8d8b\u52bf",
+        "\u80fd\u91cf\u4e0a\u5347\u65f6\u81ea\u52a8\u51cf\u5c0fmixing_beta\uff08\u4f8b\u5982\u00d70.5\uff09",
+        "\u56de\u9000\u5230\u4e0a\u4e00\u6b65\u6536\u655b\u7684\u7535\u8377\u5bc6\u5ea6",
+        "\u6700\u591a\u56de\u90003\u6b21\uff0c\u5931\u8d25\u540e\u62a5\u9519",
+        "\u8f93\u51fa\u8bca\u65ad\u4fe1\u606f"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing_rho.cpp",
+        "source/source_estate/module_esolver/esolver_ks.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T1-4",
+      "title": "\u89c4\u5219\u542f\u53d1\u5f0f\u5360\u636e\u731c\u6d4b",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "\u5b9e\u73b0\u57fa\u4e8e\u5316\u5b66\u89c4\u5219\u7684\u5360\u636e\u77e9\u9635\u521d\u59cb\u731c\u6d4b\uff1a\u6839\u636e\u5143\u7d20\u548c\u6c27\u5316\u6001\u9884\u8bbef\u7535\u5b50\u6570\uff08\u975eML\u65b9\u6cd5\uff09",
+      "dependencies": [
+        "T0-2"
+      ],
+      "acceptance_criteria": [
+        "\u652f\u6301\u5e38\u89c1\u7a00\u571f\u6c27\u5316\u6001\uff08+2, +3, +4\uff09",
+        "\u6839\u636e\u6c27\u5316\u6001\u9884\u8bbef\u7535\u5b50\u6570\uff08\u4f8b\u5982Ce4+: f0, Ce3+: f1\uff09",
+        "\u4e0eomc=1\u6a21\u5f0f\u96c6\u6210",
+        "\u63d0\u4f9b\u9ed8\u8ba4\u89c4\u5219\u8868\uff0c\u53ef\u7528\u6237\u81ea\u5b9a\u4e49",
+        "\u6539\u5584\u521d\u59cb\u731c\u6d4b\u8d28\u91cf"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_occup_init.cpp",
+        "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T2-1",
+      "title": "\u968f\u673a\u5360\u636e\u77e9\u9635\u521d\u59cb\u5316+\u591a\u8d77\u70b9\u63a2\u7d22",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "\u5b9e\u73b0\u968f\u673a\u5360\u636e\u77e9\u9635\u521d\u59cb\u5316\u548c\u591a\u8d77\u70b9\u5e76\u884c\u63a2\u7d22\u7b56\u7565\uff0c\u7cfb\u7edf\u641c\u7d22\u591a\u4e2aSCF\u6781\u5c0f\u503c\u5e76\u9009\u62e9\u6700\u4f4e\u80fd\u91cf",
+      "dependencies": [
+        "T0-2",
+        "T0-3"
+      ],
+      "acceptance_criteria": [
+        "\u6dfb\u52a0omc_mode=random\u9009\u9879",
+        "\u751f\u6210\u968f\u673a\u5bf9\u79f0\u5360\u636e\u77e9\u9635",
+        "\u652f\u6301\u591a\u8d77\u70b9\u5e76\u884c\u8fd0\u884c\uff08N\u4e2a\u968f\u673a\u79cd\u5b50\uff09",
+        "\u81ea\u52a8\u9009\u62e9\u6700\u4f4e\u80fd\u91cf\u7ed3\u679c",
+        "GdN\u6d4b\u8bd5\uff1a\u968f\u673a\u521d\u59cb\u5316\u627e\u5230\u66f4\u4f4e\u80fd\u6001"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu.cpp",
+        "source/source_lcao/module_dftu/dftu_occup.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "medium",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T2-2",
+      "title": "\u5360\u636e\u9000\u706b\u7b56\u7565",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "\u5b9e\u73b0\u5360\u636e\u77e9\u9635\u9000\u706b\uff1a\u4ece\u9ad8\u6e29smearing\u9010\u6b65\u51b7\u5374\u5230\u76ee\u6807\u6e29\u5ea6\uff0c\u4e0eU-ramping\u534f\u540c\u5de5\u4f5c",
+      "dependencies": [
+        "T2-1"
+      ],
+      "acceptance_criteria": [
+        "\u5b9e\u73b0smearing\u6e29\u5ea6\u9000\u706b\uff08\u9ad8\u2192\u4f4e\uff09",
+        "\u4e0eU-ramping\u534f\u540c\uff08\u53cc\u91cd\u9000\u706b\uff09",
+        "\u53ef\u914d\u7f6e\u9000\u706b\u6b65\u6570\u548c\u6e29\u5ea6\u8303\u56f4",
+        "\u9a8c\u8bc1\uff1a\u9000\u706b\u662f\u5426\u6539\u5584\u6536\u655b\u7387vs T2-1"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_occup.cpp",
+        "source/source_io/module_parameter/input_parameter.h"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "medium",
+      "defer_trigger": "T2-1:validation_passed",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T2-3",
+      "title": "Constrained DFT\u6846\u67b6",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "\u5b9e\u73b0\u7ea6\u675fDFT\u6846\u67b6\uff1a\u7ea6\u675f\u7279\u5b9a\u539f\u5b50\u7684f\u7535\u5b50\u6570\uff0c\u7ea6\u675f\u5f3a\u5ea6\u4ece\u5f3a\u5230\u5f31\u9010\u6b65\u91ca\u653e",
+      "dependencies": [
+        "T2-1"
+      ],
+      "acceptance_criteria": [
+        "\u5b9e\u73b0\u60e9\u7f5a\u52bf V_constraint = \u03bb(n_f - n_target)",
+        "\u7ea6\u675f\u5f3a\u5ea6\u9010\u6b65\u91ca\u653e\uff08\u7c7b\u4f3cU-ramping\uff09",
+        "\u4e0eDFT+U\u5360\u636e\u77e9\u9635\u63a7\u5236\u534f\u540c",
+        "\u9a8c\u8bc1\uff1a\u7ea6\u675f\u662f\u5426\u5e2e\u52a9T2-1/T2-2\u4ecd\u5931\u8d25\u7684\u4f53\u7cfb"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_constraint.cpp",
+        "source/source_lcao/module_dftu/dftu.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "medium",
+      "defer_trigger": "T2-1:insufficient OR T2-2:insufficient",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T3-1",
+      "title": "\u7528\u6237\u9700\u6c42\u8c03\u7814",
+      "layer": "workflow",
+      "type": "external_dependency",
+      "description": "\u8c03\u7814\u5b9e\u9645\u7528\u6237\u7684\u7a00\u571f\u8ba1\u7b97\u9700\u6c42\uff0c\u6536\u96c63-5\u4e2a\u5177\u4f53\u4f53\u7cfb\u548c\u6027\u8d28\u8981\u6c42\uff0c\u8bc6\u522b\u771f\u5b9e\u75db\u70b9",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "\u6536\u96c6\u81f3\u5c113\u4e2a\u5b9e\u9645\u7814\u7a76\u9879\u76ee\u7684\u8ba1\u7b97\u9700\u6c42",
+        "\u8bb0\u5f55\uff1a\u5143\u7d20\u3001\u7ed3\u6784\u3001\u76ee\u6807\u6027\u8d28\u3001\u5f53\u524d\u75db\u70b9",
+        "\u8986\u76d6\u4e0d\u540c\u5e94\u7528\u573a\u666f\uff08\u6c27\u5316\u7269/\u5408\u91d1/\u50ac\u5316\u7b49\uff09",
+        "\u5f62\u6210\u9700\u6c42\u6587\u6863"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/user_requirements.md"
+      ],
+      "estimated_scope": "small",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T3-2",
+      "title": "\u9009\u62e92-3\u4e2a\u4ee3\u8868\u6027\u9a8c\u8bc1\u4f53\u7cfb",
+      "layer": "workflow",
+      "type": "test",
+      "description": "\u57fa\u4e8e\u7528\u6237\u9700\u6c42\uff0c\u9009\u62e92-3\u4e2a\u4ee3\u8868\u6027\u4f53\u7cfb\u4f5c\u4e3a\u9a8c\u8bc1\u76ee\u6807\uff0c\u5fc5\u987b\u8986\u76d6\uff1a\u7b80\u5355\u6c27\u5316\u7269\u57fa\u7ebf\u3001\u78c1\u5e8f\u3001\u4e00\u4e2a\u5e94\u7528\u573a\u666f",
+      "dependencies": [
+        "T3-1"
+      ],
+      "acceptance_criteria": [
+        "\u9009\u62e9\u6807\u51c6\uff1a\u8986\u76d6\u5173\u952e\u7269\u7406\uff08f\u7535\u5b50\u3001\u78c1\u6027\u3001\u5316\u5b66\u73af\u5883\uff09",
+        "\u793a\u4f8b\u7ec4\u5408\uff1aCeO2\uff08\u57fa\u7ebf\uff09+ GdN\uff08\u78c1\u6027\uff09+ CeO2(111)\u8868\u9762\uff08\u50ac\u5316\uff09",
+        "\u6216\uff1aCeO2 + NdFeB\uff08\u5408\u91d1\u78c1\u6027\uff09+ \u7a00\u571fMOF\uff08\u5206\u5b50\uff09",
+        "\u6bcf\u4e2a\u4f53\u7cfb\u6709\u660e\u786e\u7684\u53c2\u8003\u6570\u636e\u6765\u6e90"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation_systems.md"
+      ],
+      "estimated_scope": "small",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T3-3",
+      "title": "\u8de8\u4ee3\u7801\u9a8c\u8bc1\uff08ABACUS vs VASP\uff09",
+      "layer": "workflow",
+      "type": "test",
+      "description": "\u5bf9\u9009\u5b9a\u7684\u9a8c\u8bc1\u4f53\u7cfb\uff0c\u8fd0\u884cABACUS\u548cVASP\u8ba1\u7b97\uff0c\u5bf9\u6bd4\u6676\u683c\u5e38\u6570\u3001\u78c1\u77e9\u3001\u5e26\u9699\u3001\u5f62\u6210\u80fd\u7b49\u5173\u952e\u6027\u8d28",
+      "dependencies": [
+        "T1-1",
+        "T1-2",
+        "T1-3",
+        "T1-4",
+        "T2-1",
+        "T3-2"
+      ],
+      "acceptance_criteria": [
+        "ABACUS vs VASP\u7ed3\u6784\u6027\u8d28\u8bef\u5dee<2%",
+        "\u80fd\u91cf\u8bef\u5dee<10%",
+        "\u78c1\u77e9\u8bef\u5dee<0.1 \u03bcB",
+        "\u5982\u679c\u8bef\u5dee>5%\u4e14\u53ef\u8ffd\u6eaf\u5230\u8d5d\u52bf\uff0c\u89e6\u53d1D-A1"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/",
+        "projects/f-electron-scf/validation/comparison_report.md"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "medium",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T3-4",
+      "title": "\u6536\u655b\u53ef\u9760\u6027\u6d4b\u8bd5",
+      "layer": "workflow",
+      "type": "test",
+      "description": "\u5bf9\u6bcf\u4e2a\u9a8c\u8bc1\u4f53\u7cfb\u8fd0\u884c10\u6b21\u4e0d\u540c\u968f\u673a\u79cd\u5b50\u7684\u8ba1\u7b97\uff0c\u7edf\u8ba1\u6536\u655b\u7387\u548c\u80fd\u91cf\u4e00\u81f4\u6027",
+      "dependencies": [
+        "T3-3"
+      ],
+      "acceptance_criteria": [
+        "\u6bcf\u4e2a\u4f53\u7cfb\u8fd0\u884c10\u6b21\uff08\u4e0d\u540c\u968f\u673a\u79cd\u5b50\uff09",
+        "\u6536\u655b\u7387>90%",
+        "\u6536\u655b\u7ed3\u679c\u80fd\u91cf\u6807\u51c6\u5dee<1 meV",
+        "\u8bb0\u5f55\u5931\u8d25\u6848\u4f8b\u7684\u8bca\u65ad\u4fe1\u606f"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/reliability_test.py",
+        "projects/f-electron-scf/validation/reliability_report.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T4-1",
+      "title": "\u81ea\u52a8\u53c2\u6570\u9009\u62e9",
+      "layer": "workflow",
+      "type": "new",
+      "description": "\u5b9e\u73b0\u81ea\u52a8\u53c2\u6570\u9009\u62e9\u5de5\u5177\uff1a\u8f93\u5165\u7ed3\u6784\u6587\u4ef6+\u5143\u7d20\u5217\u8868\uff0c\u8f93\u51fa\u63a8\u8350\u7684mixing_beta\u3001Kerker\u53c2\u6570\u3001U\u503c\u3001\u5360\u636e\u7b56\u7565",
+      "dependencies": [
+        "T3-3",
+        "T3-4"
+      ],
+      "acceptance_criteria": [
+        "\u68c0\u6d4bf\u5143\u7d20\u5e76\u5e94\u7528\u6700\u4f73\u5b9e\u8df5\u53c2\u6570",
+        "\u8f93\u51fa\u63a8\u8350INPUT\u6587\u4ef6",
+        "Python\u811a\u672c\u6216ABACUS\u9884\u5904\u7406\u5668",
+        "\u6587\u6863\u8bf4\u660e\u53c2\u6570\u9009\u62e9\u903b\u8f91"
+      ],
+      "files_to_touch": [
+        "tools/rare_earth_auto_setup.py",
+        "tools/rare_earth_auto_setup_README.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T4-2",
+      "title": "\u5931\u8d25\u8bca\u65ad+\u81ea\u52a8\u91cd\u8bd5",
+      "layer": "workflow",
+      "type": "new",
+      "description": "\u5b9e\u73b0SCF\u5931\u8d25\u81ea\u52a8\u8bca\u65ad\u548c\u91cd\u8bd5\u673a\u5236\uff1a\u76d1\u63a7\u6536\u655b\u6a21\u5f0f\uff08\u9707\u8361/\u53d1\u6563/\u6162\u6536\u655b\uff09\uff0c\u81ea\u52a8\u8c03\u6574\u53c2\u6570\u91cd\u8bd5",
+      "dependencies": [
+        "T4-1"
+      ],
+      "acceptance_criteria": [
+        "\u8bc6\u522b\u5931\u8d25\u6a21\u5f0f\uff08\u9707\u8361/\u53d1\u6563/\u6162\u6536\u655b\uff09",
+        "\u81ea\u52a8\u8c03\u6574\u7b56\u7565\uff1a\u51cf\u5c0fbeta/\u5207\u6362\u9000\u706b/\u5c1d\u8bd5\u968f\u673a\u521d\u59cb\u5316",
+        "\u6700\u591a3\u6b21\u91cd\u8bd5\u7b56\u7565",
+        "\u8f93\u51fa\u8bca\u65ad\u65e5\u5fd7",
+        "\u5931\u8d25\u540e\u7ed9\u51fa\u660e\u786e\u9519\u8bef\u4fe1\u606f\u548c\u5efa\u8bae"
+      ],
+      "files_to_touch": [
+        "tools/scf_auto_retry.py",
+        "source/source_estate/module_esolver/esolver_ks.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "medium",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T4-3",
+      "title": "abacustest\u5de5\u4f5c\u6d41\u96c6\u6210",
+      "layer": "workflow",
+      "type": "extend",
+      "description": "\u5c06\u7a00\u571f\u6536\u655b\u5de5\u4f5c\u6d41\u96c6\u6210\u5230abacustest\uff0c\u63d0\u4f9b\u9884\u914d\u7f6e\u6a21\u677f\u548c\u81ea\u52a8\u5316VASP\u5bf9\u6bd4",
+      "dependencies": [
+        "T4-1"
+      ],
+      "acceptance_criteria": [
+        "\u6dfb\u52a0\u7a00\u571fDFT+U\u5de5\u4f5c\u6d41\u6a21\u677f\u5230abacustest",
+        "\u9884\u914d\u7f6eINPUT\u6587\u4ef6\uff08\u5e38\u89c1\u573a\u666f\uff09",
+        "\u81ea\u52a8VASP\u5bf9\u6bd4\uff08\u5982\u679c\u6709\u53c2\u8003\u6570\u636e\uff09",
+        "\u96c6\u6210\u5230abacustest\u6587\u6863"
+      ],
+      "files_to_touch": [
+        "abacustest/workflows/rare_earth_dftu/",
+        "abacustest/workflows/rare_earth_dftu/README.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "abacus-test",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "T4-4",
+      "title": "\u6587\u6863\u4e0e\u793a\u4f8b",
+      "layer": "workflow",
+      "type": "new",
+      "description": "\u7f16\u5199\u5b8c\u6574\u7684\u7528\u6237\u6587\u6863\u548c\u793a\u4f8b\uff1a\u6559\u7a0b\u3001\u793a\u4f8b\u5e93\u3001\u6545\u969c\u6392\u9664\u6307\u5357",
+      "dependencies": [
+        "T4-1"
+      ],
+      "acceptance_criteria": [
+        "\u6559\u7a0b\uff1a\u300aABACUS\u7a00\u571fDFT+U\u8ba1\u7b97\u6307\u5357\u300b",
+        "\u793a\u4f8b\u5e93\uff1a5-10\u4e2a\u6536\u655b\u4f53\u7cfb\u7684INPUT\u6587\u4ef6\u548c\u5206\u6790",
+        "\u6545\u969c\u6392\u9664\u6307\u5357\uff1a\u5e38\u89c1\u5931\u8d25\u6a21\u5f0f\u548c\u89e3\u51b3\u65b9\u6848",
+        "\u53d1\u5e03\u5230ABACUS\u6587\u6863\u7f51\u7ad9"
+      ],
+      "files_to_touch": [
+        "docs/advanced/rare_earth_dftu_tutorial.md",
+        "examples/rare_earth/",
+        "docs/troubleshooting/rare_earth_convergence.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "low",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "D-A1",
+      "title": "ONCVPSP\u8d5d\u52bf\u751f\u6210\u73af\u5883\u642d\u5efa",
+      "layer": "infra",
+      "type": "external_dependency",
+      "description": "\u642d\u5efaONCVPSP\u8d5d\u52bf\u751f\u6210\u73af\u5883\uff0c\u51c6\u5907\u81ea\u5b9a\u4e49\u7a00\u571fNC\u8d5d\u52bf\u751f\u6210\u5de5\u5177\u94fe",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "ONCVPSP\u7f16\u8bd1\u5b89\u88c5\u6210\u529f",
+        "\u6d4b\u8bd5\u751f\u6210\u4e00\u4e2a\u7b80\u5355\u5143\u7d20\u8d5d\u52bf",
+        "\u51c6\u5907\u7a00\u571f\u5143\u7d20\u53c2\u8003\u6784\u578b\u6570\u636e",
+        "\u5efa\u7acb\u8d5d\u52bf\u8d28\u91cf\u68c0\u6d4b\u6d41\u7a0b\uff08\u5bf9\u6570\u5bfc\u6570\u3001ghost state\uff09"
+      ],
+      "files_to_touch": [
+        "tools/pseudopotential_generation/",
+        "tools/pseudopotential_generation/README.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "deferred",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "high",
+      "defer_trigger": "T3-3:accuracy_below_threshold",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "D-A2",
+      "title": "\u81ea\u5b9a\u4e49\u7a00\u571fNC\u8d5d\u52bf\u751f\u6210",
+      "layer": "workflow",
+      "type": "external_dependency",
+      "description": "\u4f7f\u7528ONCVPSP\u751f\u6210\u7a00\u571f\u5143\u7d20\u81ea\u5b9a\u4e49\u6a21\u5b88\u6052\u8d5d\u52bf\uff0c\u4f18\u5316\u622a\u65ad\u534a\u5f84\u548c\u53ef\u8fc1\u79fb\u6027",
+      "dependencies": [
+        "D-A1"
+      ],
+      "acceptance_criteria": [
+        "\u751f\u6210Ce, Gd, La, Nd, Sm, Eu, Tb\u7684f_in_valence\u8d5d\u52bf",
+        "\u4f18\u53164f/5s/5p/5d/6s\u5404\u901a\u9053\u622a\u65ad\u534a\u5f84",
+        "\u901a\u8fc7ghost state\u68c0\u6d4b",
+        "\u53ef\u8fc1\u79fb\u6027\u6d4b\u8bd5\uff08\u591a\u6784\u578b\u80fd\u91cf\u5dee vs \u5168\u7535\u5b50\uff09"
+      ],
+      "files_to_touch": [
+        "pseudopotentials/rare_earth_custom/",
+        "pseudopotentials/rare_earth_custom/generation_log.md"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "deferred",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "high",
+      "defer_trigger": "D-A1:completed",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "D-A3",
+      "title": "\u65b0\u8d5d\u52bf\u5168\u9762\u9a8c\u8bc1",
+      "layer": "workflow",
+      "type": "test",
+      "description": "\u4f7f\u7528\u65b0\u751f\u6210\u7684\u8d5d\u52bf\u91cd\u65b0\u8fd0\u884c\u5168\u90e8\u9a8c\u8bc1\u6d4b\u8bd5\uff0c\u786e\u4fdd\u8d28\u91cf\u6539\u5584",
+      "dependencies": [
+        "D-A2"
+      ],
+      "acceptance_criteria": [
+        "\u91cd\u65b0\u8fd0\u884cT3-3\u9a8c\u8bc1",
+        "\u8bef\u5dee\u964d\u4f4e\u5230<2%",
+        "Delta-test\u6846\u67b6\u9a8c\u8bc1",
+        "\u4e0eVASP PAW\u5bf9\u6bd4"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/custom_pp_validation.md"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "deferred",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "high",
+      "defer_trigger": "D-A2:completed",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "D-B1",
+      "title": "NAO\u591azeta\u8f68\u9053\u751f\u6210\u4e0e\u6d4b\u8bd5",
+      "layer": "workflow",
+      "type": "extend",
+      "description": "\u4f7f\u7528ABACUS-orbitals\u751f\u6210\u7a00\u571f\u5143\u7d20\u7684\u591azeta\u6570\u503c\u539f\u5b50\u8f68\u9053\uff08DZP, TZP\uff09\uff0c\u7cfb\u7edf\u6d4b\u8bd5\u5bf9\u8ba1\u7b97\u7cbe\u5ea6\u7684\u5f71\u54cd",
+      "dependencies": [
+        "T0-4"
+      ],
+      "acceptance_criteria": [
+        "\u751f\u6210DZP\u548cTZP\u8f68\u9053\u6587\u4ef6",
+        "\u7cfb\u7edf\u6d4b\u8bd5\u4e0d\u540czeta\u6570\u5bf9\u7cbe\u5ea6\u7684\u5f71\u54cd",
+        "LCAO vs PW\u5bf9\u6bd4\uff08\u80fd\u91cf\u3001\u529b\u3001\u5e26\u7ed3\u6784\uff09",
+        "\u786e\u5b9a\u6700\u4f18\u8f68\u9053\u7ec4\u5408"
+      ],
+      "files_to_touch": [
+        "orbitals/rare_earth/",
+        "orbitals/rare_earth/optimization_report.md"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "deferred",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "medium",
+      "defer_trigger": "T3-3:lcao_divergence_above_3pct",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "D-B2",
+      "title": "Spillage\u7b97\u6cd5f\u8f68\u9053\u8c03\u4f18",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "\u5982\u679c\u6807\u51c6spillage\u4f18\u5316\u5bf9f\u8f68\u9053\u6548\u679c\u4e0d\u4f73\uff0c\u4fee\u6539spillage\u7b97\u6cd5\u4ee5\u66f4\u597d\u5904\u7406\u9ad8\u5ea6\u5c40\u57df\u7684f\u8f68\u9053",
+      "dependencies": [
+        "D-B1"
+      ],
+      "acceptance_criteria": [
+        "\u5206\u6790f\u8f68\u9053spillage\u4f18\u5316\u74f6\u9888",
+        "\u8c03\u6574spillage\u6743\u91cd\u6216\u4f18\u5316\u7b56\u7565",
+        "\u6539\u5584f\u8f68\u9053\u8d28\u91cf\u6307\u6807",
+        "\u4e0ePW\u57fa\u7ec4\u4e00\u81f4\u6027\u63d0\u5347"
+      ],
+      "files_to_touch": [
+        "source/source_basis/module_nao/",
+        "tools/ABACUS-orbitals/"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "deferred",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "medium",
+      "defer_trigger": "D-B1:spillage_issue_detected",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "D-C1",
+      "title": "ML\u8bad\u7ec3\u6570\u636e\u6536\u96c6",
+      "layer": "workflow",
+      "type": "external_dependency",
+      "description": "\u6536\u96c6\u5df2\u6536\u655b\u7684DFT+U\u8ba1\u7b97\u7ed3\u679c\u4f5c\u4e3aML\u8bad\u7ec3\u6570\u636e\uff0c\u5305\u542b\u7ed3\u6784\u548c\u5bf9\u5e94\u7684\u5360\u636e\u77e9\u9635",
+      "dependencies": [
+        "T3-3",
+        "T3-4"
+      ],
+      "acceptance_criteria": [
+        "\u6536\u96c6100+\u4e2a\u6536\u655b\u7684\u7a00\u571f\u4f53\u7cfb\u8ba1\u7b97",
+        "\u8bb0\u5f55\uff1a\u7ed3\u6784\u3001\u5143\u7d20\u3001\u5360\u636e\u77e9\u9635\u3001\u80fd\u91cf",
+        "\u8986\u76d6\u4e0d\u540c\u6c27\u5316\u6001\u3001\u914d\u4f4d\u73af\u5883\u3001\u78c1\u5e8f",
+        "\u6570\u636e\u6e05\u6d17\u548c\u6807\u51c6\u5316"
+      ],
+      "files_to_touch": [
+        "ml_models/training_data/",
+        "ml_models/training_data/dataset.json"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "deferred",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "high",
+      "defer_trigger": "T1-4:failure_rate_above_20pct",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "D-C2",
+      "title": "GNN\u5360\u636e\u77e9\u9635\u6a21\u578b\u8bad\u7ec3",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "\u8bad\u7ec3\u56fe\u795e\u7ecf\u7f51\u7edc\u6a21\u578b\uff1a\u8f93\u5165\u539f\u5b50\u7ed3\u6784\uff0c\u8f93\u51fa\u6bcf\u4e2a\u7a00\u571f\u539f\u5b50\u7684f\u7535\u5b50\u5360\u636e\u77e9\u9635\u9884\u6d4b",
+      "dependencies": [
+        "D-C1"
+      ],
+      "acceptance_criteria": [
+        "\u8bbe\u8ba1GNN\u67b6\u6784\uff08\u7ed3\u6784\u2192\u5360\u636e\u77e9\u9635\uff09",
+        "\u8bad\u7ec3/\u9a8c\u8bc1/\u6d4b\u8bd5\u96c6\u5212\u5206",
+        "\u6a21\u578b\u7cbe\u5ea6\uff1a\u5360\u636e\u6570\u9884\u6d4b\u8bef\u5dee<0.5\u7535\u5b50",
+        "\u63a8\u7406\u901f\u5ea6<1\u79d2/\u7ed3\u6784"
+      ],
+      "files_to_touch": [
+        "ml_models/occupation_predictor/",
+        "ml_models/occupation_predictor/model.py",
+        "ml_models/occupation_predictor/train.py"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow",
+      "gates": [],
+      "status": "deferred",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "high",
+      "defer_trigger": "D-C1:completed",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    },
+    {
+      "id": "D-C3",
+      "title": "ABACUS ML\u96c6\u6210",
+      "layer": "infra",
+      "type": "new",
+      "description": "\u5c06\u8bad\u7ec3\u597d\u7684ML\u6a21\u578b\u96c6\u6210\u5230ABACUS\uff0c\u901a\u8fc7init_chg/omc\u63a5\u53e3\u81ea\u52a8\u751f\u6210\u5360\u636e\u77e9\u9635\u521d\u731c",
+      "dependencies": [
+        "D-C2"
+      ],
+      "acceptance_criteria": [
+        "\u6a21\u578b\u63a8\u7406\u63a5\u53e3\u96c6\u6210\u5230ABACUS",
+        "\u6dfb\u52a0init_chg=ml\u9009\u9879",
+        "\u81ea\u52a8\u4ece\u7ed3\u6784\u9884\u6d4b\u5360\u636e\u77e9\u9635",
+        "\u4e0e\u73b0\u6709omc\u6a21\u5f0f\u517c\u5bb9",
+        "\u6027\u80fd\u5f00\u9500<5%"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_ml_init.cpp",
+        "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "abacus-develop",
+      "gates": [],
+      "status": "deferred",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "high",
+      "defer_trigger": "D-C2:completed",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    }
+  ],
+  "current_task_id": null,
+  "drafts": {},
+  "gate_results": {},
+  "integration_results": [],
+  "phase": "decompose",
+  "human_decisions": [],
+  "review_results": [],
+  "human_approvals": [],
+  "brainstorm_results": [],
+  "blocked_reason": null
+}

@@ -1,0 +1,322 @@
+{
+  "project_id": "f-electron-scf",
+  "tasks": [
+    {
+      "id": "FE-000",
+      "title": "赝势库调研与收集",
+      "layer": "CORE",
+      "type": "RESEARCH",
+      "scope": "EXTERNAL",
+      "status": "PENDING",
+      "depends_on": [],
+      "blocks": ["FE-100"],
+      "description": "系统调研现有稀土f_in_valence模守恒赝势库：PseudoDojo (ONCVPSP), PSlibrary (QE), GBRV, JTH。收集可用赝势，记录每个赝势的参考构型、截断半径、lmax、验证状态。",
+      "acceptance": "至少覆盖La/Ce/Nd/Sm/Eu/Gd/Tb 7种元素的赝势可用性报告",
+      "estimated_effort": "1-2 days"
+    },
+    {
+      "id": "FE-001",
+      "title": "ONCVPSP赝势生成环境搭建",
+      "layer": "CORE",
+      "type": "INFRA",
+      "scope": "LOCAL",
+      "status": "PENDING",
+      "depends_on": [],
+      "blocks": ["FE-100"],
+      "description": "安装配置ONCVPSP 4.0+赝势生成工具。准备稀土元素全电子参考数据（NIST原子数据库）。建立赝势生成→UPF转换→ABACUS读取的完整工具链。",
+      "acceptance": "oncvpsp可运行，能生成Si测试赝势并被ABACUS正确读取",
+      "estimated_effort": "1 day"
+    },
+    {
+      "id": "FE-002",
+      "title": "ABACUS DFT+U代码深度审计",
+      "layer": "CORE",
+      "type": "RESEARCH",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": [],
+      "blocks": ["FE-200", "FE-201", "FE-202", "FE-203", "FE-204", "FE-205"],
+      "description": "详细审计ABACUS DFT+U实现：dftu.cpp（主逻辑、U-ramping、omc）、dftu_occup.cpp（占据矩阵mixing）、dftu_hamilt.cpp（哈密顿量）、dftu_yukawa.cpp（自动U）、dftu_pw.cpp（PW限制）。记录每个函数的输入输出、数据流、已知限制。特别关注f电子（l=3）的处理路径。",
+      "acceptance": "完整的代码审计文档，包含数据流图和f电子处理路径分析",
+      "estimated_effort": "2-3 days"
+    },
+    {
+      "id": "FE-100",
+      "title": "稀土NC赝势生成（Ce, Gd, Nd, Sm, Eu, Tb, La）",
+      "layer": "CORE",
+      "type": "ALGORITHM",
+      "scope": "EXTERNAL",
+      "status": "PENDING",
+      "depends_on": ["FE-000", "FE-001"],
+      "blocks": ["FE-101"],
+      "description": "用ONCVPSP为7种稀土元素生成f_in_valence模守恒赝势。关键参数优化：参考构型（中性/离子化）、各通道截断半径、局域势选择。对每个赝势进行ghost state检测（对数导数测试）和基本可迁移性检查。对于已有高质量赝势的元素（如PseudoDojo），直接采用并验证。",
+      "acceptance": "7种元素各至少1个通过ghost state检测的UPF赝势",
+      "estimated_effort": "1-2 weeks"
+    },
+    {
+      "id": "FE-101",
+      "title": "赝势质量验证（原子测试 + 简单化合物）",
+      "layer": "CORE",
+      "type": "VALIDATION",
+      "scope": "CROSS_CODE",
+      "status": "PENDING",
+      "depends_on": ["FE-100"],
+      "blocks": ["FE-102", "FE-200"],
+      "description": "对FE-100生成的赝势进行系统验证：(1) 原子能级对比（ABACUS vs 全电子AE），(2) CeO2/Gd2O3/La2O3晶格常数和体模量对比VASP PAW参考值，(3) 带隙对比。误差标准：晶格常数<1%，体模量<5%，带隙定性一致。",
+      "acceptance": "验证报告，至少3种化合物的ABACUS vs VASP对比数据",
+      "estimated_effort": "1 week"
+    },
+    {
+      "id": "FE-102",
+      "title": "NAO轨道生成（多zeta组合系统测试）",
+      "layer": "CORE",
+      "type": "ALGORITHM",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": ["FE-101"],
+      "blocks": ["FE-103"],
+      "description": "用ABACUS-orbitals为验证通过的赝势生成NAO轨道文件。系统测试组合：SZ/DZP/TZDP，截断半径6/7/8/9/10 au。评估每种组合对CeO2晶格常数、带结构的影响。确定推荐的默认轨道组合。",
+      "acceptance": "每种元素至少DZP和TZDP两套轨道，附PW vs LCAO对比数据",
+      "estimated_effort": "1-2 weeks"
+    },
+    {
+      "id": "FE-103",
+      "title": "轨道质量评估与推荐方案",
+      "layer": "CORE",
+      "type": "VALIDATION",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": ["FE-102"],
+      "blocks": ["FE-400"],
+      "description": "综合评估不同轨道组合的精度-效率权衡。输出推荐方案：(1) 快速筛选用（SZ/DZP），(2) 生产计算用（TZDP），(3) 高精度参考用（QZP或PW）。评估不同化学环境的可迁移性。",
+      "acceptance": "轨道推荐文档，含精度-效率对比图表",
+      "estimated_effort": "3-5 days"
+    },
+    {
+      "id": "FE-200",
+      "title": "自适应Kerker预处理参数",
+      "layer": "ALGORITHM",
+      "type": "ALGORITHM",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": ["FE-002", "FE-101"],
+      "blocks": ["FE-204"],
+      "description": "修改charge_mixing_preconditioner.cpp，实现自适应mixing_gg0：(1) 根据体系类型（金属/绝缘体/f电子）自动选择初始值，(2) 在SCF过程中根据残差变化动态调整，(3) 对f电子体系使用更保守的预处理。需要在input_parameter.h中添加mixing_gg0_auto选项。",
+      "acceptance": "CeO2和GdN的SCF收敛步数不劣于手动调参结果",
+      "estimated_effort": "3-5 days",
+      "files": [
+        "source/source_estate/module_charge/charge_mixing_preconditioner.cpp",
+        "source/source_estate/module_charge/charge_mixing.h",
+        "source/source_estate/module_charge/charge_mixing.cpp",
+        "source/source_io/module_parameter/input_parameter.h"
+      ]
+    },
+    {
+      "id": "FE-201",
+      "title": "分通道mixing_beta实现",
+      "layer": "ALGORITHM",
+      "type": "ALGORITHM",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": ["FE-002"],
+      "blocks": ["FE-204"],
+      "description": "在charge_mixing中实现按角动量通道分别设置mixing_beta的能力。f电子通道使用更小的mixing_beta（如0.05-0.1），s/p/d通道使用正常值（0.3-0.7）。实现方式：在实空间投影到原子轨道分量后分别mixing，或在密度矩阵mixing（LCAO）中按l分通道。",
+      "acceptance": "含f电子体系的SCF收敛性改善，不影响无f电子体系的性能",
+      "estimated_effort": "3-5 days",
+      "files": [
+        "source/source_estate/module_charge/charge_mixing_rho.cpp",
+        "source/source_estate/module_charge/charge_mixing_dmr.cpp",
+        "source/source_estate/module_charge/charge_mixing.h"
+      ]
+    },
+    {
+      "id": "FE-202",
+      "title": "占据矩阵随机初始化 + 多起点探索",
+      "layer": "ALGORITHM",
+      "type": "ALGORITHM",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": ["FE-002"],
+      "blocks": ["FE-203"],
+      "description": "在dftu.cpp中实现：(1) 随机占据矩阵初始化（在合理物理约束内随机），(2) 基于氧化态的化学直觉初始化（如Ce4+ → f^0, Ce3+ → f^1），(3) 多起点并行探索接口（运行N个不同初始化的SCF，选最低能量）。新增输入参数：omc_random, omc_nstart, omc_seed。",
+      "acceptance": "CeO2的DFT+U计算能通过多起点找到正确基态（与VASP一致）",
+      "estimated_effort": "1 week",
+      "files": [
+        "source/source_lcao/module_dftu/dftu.cpp",
+        "source/source_lcao/module_dftu/dftu.h",
+        "source/source_lcao/module_dftu/dftu_io.cpp",
+        "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"
+      ]
+    },
+    {
+      "id": "FE-203",
+      "title": "占据矩阵退火策略",
+      "layer": "ALGORITHM",
+      "type": "ALGORITHM",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": ["FE-202"],
+      "blocks": ["FE-204"],
+      "description": "实现占据退火：(1) 初始阶段使用高smearing温度（如0.1 Ry），使占据矩阵平滑化，(2) 逐步降低smearing到目标值（如0.01 Ry），(3) 与U-ramping协同：先ramping U到目标值，再退火smearing。在dftu_occup.cpp中实现退火调度器。",
+      "acceptance": "EuO等多极小值体系的收敛成功率提升>50%",
+      "estimated_effort": "3-5 days",
+      "files": [
+        "source/source_lcao/module_dftu/dftu_occup.cpp",
+        "source/source_lcao/module_dftu/dftu.cpp"
+      ]
+    },
+    {
+      "id": "FE-204",
+      "title": "能量监控 + SCF自动回退机制",
+      "layer": "ALGORITHM",
+      "type": "ALGORITHM",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": ["FE-200", "FE-201", "FE-203"],
+      "blocks": ["FE-205"],
+      "description": "在SCF主循环中实现：(1) 逐步监控总能量变化，检测震荡模式，(2) 当能量连续上升N步时，自动减小mixing_beta并回退到上一个低能量状态，(3) 当检测到周期性震荡时，切换mixing策略（如从Broyden切换到Pulay或plain），(4) 输出诊断信息帮助用户理解收敛行为。",
+      "acceptance": "原本不收敛的f电子体系中>70%可通过自动回退收敛",
+      "estimated_effort": "1 week",
+      "files": [
+        "source/source_estate/module_charge/charge_mixing.cpp",
+        "source/source_estate/module_charge/charge_mixing_rho.cpp"
+      ]
+    },
+    {
+      "id": "FE-205",
+      "title": "constrained DFT框架（f电子数约束）",
+      "layer": "ALGORITHM",
+      "type": "ALGORITHM",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": ["FE-204"],
+      "blocks": ["FE-300"],
+      "description": "实现constrained DFT：(1) 新模块charge_constraint.cpp，添加惩罚势V = λ·(n_f - n_target)^2到哈密顿量，(2) 约束强度λ从大到小逐步释放（类似U-ramping），(3) 支持按原子指定目标f电子数，(4) 与DFT+U的omc协同工作。这是确保f电子体系收敛到正确基态的关键手段。",
+      "acceptance": "Ce2O3中Ce的f电子数可被约束到目标值±0.1，释放约束后保持",
+      "estimated_effort": "2 weeks",
+      "files": [
+        "source/source_estate/module_charge/charge_constraint.cpp (NEW)",
+        "source/source_estate/module_charge/charge_constraint.h (NEW)",
+        "source/source_lcao/module_dftu/dftu.cpp",
+        "source/source_io/module_parameter/input_parameter.h"
+      ]
+    },
+    {
+      "id": "FE-300",
+      "title": "AI初猜训练数据收集",
+      "layer": "WORKFLOW",
+      "type": "DATA",
+      "scope": "CROSS_CODE",
+      "status": "PENDING",
+      "depends_on": ["FE-205"],
+      "blocks": ["FE-301"],
+      "description": "从Phase 1-2的验证计算中收集训练数据：(1) 结构信息（元素、坐标、晶格），(2) 收敛后的占据矩阵，(3) f电子数、自旋态、轨道序，(4) SCF收敛路径信息。目标：至少500个不同结构的数据点，覆盖氧化物、合金、表面等场景。",
+      "acceptance": "结构化数据集，含>=500个数据点，格式统一",
+      "estimated_effort": "2-3 weeks (与Phase 2并行积累)"
+    },
+    {
+      "id": "FE-301",
+      "title": "AI占据矩阵预测模型",
+      "layer": "WORKFLOW",
+      "type": "ALGORITHM",
+      "scope": "LOCAL",
+      "status": "PENDING",
+      "depends_on": ["FE-300"],
+      "blocks": ["FE-302"],
+      "description": "训练轻量级模型预测初始占据矩阵：(1) 输入特征：原子类型、近邻环境（配位数、键长、角度）、氧化态估计，(2) 输出：每个稀土原子的f电子占据数和轨道序，(3) 模型选择：先尝试简单MLP/随机森林，再考虑GNN，(4) 评估指标：预测占据数的MAE，以及使用预测初猜后SCF收敛步数的减少。",
+      "acceptance": "模型预测f电子数MAE < 0.3，SCF步数减少>30%",
+      "estimated_effort": "3-4 weeks"
+    },
+    {
+      "id": "FE-302",
+      "title": "AI模型与ABACUS接口集成",
+      "layer": "WORKFLOW",
+      "type": "INFRA",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": ["FE-301"],
+      "blocks": ["FE-500"],
+      "description": "将训练好的模型集成到ABACUS工作流：(1) Python脚本：读取STRU文件→模型预测→生成initial_onsite.dm，(2) 或通过PyABACUS接口直接注入，(3) 新增init_chg='ai'选项（长期目标），(4) 短期方案：作为预处理脚本，生成omc输入文件。",
+      "acceptance": "端到端工作流：STRU → AI预测 → initial_onsite.dm → ABACUS SCF收敛",
+      "estimated_effort": "1-2 weeks"
+    },
+    {
+      "id": "FE-400",
+      "title": "简单氧化物验证（CeO2, Gd2O3, La2O3）",
+      "layer": "VALIDATION",
+      "type": "VALIDATION",
+      "scope": "CROSS_CODE",
+      "status": "PENDING",
+      "depends_on": ["FE-103"],
+      "blocks": ["FE-401"],
+      "description": "基准验证：ABACUS vs VASP PAW对比CeO2/Gd2O3/La2O3的晶格常数、体模量、带隙、磁矩（如适用）。PBE和PBE+U两种泛函。记录SCF收敛步数和计算时间。",
+      "acceptance": "晶格常数误差<1%，体模量误差<10%，带隙定性一致"
+    },
+    {
+      "id": "FE-401",
+      "title": "合金与磁性化合物验证",
+      "layer": "VALIDATION",
+      "type": "VALIDATION",
+      "scope": "CROSS_CODE",
+      "status": "PENDING",
+      "depends_on": ["FE-400", "FE-204"],
+      "blocks": ["FE-402"],
+      "description": "中等难度验证：(1) NdFeB/SmCo5合金的磁矩和磁各向异性，(2) GdN/EuO的磁序和交换耦合，(3) TbMnO3的多铁性。重点关注DFT+U参数敏感性和SCF收敛可靠性。",
+      "acceptance": "磁矩与VASP/实验值偏差<10%，SCF收敛成功率>90%"
+    },
+    {
+      "id": "FE-402",
+      "title": "表面催化验证（CeO2表面 + 吸附）",
+      "layer": "VALIDATION",
+      "type": "VALIDATION",
+      "scope": "CROSS_CODE",
+      "status": "PENDING",
+      "depends_on": ["FE-401"],
+      "blocks": ["FE-403"],
+      "description": "高难度验证：(1) CeO2(111)清洁表面的表面能，(2) CO/CeO2(111)吸附能和吸附构型，(3) 氧空位形成能（Ce4+→Ce3+电子转移），(4) La2O3表面催化。重点：f电子在表面的重新分布和SCF收敛。",
+      "acceptance": "吸附能与VASP偏差<0.1 eV，氧空位形成能偏差<0.2 eV"
+    },
+    {
+      "id": "FE-403",
+      "title": "分子催化验证（稀土配合物）",
+      "layer": "VALIDATION",
+      "type": "VALIDATION",
+      "scope": "CROSS_CODE",
+      "status": "PENDING",
+      "depends_on": ["FE-402"],
+      "blocks": ["FE-500"],
+      "description": "分子催化场景验证：(1) 稀土茂金属（Cp2LnX）的几何结构和配位能，(2) 稀土MOF节点的电子结构，(3) 稀土催化剂的反应活性（如烯烃聚合催化）。需要大盒子+Gamma点计算。",
+      "acceptance": "配位能与全电子方法偏差<0.15 eV，几何结构偏差<0.02 Å"
+    },
+    {
+      "id": "FE-500",
+      "title": "自动化工作流与参数推荐系统",
+      "layer": "WORKFLOW",
+      "type": "WORKFLOW",
+      "scope": "ABACUS",
+      "status": "PENDING",
+      "depends_on": ["FE-302", "FE-403"],
+      "blocks": [],
+      "description": "整合所有技术为自动化工作流：(1) 根据输入结构自动选择赝势/轨道/DFT+U参数，(2) 自动选择SCF策略（mixing参数、是否启用约束、是否多起点），(3) 失败自动诊断和重试，(4) 通过abacustest或PyABACUS接口暴露。",
+      "acceptance": "端到端自动化：用户只需提供结构文件，系统自动完成计算"
+    }
+  ],
+  "annotations": {
+    "total_tasks": 20,
+    "phases": {
+      "Phase 0 (基础设施)": ["FE-000", "FE-001", "FE-002"],
+      "Phase 1 (赝势与轨道)": ["FE-100", "FE-101", "FE-102", "FE-103"],
+      "Phase 2 (SCF算法)": ["FE-200", "FE-201", "FE-202", "FE-203", "FE-204", "FE-205"],
+      "Phase 3 (AI辅助)": ["FE-300", "FE-301", "FE-302"],
+      "Phase 4 (验证)": ["FE-400", "FE-401", "FE-402", "FE-403"],
+      "Phase 5 (自动化)": ["FE-500"]
+    },
+    "critical_path": "FE-000 → FE-100 → FE-101 → FE-200/201/202 → FE-204 → FE-205 → FE-401 → FE-402",
+    "parallel_opportunities": [
+      "FE-000 || FE-001 || FE-002",
+      "FE-200 || FE-201 || FE-202",
+      "FE-102 || FE-200 (轨道生成与SCF算法可并行)",
+      "FE-300 与 Phase 2 后期并行积累数据"
+    ]
+  }
+}
