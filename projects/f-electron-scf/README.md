@@ -10,8 +10,9 @@
 
 ## 关键指标
 
-- **总任务数：** 27个
-- **活跃任务：** 19个（可立即执行）
+- **总任务数：** 38个
+- **PR 重构任务：** 14个（zdy-tmp 代码合并）
+- **活跃任务：** 30个（可立即执行）
 - **延迟任务：** 8个（触发条件满足时执行）
 - **预计时间：** 5-6个月
 - **节省时间：** 40%（相比原计划7-9个月）
@@ -51,15 +52,15 @@ f-electron-scf/
 ├── project.json                   # 项目元数据
 ├── plans/                         # 项目计划文档
 │   ├── 2026-02-11-f-electron-scf-analysis.md
-│   └── 2026-02-11-brainstorm-refined-plan.md
-├── state/                         # 项目状态数据
-│   ├── project_state.json         # 完整状态（自动生成）
-│   ├── project_state_meta.json    # 元数据
-│   ├── active_tasks.json          # 活跃任务
-│   ├── validation_tasks.json      # 验证任务
-│   ├── deferred_tasks.json        # 延迟任务
-│   └── build_state.py             # 状态构建脚本
-└── annotations/                   # 任务注释
+│   ├── 2026-02-11-brainstorm-refined-plan.md
+│   └── 2026-02-12-zdy-tmp-refactor-merge-design.md
+└── state/                         # 项目状态数据
+    ├── project_state.json         # 完整状态（自动生成）
+    ├── project_state_meta.json    # 元数据
+    ├── active_tasks.json          # 活跃任务
+    ├── validation_tasks.json      # 验证任务
+    ├── deferred_tasks.json        # 延迟任务
+    └── build_state.py             # 状态构建脚本
 
 ```
 
