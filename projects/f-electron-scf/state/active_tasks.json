@@ -1,563 +1,151 @@
 {
+  "revision_note": "2026-02-12: 重新评估后大幅精简。force/stress/mixing_dftu/oscillation detection 已在 develop 中存在，无需移植。原 14-PR 计划缩减为 7 PR。",
   "phase0_tasks": [
     {
       "id": "PR-1",
       "title": "onsite_projector nspin=1/2 支持",
       "layer": "infra",
       "type": "extend",
-      "description": "扩展 develop 的 onsite_projector 支持 nspin=1/2。当前 develop 仅支持 nspin=4。需要：(1) cal_occupations() 增加 isk_in 参数，(2) cal_becp() 增加 npwx 参数，(3) 适配 Onsite_Proj_tools（develop）vs FS_Nonlocal_tools（zdy-tmp）的 API 差异。",
+      "description": "扩展 develop 的 onsite_projector 支持 nspin=1/2。",
       "dependencies": [],
-      "acceptance_criteria": [
-        "编译通过",
-        "现有 nspin=4 测试不受影响",
-        "新增 nspin=2 单元测试"
-      ],
-      "files_to_touch": [
-        "source/source_pw/module_pwdft/onsite_projector.h",
-        "source/source_pw/module_pwdft/onsite_projector.cpp",
-        "source/source_pw/module_pwdft/onsite_proj_tools.h",
-        "source/source_pw/module_pwdft/onsite_proj_tools.cpp"
-      ],
-      "reference_code": "zdy-tmp: module_hamilt_pw/hamilt_pwdft/onsite_projector.h/cpp",
+      "status": "code_committed_unverified",
+      "commit": "d2364165c",
+      "task_instruction": "tasks/PR-1-task-instruction.md",
       "worktree": "/root/abacus-dftu-pw-port",
-      "branch": "feat/dftu-pw-port",
-      "estimated_scope": "small",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit"],
-      "status": "pending",
-      "risk_level": "low",
-      "estimated_days": "1-2"
+      "branch": "feat/dftu-pw-port"
     },
     {
       "id": "PR-2",
-      "title": "DFT+U PW SCF（nspin=4）",
+      "title": "DFT+U PW SCF nspin=1/2/4 全支持",
       "layer": "infra",
       "type": "extend",
-      "description": "在 PW 基组下支持 DFT+U SCF 计算（先 nspin=4）。核心工作：(1) 移植 zdy-tmp dftu_pw.cpp 的 PW 占据矩阵计算到 develop 的 Plus_U 类，(2) 添加 eff_pot_pw/cal_occup_m_pw 等 PW 相关方法，(3) 在 esolver_ks_pw.cpp 集成 DFT+U 调用。适配要点：DFTU→Plus_U 类名、GlobalC::ucell→参数传递、GlobalV::NSPIN→PARAM.inp.nspin。",
+      "description": "将 zdy-tmp 的 cal_occ_pw() nspin=1/2 支持移植到 develop，使 DFT+U PW SCF 支持 nspin=1/2/4。包含占据矩阵计算、能量/有效势、initialed_locale 守卫、uom_array 机制。吸收了原 PR-2（nspin=4）和原 PR-3（nspin=1/2 扩展）。",
       "dependencies": ["PR-1"],
-      "acceptance_criteria": [
-        "CeO2 nspin=4 PW DFT+U SCF 可收敛",
-        "能量与 LCAO DFT+U 定性一致",
-        "编译通过，现有测试不受影响"
-      ],
-      "files_to_touch": [
-        "source/source_lcao/module_dftu/dftu_pw.cpp",
-        "source/source_lcao/module_dftu/dftu.h",
-        "source/source_lcao/module_dftu/dftu.cpp",
-        "source/source_esolver/esolver_ks_pw.cpp",
-        "source/source_io/module_parameter/input_parameter.h"
-      ],
-      "reference_code": "zdy-tmp: module_hamilt_lcao/module_dftu/dftu_pw.cpp (354行 vs develop 219行)",
-      "adaptation_notes": "ModuleDFTU::DFTU → Plus_U; GlobalC::ucell → UnitCell& 参数; GlobalV::NSPIN → PARAM.inp.nspin; get_instance() → develop 实例模式",
+      "status": "wip_uncommitted",
+      "task_instruction": "tasks/PR-2-task-instruction.md",
       "worktree": "/root/abacus-dftu-pw-port",
-      "branch": "feat/dftu-pw-port",
-      "estimated_scope": "large",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "medium",
-      "estimated_days": "3-5"
+      "branch": "feat/dftu-pw-port"
     },
     {
       "id": "PR-3",
-      "title": "DFT+U PW nspin=1/2 扩展",
+      "title": "DeltaSpin 缺失文件移植",
       "layer": "infra",
-      "type": "extend",
-      "description": "扩展 PW DFT+U 支持 nspin=1 和 nspin=2。在 dftu_pw.cpp 添加 nspin=1/2 分支，在 esolver_ks_pw.cpp 处理 nspin=2 的 isk 映射。",
-      "dependencies": ["PR-1", "PR-2"],
-      "acceptance_criteria": [
-        "NiO nspin=2 PW DFT+U SCF 可收敛",
-        "能量与 LCAO 一致"
-      ],
-      "files_to_touch": [
-        "source/source_lcao/module_dftu/dftu_pw.cpp",
-        "source/source_esolver/esolver_ks_pw.cpp"
-      ],
-      "reference_code": "zdy-tmp commits: 0becd0c54 (nspin2 for DFTU), 6098fba11 (fix nspin2)",
-      "worktree": "/root/abacus-dftu-pw-port",
-      "branch": "feat/dftu-pw-port",
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
+      "type": "port",
+      "description": "移植 zdy-tmp 中 3 个 DeltaSpin 文件到 develop：cal_h_lambda.cpp、cal_mw_helper.cpp、sc_parse_json.cpp，以及对应的 3 个测试文件。",
+      "dependencies": [],
       "status": "pending",
-      "risk_level": "medium",
-      "estimated_days": "2-3"
+      "task_instruction": "tasks/PR-3-task-instruction.md",
+      "worktree": "/root/abacus-dftu-pw-port",
+      "branch": "feat/dftu-pw-port"
     },
     {
       "id": "PR-4",
-      "title": "DFT+U PW force",
+      "title": "DeltaSpin PW 集成",
       "layer": "infra",
       "type": "extend",
-      "description": "PW 基组下 DFT+U 力的计算。适配 forces_onsite.cpp 到 Plus_U 接口，确保 cal_force_dftu() 在 Onsite_Proj_tools 中正确工作。",
-      "dependencies": ["PR-2"],
-      "acceptance_criteria": [
-        "CeO2 PW DFT+U 力与 LCAO 一致（误差 < 1 mRy/Bohr）",
-        "力的对称性正确"
-      ],
-      "files_to_touch": [
-        "source/source_pw/module_pwdft/forces_onsite.cpp",
-        "source/source_pw/module_pwdft/onsite_proj_tools.h",
-        "source/source_pw/module_pwdft/onsite_proj_tools.cpp"
-      ],
-      "reference_code": "zdy-tmp: forces_onsite.cpp, onsite_proj_pw.cpp (force部分)",
-      "worktree": "/root/abacus-dftu-pw-port",
-      "branch": "feat/dftu-pw-port",
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
+      "description": "在 esolver_ks_pw.cpp 中集成 DeltaSpin PW 调用（cal_mi_pw），使 PW 基组下 DeltaSpin 功能完整。",
+      "dependencies": ["PR-1", "PR-3"],
       "status": "pending",
-      "risk_level": "medium",
-      "estimated_days": "2-3"
+      "task_instruction": null,
+      "worktree": "/root/abacus-dftu-pw-port",
+      "branch": "feat/dftu-pw-port"
     },
     {
       "id": "PR-5",
-      "title": "DFT+U PW stress",
+      "title": "DeltaSpin + DFT+U 联合计算",
       "layer": "infra",
       "type": "extend",
-      "description": "PW 基组下 DFT+U 应力的计算。适配 stress_func_onsite.cpp 到 Plus_U 接口。",
-      "dependencies": ["PR-4"],
-      "acceptance_criteria": [
-        "CeO2 PW DFT+U 应力与 LCAO 一致",
-        "应力张量对称性正确"
-      ],
-      "files_to_touch": [
-        "source/source_pw/module_pwdft/stress_func_onsite.cpp",
-        "source/source_pw/module_pwdft/onsite_proj_tools.h",
-        "source/source_pw/module_pwdft/onsite_proj_tools.cpp"
-      ],
-      "reference_code": "zdy-tmp: stress_func_onsite.cpp, commit c324dfb42",
+      "description": "支持 DeltaSpin 和 DFT+U 同时使用，添加 conserve_setting 参数。",
+      "dependencies": ["PR-2", "PR-3"],
+      "status": "pending",
+      "task_instruction": null,
       "worktree": "/root/abacus-dftu-pw-port",
       "branch": "feat/dftu-pw-port",
-      "estimated_scope": "small",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "low",
-      "estimated_days": "2"
+      "reference_code": "zdy-tmp commit: a9d881c95"
     },
     {
       "id": "PR-6",
-      "title": "mixing_dftu（占据矩阵 mixing）",
+      "title": "GPU DFT+U kernels",
       "layer": "infra",
-      "type": "extend",
-      "description": "实现占据矩阵的 Broyden mixing，改善 DFT+U 收敛性。添加 mix_locale() 方法，mixing_dftu 输入参数，震荡体系自动开启 mixing_dftu。",
+      "type": "new",
+      "description": "实现 DFT+U force/stress 的 GPU/CUDA kernel。当前两个代码库都只有 CPU 实现和 GPU 声明，缺少 .cu 实现。",
       "dependencies": ["PR-2"],
-      "acceptance_criteria": [
-        "mixing_dftu=true 时占据矩阵使用 Broyden mixing",
-        "震荡体系自动开启 mixing_dftu",
-        "不影响非 DFT+U 计算"
-      ],
-      "files_to_touch": [
-        "source/source_lcao/module_dftu/dftu_occup.cpp",
-        "source/source_lcao/module_dftu/dftu.h",
-        "source/source_lcao/module_dftu/dftu.cpp",
-        "source/source_io/module_parameter/input_parameter.h",
-        "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"
-      ],
-      "reference_code": "zdy-tmp commits: d1caf6186 (mixing_dftu for PW), 7bb6fd666 (auto open)",
-      "worktree": "/root/abacus-dftu-pw-port",
-      "branch": "feat/dftu-pw-port",
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
       "status": "pending",
-      "risk_level": "medium",
-      "estimated_days": "3-4"
+      "task_instruction": null,
+      "worktree": "/root/abacus-dftu-pw-port",
+      "branch": "feat/dftu-pw-port"
     },
     {
       "id": "PR-7",
-      "title": "DFT+U PW GPU/DCU 加速适配",
-      "layer": "infra",
-      "type": "extend",
-      "description": "确保 PW DFT+U 在 GPU/DCU 上正确运行。适配 GPU kernel、device memory 操作。",
-      "dependencies": ["PR-2", "PR-3", "PR-4", "PR-5"],
-      "acceptance_criteria": [
-        "CUDA 编译通过",
-        "GPU 结果与 CPU 一致"
-      ],
-      "files_to_touch": [
-        "source/source_pw/module_pwdft/kernels/",
-        "source/source_pw/module_pwdft/onsite_proj_tools.cpp"
-      ],
-      "reference_code": "zdy-tmp 中大量 GPU fix commits",
-      "worktree": "/root/abacus-dftu-pw-port",
-      "branch": "feat/dftu-pw-port",
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build"],
-      "status": "pending",
-      "risk_level": "medium",
-      "estimated_days": "3-5"
-    },
-    {
-      "id": "PR-8",
-      "title": "module_deltaspin 核心移植",
-      "layer": "infra",
-      "type": "extend",
-      "description": "将 zdy-tmp 新增的 deltaspin 文件移植到 develop。新增 cal_h_lambda.cpp、cal_mw_helper.cpp、sc_parse_json.cpp。更新 spin_constrain.h/cpp（合并 zdy-tmp 增强到 develop 基础版本）。适配 include 路径和 GlobalC 去除。",
-      "dependencies": [],
-      "acceptance_criteria": [
-        "所有 deltaspin 单元测试通过",
-        "编译通过"
-      ],
-      "files_to_touch": [
-        "source/source_lcao/module_deltaspin/cal_h_lambda.cpp (NEW)",
-        "source/source_lcao/module_deltaspin/cal_mw_helper.cpp (NEW)",
-        "source/source_lcao/module_deltaspin/sc_parse_json.cpp (NEW)",
-        "source/source_lcao/module_deltaspin/spin_constrain.h",
-        "source/source_lcao/module_deltaspin/spin_constrain.cpp",
-        "source/source_lcao/module_deltaspin/CMakeLists.txt",
-        "source/source_lcao/module_deltaspin/test/"
-      ],
-      "reference_code": "zdy-tmp: module_hamilt_lcao/module_deltaspin/",
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit"],
-      "status": "pending",
-      "risk_level": "low",
-      "estimated_days": "3-4"
-    },
-    {
-      "id": "PR-9",
-      "title": "DeltaSpin LCAO 算符更新",
-      "layer": "infra",
-      "type": "extend",
-      "description": "更新 LCAO 下的 DeltaSpin 算符。合并 zdy-tmp 对 dspin_lcao.h/cpp、dspin_force_stress.hpp 的改动。更新 esolver_ks_lcao.cpp 中的 DeltaSpin 集成点。",
-      "dependencies": ["PR-8"],
-      "acceptance_criteria": [
-        "LCAO DeltaSpin SCF 正确",
-        "力/应力正确"
-      ],
-      "files_to_touch": [
-        "source/source_lcao/module_operator_lcao/dspin_lcao.h",
-        "source/source_lcao/module_operator_lcao/dspin_lcao.cpp",
-        "source/source_lcao/module_operator_lcao/dspin_force_stress.hpp",
-        "source/source_esolver/esolver_ks_lcao.cpp"
-      ],
-      "reference_code": "zdy-tmp: operator_lcao/dspin_lcao.cpp, sc_lambda_lcao.cpp",
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "medium",
-      "estimated_days": "2-3"
-    },
-    {
-      "id": "PR-10",
-      "title": "DeltaSpin PW 支持",
-      "layer": "infra",
-      "type": "extend",
-      "description": "在 PW 基组下支持 DeltaSpin。在 esolver_ks_pw.cpp 集成 lambda loop，添加 cal_Mi_pw 等 PW 相关方法。",
-      "dependencies": ["PR-1", "PR-8"],
-      "acceptance_criteria": [
-        "PW DeltaSpin SCF 可运行",
-        "磁矩约束有效"
-      ],
-      "files_to_touch": [
-        "source/source_esolver/esolver_ks_pw.cpp",
-        "source/source_lcao/module_deltaspin/spin_constrain.h",
-        "source/source_lcao/module_deltaspin/spin_constrain.cpp"
-      ],
-      "reference_code": "zdy-tmp commits: 045066ee0 (lambda operator in PW), f59fadd89 (nspin2 DeltaSpin PW)",
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "medium",
-      "estimated_days": "3-4"
-    },
-    {
-      "id": "PR-11",
-      "title": "DeltaSpin force/stress（LCAO + PW）",
-      "layer": "infra",
-      "type": "extend",
-      "description": "DeltaSpin 的力和应力计算，覆盖 LCAO 和 PW 两种基组。",
-      "dependencies": ["PR-9", "PR-10"],
-      "acceptance_criteria": [
-        "DeltaSpin 力/应力与数值微分一致"
-      ],
-      "files_to_touch": [
-        "source/source_pw/module_pwdft/forces_onsite.cpp",
-        "source/source_pw/module_pwdft/stress_func_onsite.cpp"
-      ],
-      "reference_code": "zdy-tmp commits: cef4b8312 (force), c324dfb42 (stress)",
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "medium",
-      "estimated_days": "2-3"
-    },
-    {
-      "id": "PR-12",
-      "title": "DeltaSpin + DFTU 联合 + conserve_setting",
-      "layer": "infra",
-      "type": "extend",
-      "description": "支持 DeltaSpin 和 DFT+U 同时使用。添加 conserve_setting 参数控制联合计算行为。",
-      "dependencies": ["PR-6", "PR-9"],
-      "acceptance_criteria": [
-        "DeltaSpin + DFT+U 联合计算正确",
-        "conserve_setting 参数生效"
-      ],
-      "files_to_touch": [
-        "source/source_esolver/esolver_ks_pw.cpp",
-        "source/source_esolver/esolver_ks_lcao.cpp",
-        "source/source_io/module_parameter/input_parameter.h"
-      ],
-      "reference_code": "zdy-tmp commit: a9d881c95 (conserve_setting for DFTU with DeltaSpin)",
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "medium",
-      "estimated_days": "2-3"
-    },
-    {
-      "id": "PR-13",
-      "title": "SCF 震荡检测 + 自动回退",
-      "layer": "algorithm",
-      "type": "extend",
-      "description": "检测 SCF 能量震荡并自动调整策略。震荡体系自动调整 mixing 参数，不影响正常收敛体系。",
-      "dependencies": ["PR-6"],
-      "acceptance_criteria": [
-        "震荡体系自动检测并调整 mixing 参数",
-        "不影响正常收敛体系"
-      ],
-      "files_to_touch": [
-        "source/source_estate/module_charge/charge_mixing.cpp",
-        "source/source_esolver/esolver_ks.cpp"
-      ],
-      "reference_code": "zdy-tmp commits: f506ae37f, 7bb6fd666",
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "low",
-      "estimated_days": "2-3"
-    },
-    {
-      "id": "PR-14",
       "title": "mixing_restart 与 mixing_dftu 协同修复",
       "layer": "algorithm",
       "type": "fix",
-      "description": "修复 mixing_restart 与 mixing_dftu 的兼容性问题，包括 kpar > 1 时的正确性。",
-      "dependencies": ["PR-6", "PR-13"],
-      "acceptance_criteria": [
-        "mixing_restart 后 mixing_dftu 状态正确",
-        "kpar > 1 时 mixing_dftu 正确"
-      ],
-      "files_to_touch": [
-        "source/source_estate/module_charge/charge_mixing.cpp"
-      ],
+      "description": "修复 mixing_restart 与 mixing_dftu 的兼容性问题，包括 kpar > 1 时的正确性。需要对比 zdy-tmp 和 develop 的 charge_mixing.cpp 确认是否仍有差异。",
+      "dependencies": ["PR-2"],
+      "status": "pending",
+      "task_instruction": null,
+      "worktree": "/root/abacus-dftu-pw-port",
+      "branch": "feat/dftu-pw-port",
       "reference_code": "zdy-tmp commits: 96f72ca00, caf450953",
-      "estimated_scope": "small",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit"],
-      "status": "pending",
-      "risk_level": "low",
-      "estimated_days": "1-2"
-    },
-    {
-      "id": "T0-4",
-      "title": "收集现有f_in_valence赝势",
-      "layer": "workflow",
-      "type": "external_dependency",
-      "description": "从SG15、PseudoDojo、PSlibrary收集稀土元素f_in_valence模守恒赝势，建立赝势库索引",
-      "dependencies": [],
-      "acceptance_criteria": [
-        "至少覆盖Ce, Gd, La, Nd, Sm, Eu, Tb",
-        "每个元素至少1个f_in_valence赝势",
-        "记录赝势来源、参数、质量评估",
-        "建立赝势库目录结构"
-      ],
-      "files_to_touch": [
-        "pseudopotentials/rare_earth/",
-        "pseudopotentials/rare_earth/README.md"
-      ],
-      "estimated_scope": "small",
-      "specialist": "workflow",
-      "gates": [],
-      "status": "pending",
-      "risk_level": "low"
+      "note": "需要先确认 develop 是否已包含此修复"
     }
   ],
-  "phase1_tasks": [
+  "cancelled_tasks": [
     {
-      "id": "T1-1",
-      "title": "自适应Kerker预处理器",
-      "layer": "algorithm",
-      "type": "extend",
-      "description": "实现自适应Kerker参数调整，自动检测f电子体系并调整mixing_gg0参数以改善收敛性",
-      "dependencies": ["PR-6"],
-      "acceptance_criteria": [
-        "自动检测体系中是否含f电子",
-        "根据体系类型自动调整mixing_gg0",
-        "CeO2收敛步数减少>20%",
-        "不影响非f电子体系性能"
-      ],
-      "files_to_touch": [
-        "source/source_estate/module_charge/charge_mixing_preconditioner.cpp"
-      ],
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "low"
+      "original_id": "PR-3 (old)",
+      "title": "DFT+U PW nspin=1/2 扩展",
+      "reason": "吸收进新 PR-2"
     },
     {
-      "id": "T1-2",
-      "title": "分通道mixing_beta",
-      "layer": "algorithm",
-      "type": "extend",
-      "description": "实现分通道mixing策略，对f电子通道使用更小的mixing_beta",
-      "dependencies": ["PR-6"],
-      "acceptance_criteria": [
-        "识别f通道并单独设置mixing_beta",
-        "改善f电子体系收敛稳定性"
-      ],
-      "files_to_touch": [
-        "source/source_estate/module_charge/charge_mixing.cpp",
-        "source/source_io/module_parameter/input_parameter.h"
-      ],
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "low"
+      "original_id": "PR-4 (old)",
+      "title": "DFT+U PW force",
+      "reason": "develop 已有完整实现，无需移植"
     },
     {
-      "id": "T1-3",
-      "title": "能量监控+自动回退",
-      "layer": "algorithm",
-      "type": "extend",
-      "description": "实现SCF能量监控机制，当能量上升时自动减小mixing_beta并回退",
-      "dependencies": ["PR-6"],
-      "acceptance_criteria": [
-        "监控SCF能量变化趋势",
-        "能量上升时自动减小mixing_beta",
-        "回退到上一步收敛的电荷密度"
-      ],
-      "files_to_touch": [
-        "source/source_estate/module_charge/charge_mixing_rho.cpp",
-        "source/source_esolver/esolver_ks.cpp"
-      ],
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "low"
+      "original_id": "PR-5 (old)",
+      "title": "DFT+U PW stress",
+      "reason": "develop 已有完整实现，无需移植"
     },
     {
-      "id": "T1-4",
-      "title": "规则启发式占据猜测",
-      "layer": "algorithm",
-      "type": "new",
-      "description": "实现基于化学规则的占据矩阵初始猜测：根据元素和氧化态预设f电子数",
-      "dependencies": ["PR-6"],
-      "acceptance_criteria": [
-        "支持常见稀土氧化态",
-        "与omc=1模式集成",
-        "改善初始猜测质量"
-      ],
-      "files_to_touch": [
-        "source/source_lcao/module_dftu/dftu_occup_init.cpp",
-        "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"
-      ],
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit"],
-      "status": "pending",
-      "risk_level": "low"
-    }
-  ],
-  "phase2_tasks": [
-    {
-      "id": "T2-1",
-      "title": "随机占据矩阵初始化+多起点探索",
-      "layer": "algorithm",
-      "type": "new",
-      "description": "实现随机占据矩阵初始化和多起点并行探索策略",
-      "dependencies": ["PR-6"],
-      "acceptance_criteria": [
-        "添加omc_mode=random选项",
-        "支持多起点并行运行",
-        "自动选择最低能量结果"
-      ],
-      "files_to_touch": [
-        "source/source_lcao/module_dftu/dftu.cpp",
-        "source/source_lcao/module_dftu/dftu_occup.cpp"
-      ],
-      "estimated_scope": "large",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "medium"
+      "original_id": "PR-6 (old)",
+      "title": "mixing_dftu（占据矩阵 mixing）",
+      "reason": "develop 已有 mixing_dftu 参数和 mix_uom/allocate_mixing_uom 基础设施"
     },
     {
-      "id": "T2-2",
-      "title": "占据退火策略",
-      "layer": "algorithm",
-      "type": "new",
-      "description": "实现占据矩阵退火：从高温smearing逐步冷却到目标温度",
-      "dependencies": ["T2-1"],
-      "acceptance_criteria": [
-        "实现smearing温度退火",
-        "与U-ramping协同",
-        "验证收敛率改善"
-      ],
-      "files_to_touch": [
-        "source/source_lcao/module_dftu/dftu_occup.cpp",
-        "source/source_io/module_parameter/input_parameter.h"
-      ],
-      "estimated_scope": "medium",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "medium",
-      "defer_trigger": "T2-1:validation_passed"
+      "original_id": "PR-8 (old)",
+      "title": "module_deltaspin 核心移植",
+      "reason": "develop 已有大部分文件，缩减为新 PR-3（仅移植 3 个缺失文件）"
     },
     {
-      "id": "T2-3",
-      "title": "Constrained DFT框架",
-      "layer": "algorithm",
-      "type": "new",
-      "description": "实现约束DFT框架：约束特定原子的f电子数",
-      "dependencies": ["T2-1"],
-      "acceptance_criteria": [
-        "实现惩罚势 V_constraint",
-        "约束强度逐步释放",
-        "与DFT+U占据矩阵控制协同"
-      ],
-      "files_to_touch": [
-        "source/source_estate/module_charge/charge_constraint.cpp",
-        "source/source_lcao/module_dftu/dftu.cpp"
-      ],
-      "estimated_scope": "large",
-      "specialist": "abacus-develop",
-      "gates": ["build", "unit", "numeric"],
-      "status": "pending",
-      "risk_level": "medium",
-      "defer_trigger": "T2-1:insufficient OR T2-2:insufficient"
+      "original_id": "PR-9 (old)",
+      "title": "DeltaSpin LCAO 算符更新",
+      "reason": "需要重新评估 develop 中 dspin_lcao 的完整度"
+    },
+    {
+      "original_id": "PR-10 (old)",
+      "title": "DeltaSpin PW 支持",
+      "reason": "缩减为新 PR-4（仅补 esolver_ks_pw 中的 cal_mi_pw 调用）"
+    },
+    {
+      "original_id": "PR-11 (old)",
+      "title": "DeltaSpin force/stress",
+      "reason": "develop 已有完整实现，无需移植"
+    },
+    {
+      "original_id": "PR-13 (old)",
+      "title": "SCF 震荡检测 + 自动回退",
+      "reason": "develop 已有 oscillate_esolver 和 if_scf_oscillate 基础设施"
     }
   ],
   "execution_plan": {
-    "timeline": {
-      "week1": ["PR-1", "PR-8"],
-      "week2": ["PR-2"],
-      "week3": ["PR-3", "PR-4"],
-      "week4": ["PR-5", "PR-6"],
-      "week5": ["PR-9", "PR-10"],
-      "week6": ["PR-11", "PR-12"],
-      "week7": ["PR-7", "PR-13", "PR-14"]
-    },
     "parallel_opportunities": [
-      "PR-1 || PR-8 (无依赖关系)",
-      "PR-3 || PR-4 (都依赖PR-2但互不依赖)",
-      "PR-5 || PR-6 (PR-5依赖PR-4, PR-6依赖PR-2)",
-      "PR-9 || PR-10 (都依赖PR-8但互不依赖)"
+      "PR-1 || PR-3 (无依赖关系)",
+      "PR-4 || PR-2 (PR-4 依赖 PR-1+PR-3, PR-2 依赖 PR-1, 互不依赖)"
     ],
-    "critical_path": "PR-1 → PR-2 → PR-3/PR-4 → PR-5 → PR-7",
+    "critical_path": "PR-1 → PR-2 → PR-5",
     "worktree": "/root/abacus-dftu-pw-port",
     "base_branch": "origin/develop (c039e9275)"
-  }
+  },
+  "phase1_tasks": "保持不变，见原文件",
+  "phase2_tasks": "保持不变，见原文件"
 }
