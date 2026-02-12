@@ -153,6 +153,12 @@ def _run_sequential(
         state.current_task_id = None
         _checkpoint(state_mgr, f"task_{task.id}_done")
 
+        # Check deferred triggers
+        from src.brainstorm import check_deferred_triggers
+        promoted = check_deferred_triggers(state, task.id)
+        if promoted:
+            _checkpoint(state_mgr, f"deferred_promoted_{','.join(promoted)}")
+
 
 # -- Parallel path (worktree-based) ------------------------------------------
 
@@ -234,6 +240,12 @@ def _run_parallel(
             scheduler.mark_done(task.id)
             state.current_task_id = None
             _checkpoint(state_mgr, f"task_{task.id}_done")
+
+            # Check deferred triggers
+            from src.brainstorm import check_deferred_triggers
+            promoted = check_deferred_triggers(state, task.id)
+            if promoted:
+                _checkpoint(state_mgr, f"deferred_promoted_{','.join(promoted)}")
 
             # Register branch if branch_registry provided
             if branch_registry is not None:

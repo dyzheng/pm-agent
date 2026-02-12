@@ -26,7 +26,7 @@ class TaskScheduler:
         """Return all PENDING tasks whose dependencies are all DONE."""
         batch = []
         for task in self._tasks.values():
-            if task.status != TaskStatus.PENDING:
+            if task.status not in (TaskStatus.PENDING,):
                 continue
             if task.id in self._in_progress:
                 continue
@@ -53,7 +53,7 @@ class TaskScheduler:
             self._tasks[task_id].status = TaskStatus.FAILED
 
     def all_done(self) -> bool:
-        """True when no PENDING or IN_PROGRESS tasks remain."""
+        """True when no PENDING or IN_PROGRESS tasks remain (DEFERRED excluded)."""
         for task in self._tasks.values():
             if task.status in (TaskStatus.PENDING, TaskStatus.IN_PROGRESS):
                 return False

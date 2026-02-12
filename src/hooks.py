@@ -27,11 +27,13 @@ from src.state import (
 
 @dataclass
 class HookStepConfig:
-    """Configuration for a single hook step (ai_review or human_check)."""
+    """Configuration for a single hook step (ai_review, human_check, or brainstorm)."""
     enabled: bool = True
     checks: list[str] = field(default_factory=list)
     mode: str = "interactive"
     file_path: str = ""
+    auto_defer_keywords: list[str] = field(default_factory=list)
+    critical_path_threshold: int = 3
 
 
 @dataclass
@@ -56,6 +58,8 @@ class HookConfig:
                     checks=step_data.get("checks", []),
                     mode=step_data.get("mode", "interactive"),
                     file_path=step_data.get("file_path", ""),
+                    auto_defer_keywords=step_data.get("auto_defer_keywords", []),
+                    critical_path_threshold=step_data.get("critical_path_threshold", 3),
                 )
         return cls(hooks=hooks)
 

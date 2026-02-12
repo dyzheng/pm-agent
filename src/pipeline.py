@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from src.branches import BranchRegistry
+from src.brainstorm import run_brainstorm
 from src.hooks import HookConfig, run_ai_review, run_human_check
 from src.phases.audit import run_audit
 from src.phases.decompose import run_decompose
@@ -139,6 +140,28 @@ def _run_phase_with_hooks(
                         + "; ".join(review.issues)
                     )
                     return state
+
+        # Brainstorm (between AI review and human check)
+        bs_config = hook.get("brainstorm")
+        if bs_config and bs_config.enabled:
+            resolved = run_brainstorm(
+                state,
+                hook_name,
+                checks=bs_config.checks or None,
+                keywords=bs_config.auto_defer_keywords or None,
+                threshold=bs_config.critical_path_threshold,
+                mode=bs_config.mode,
+                file_path=bs_config.file_path or "state/brainstorm_prompt.json",
+                input_fn=input_fn,
+            )
+            if not resolved:
+                # File mode: prompt written, pipeline pauses
+                state.blocked_reason = (
+                    f"Brainstorm pending at {hook_name}: "
+                    "review state/brainstorm_prompt.json and write "
+                    "state/brainstorm_response.json"
+                )
+                return state
 
         # Human Check
         human_config = hook.get("human_check")

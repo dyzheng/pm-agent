@@ -97,6 +97,7 @@ class TaskStatus(Enum):
     IN_PROGRESS = "in_progress"
     DONE = "done"
     FAILED = "failed"
+    DEFERRED = "deferred"
 
 
 # -- Dataclasses -----------------------------------------------------------
@@ -121,6 +122,10 @@ class Task:
     branch_name: str = ""
     commit_hash: str = ""
     worktree_path: str = ""
+    risk_level: str = ""
+    defer_trigger: str = ""
+    original_dependencies: list[str] = field(default_factory=list)
+    suspended_dependencies: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -139,6 +144,10 @@ class Task:
             "branch_name": self.branch_name,
             "commit_hash": self.commit_hash,
             "worktree_path": self.worktree_path,
+            "risk_level": self.risk_level,
+            "defer_trigger": self.defer_trigger,
+            "original_dependencies": self.original_dependencies,
+            "suspended_dependencies": self.suspended_dependencies,
         }
 
     @classmethod
@@ -159,6 +168,10 @@ class Task:
             branch_name=data.get("branch_name", ""),
             commit_hash=data.get("commit_hash", ""),
             worktree_path=data.get("worktree_path", ""),
+            risk_level=data.get("risk_level", ""),
+            defer_trigger=data.get("defer_trigger", ""),
+            original_dependencies=data.get("original_dependencies", []),
+            suspended_dependencies=data.get("suspended_dependencies", []),
         )
 
 
@@ -393,6 +406,41 @@ class HumanApproval:
         )
 
 
+@dataclass
+class BrainstormResult:
+    """Record of a brainstorm decision for a flagged task."""
+    hook_name: str
+    task_id: str
+    question: str
+    options: list[str]
+    answer: str
+    action_taken: str
+    timestamp: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "hook_name": self.hook_name,
+            "task_id": self.task_id,
+            "question": self.question,
+            "options": self.options,
+            "answer": self.answer,
+            "action_taken": self.action_taken,
+            "timestamp": self.timestamp,
+        }
+
+    @classmethod
+    def from_dict(cls, data: dict[str, Any]) -> BrainstormResult:
+        return cls(
+            hook_name=data["hook_name"],
+            task_id=data["task_id"],
+            question=data.get("question", ""),
+            options=data.get("options", []),
+            answer=data.get("answer", ""),
+            action_taken=data.get("action_taken", ""),
+            timestamp=data.get("timestamp", ""),
+        )
+
+
 # -- Top-level project state -----------------------------------------------
 
 
@@ -416,6 +464,7 @@ class ProjectState:
     human_decisions: list[Decision] = field(default_factory=list)
     review_results: list[ReviewResult] = field(default_factory=list)
     human_approvals: list[HumanApproval] = field(default_factory=list)
+    brainstorm_results: list[BrainstormResult] = field(default_factory=list)
     blocked_reason: str | None = None
 
     def to_dict(self) -> dict[str, Any]:
@@ -434,6 +483,7 @@ class ProjectState:
             "human_decisions": [d.to_dict() for d in self.human_decisions],
             "review_results": [r.to_dict() for r in self.review_results],
             "human_approvals": [h.to_dict() for h in self.human_approvals],
+            "brainstorm_results": [b.to_dict() for b in self.brainstorm_results],
             "blocked_reason": self.blocked_reason,
         }
 
@@ -469,6 +519,10 @@ class ProjectState:
             ],
             human_approvals=[
                 HumanApproval.from_dict(h) for h in data.get("human_approvals", [])
+            ],
+            brainstorm_results=[
+                BrainstormResult.from_dict(b)
+                for b in data.get("brainstorm_results", [])
             ],
             blocked_reason=data.get("blocked_reason"),
         )

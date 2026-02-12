@@ -1,5 +1,5 @@
 # Review hook configuration for PM Agent pipeline
-# Each hook runs after its named phase: ai_review first, then human_check
+# Hook execution order: ai_review -> brainstorm -> human_check
 
 hooks:
   after_audit:
@@ -21,6 +21,20 @@ hooks:
         - dependency_order
         - scope_sanity
         - no_frozen_mutation
+    brainstorm:
+      enabled: true
+      checks:
+        - external_dependency
+        - high_uncertainty
+        - long_critical_path
+      auto_defer_keywords:
+        - "generate"
+        - "生成"
+        - "search"
+        - "optimize"
+        - "优化"
+      critical_path_threshold: 3
+      mode: interactive
     human_check:
       enabled: true
       mode: interactive
@@ -33,6 +47,11 @@ hooks:
         - tests_pass
         - commit_exists
         - diff_size
+    brainstorm:
+      enabled: true
+      checks:
+        - deferred_trigger_check
+      mode: interactive
     human_check:
       enabled: true
       mode: interactive
