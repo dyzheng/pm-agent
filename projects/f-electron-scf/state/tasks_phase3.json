@@ -1,0 +1,149 @@
+{
+  "phase": "Phase 3: 验证与用户场景",
+  "tasks": [
+    {
+      "id": "FE-300",
+      "title": "用户需求调研",
+      "layer": "workflow",
+      "type": "research",
+      "scope": "external",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": ["FE-301"],
+      "description": "调研实际用户的稀土计算需求，收集3-5个具体体系和性质要求，识别真实痛点。覆盖不同应用场景（氧化物/合金/催化等）。",
+      "acceptance_criteria": [
+        "收集至少3个实际研究项目的计算需求",
+        "记录：元素、结构、目标性质、当前痛点",
+        "覆盖不同应用场景（氧化物/合金/催化等）",
+        "形成需求文档"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/user_requirements.md"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "workflow",
+      "risk_level": "low",
+      "old_ids": ["T3-1"]
+    },
+    {
+      "id": "FE-301",
+      "title": "选择 2-3 个代表性验证体系",
+      "layer": "workflow",
+      "type": "research",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FE-300"],
+      "blocks": ["FE-304"],
+      "description": "基于用户需求，选择2-3个代表性体系作为验证目标，必须覆盖：简单氧化物基线、磁序、一个应用场景。每个体系有明确的参考数据来源。",
+      "acceptance_criteria": [
+        "选择标准：覆盖关键物理（f电子、磁性、化学环境）",
+        "示例组合：CeO2（基线）+ GdN（磁性）+ CeO2(111)表面（催化）",
+        "或：CeO2 + NdFeB（合金磁性）+ 稀土MOF（分子）",
+        "每个体系有明确的参考数据来源"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation_systems.md"
+      ],
+      "estimated_effort": "2-3 days",
+      "specialist": "workflow",
+      "risk_level": "low",
+      "old_ids": ["T3-2"]
+    },
+    {
+      "id": "FE-302",
+      "title": "简单氧化物验证（CeO2, Gd2O3, La2O3）",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FE-000", "FE-204"],
+      "blocks": ["FE-303", "FE-304"],
+      "description": "基准验证：ABACUS vs VASP PAW 对比 CeO2/Gd2O3/La2O3 的晶格常数、体模量、带隙、磁矩（如适用）。PBE 和 PBE+U 两种泛函。记录 SCF 收敛步数和计算时间。",
+      "acceptance_criteria": [
+        "晶格常数误差<1%",
+        "体模量误差<10%",
+        "带隙定性一致",
+        "SCF 收敛步数和计算时间记录"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/oxide_benchmark/"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "workflow",
+      "risk_level": "medium",
+      "old_ids": ["FE-400"]
+    },
+    {
+      "id": "FE-303",
+      "title": "合金与磁性化合物验证",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FE-302", "FE-204"],
+      "blocks": ["FE-304"],
+      "description": "中等难度验证：(1) NdFeB/SmCo5 合金的磁矩和磁各向异性，(2) GdN/EuO 的磁序和交换耦合，(3) TbMnO3 的多铁性。重点关注 DFT+U 参数敏感性和 SCF 收敛可靠性。",
+      "acceptance_criteria": [
+        "磁矩与 VASP/实验值偏差<10%",
+        "SCF 收敛成功率>90%"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/magnetic_benchmark/"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "workflow",
+      "risk_level": "medium",
+      "old_ids": ["FE-401"]
+    },
+    {
+      "id": "FE-304",
+      "title": "跨代码验证（ABACUS vs VASP）",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FE-302", "FE-301"],
+      "blocks": ["FE-305", "FE-400"],
+      "description": "对选定的验证体系，运行 ABACUS 和 VASP 计算，对比晶格常数、磁矩、带隙、形成能等关键性质。如果误差>5%且可追溯到赝势，触发 FE-D-A1。",
+      "acceptance_criteria": [
+        "ABACUS vs VASP 结构性质误差<2%",
+        "能量误差<10%",
+        "磁矩误差<0.1 μB",
+        "如果误差>5%且可追溯到赝势，触发 FE-D-A1"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/cross_code/",
+        "projects/f-electron-scf/validation/comparison_report.md"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "workflow",
+      "risk_level": "medium",
+      "old_ids": ["T3-3"]
+    },
+    {
+      "id": "FE-305",
+      "title": "收敛可靠性测试",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FE-304"],
+      "blocks": ["FE-400"],
+      "description": "对每个验证体系运行10次不同随机种子的计算，统计收敛率和能量一致性。",
+      "acceptance_criteria": [
+        "每个体系运行10次（不同随机种子）",
+        "收敛率>90%",
+        "收敛结果能量标准差<1 meV",
+        "记录失败案例的诊断信息"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/reliability_test.py",
+        "projects/f-electron-scf/validation/reliability_report.md"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "workflow",
+      "risk_level": "low",
+      "old_ids": ["T3-4"]
+    }
+  ]
+}

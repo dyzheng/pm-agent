@@ -1,0 +1,77 @@
+{
+  "phase": "Phase 0: 基础设施与调研",
+  "tasks": [
+    {
+      "id": "FE-000",
+      "title": "赝势库调研与收集",
+      "layer": "core",
+      "type": "research",
+      "scope": "external",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": ["FE-302"],
+      "description": "系统调研现有稀土f_in_valence模守恒赝势库：PseudoDojo (ONCVPSP), PSlibrary (QE), SG15, GBRV, JTH。收集可用赝势，记录每个赝势的参考构型、截断半径、lmax、验证状态。建立赝势库索引。",
+      "acceptance_criteria": [
+        "至少覆盖La/Ce/Nd/Sm/Eu/Gd/Tb 7种元素的赝势可用性报告",
+        "每个元素至少1个f_in_valence赝势",
+        "记录赝势来源、参数、质量评估",
+        "建立赝势库目录结构"
+      ],
+      "files_to_touch": [
+        "pseudopotentials/rare_earth/",
+        "pseudopotentials/rare_earth/README.md"
+      ],
+      "estimated_effort": "1-2 days",
+      "specialist": "workflow",
+      "risk_level": "low",
+      "old_ids": ["T0-4", "FE-000"]
+    },
+    {
+      "id": "FE-001",
+      "title": "ABACUS DFT+U 代码深度审计",
+      "layer": "core",
+      "type": "research",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": ["FE-200", "FE-201", "FE-202"],
+      "description": "详细审计ABACUS DFT+U实现：dftu.cpp（主逻辑、U-ramping、omc）、dftu_occup.cpp（占据矩阵mixing）、dftu_hamilt.cpp（哈密顿量）、dftu_yukawa.cpp（自动U）、dftu_pw.cpp（PW限制）。记录每个函数的输入输出、数据流、已知限制。特别关注f电子（l=3）的处理路径。",
+      "acceptance_criteria": [
+        "完整的代码审计文档，包含数据流图",
+        "f电子处理路径分析",
+        "已知限制和改进点清单"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/audit/dftu_audit.md"
+      ],
+      "estimated_effort": "2-3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "old_ids": ["FE-002"]
+    },
+    {
+      "id": "FE-002",
+      "title": "建立 DFT+U 回归测试套件",
+      "layer": "core",
+      "type": "infra",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": ["FE-101"],
+      "description": "建立CeO2和GdN的DFT+U回归测试基线。包括LCAO和PW两种基组的参考结果。确保后续代码移植不破坏现有功能。",
+      "acceptance_criteria": [
+        "CeO2 LCAO DFT+U 基线结果",
+        "GdN LCAO DFT+U 基线结果",
+        "自动化回归测试脚本",
+        "结果对比阈值定义"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/tests/regression/"
+      ],
+      "estimated_effort": "1-2 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "old_ids": ["T0-3"]
+    }
+  ]
+}

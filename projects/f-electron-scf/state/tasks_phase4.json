@@ -1,0 +1,129 @@
+{
+  "phase": "Phase 4: 生产就绪自动化",
+  "tasks": [
+    {
+      "id": "FE-400",
+      "title": "自动参数选择",
+      "layer": "workflow",
+      "type": "new",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-304", "FE-305"],
+      "blocks": ["FE-401", "FE-402", "FE-403"],
+      "description": "实现自动参数选择工具：输入结构文件+元素列表，输出推荐的 mixing_beta、Kerker 参数、U 值、占据策略。检测 f 元素并应用最佳实践参数。",
+      "acceptance_criteria": [
+        "检测f元素并应用最佳实践参数",
+        "输出推荐 INPUT 文件",
+        "Python 脚本或 ABACUS 预处理器",
+        "文档说明参数选择逻辑"
+      ],
+      "files_to_touch": [
+        "tools/rare_earth_auto_setup.py",
+        "tools/rare_earth_auto_setup_README.md"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "workflow",
+      "risk_level": "low",
+      "old_ids": ["T4-1"]
+    },
+    {
+      "id": "FE-401",
+      "title": "失败诊断 + 自动重试",
+      "layer": "workflow",
+      "type": "new",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-400"],
+      "blocks": ["FE-404"],
+      "description": "实现 SCF 失败自动诊断和重试机制：监控收敛模式（震荡/发散/慢收敛），自动调整参数重试。最多3次重试策略。",
+      "acceptance_criteria": [
+        "识别失败模式（震荡/发散/慢收敛）",
+        "自动调整策略：减小 beta/切换退火/尝试随机初始化",
+        "最多3次重试策略",
+        "输出诊断日志",
+        "失败后给出明确错误信息和建议"
+      ],
+      "files_to_touch": [
+        "tools/scf_auto_retry.py",
+        "source/source_estate/module_esolver/esolver_ks.cpp"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "workflow",
+      "risk_level": "medium",
+      "old_ids": ["T4-2"]
+    },
+    {
+      "id": "FE-402",
+      "title": "abacustest 工作流集成",
+      "layer": "workflow",
+      "type": "extend",
+      "scope": "abacus-test",
+      "status": "pending",
+      "dependencies": ["FE-400"],
+      "blocks": [],
+      "description": "将稀土收敛工作流集成到 abacustest，提供预配置模板和自动化 VASP 对比。",
+      "acceptance_criteria": [
+        "添加稀土 DFT+U 工作流模板到 abacustest",
+        "预配置 INPUT 文件（常见场景）",
+        "自动 VASP 对比（如果有参考数据）",
+        "集成到 abacustest 文档"
+      ],
+      "files_to_touch": [
+        "abacustest/workflows/rare_earth_dftu/",
+        "abacustest/workflows/rare_earth_dftu/README.md"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "abacus-test",
+      "risk_level": "low",
+      "old_ids": ["T4-3"]
+    },
+    {
+      "id": "FE-403",
+      "title": "文档与示例",
+      "layer": "workflow",
+      "type": "new",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-400"],
+      "blocks": ["FE-404"],
+      "description": "编写完整的用户文档和示例：教程、示例库、故障排除指南。",
+      "acceptance_criteria": [
+        "教程：《ABACUS 稀土 DFT+U 计算指南》",
+        "示例库：5-10 个收敛体系的 INPUT 文件和分析",
+        "故障排除指南：常见失败模式和解决方案",
+        "发布到 ABACUS 文档网站"
+      ],
+      "files_to_touch": [
+        "docs/advanced/rare_earth_dftu_tutorial.md",
+        "examples/rare_earth/",
+        "docs/troubleshooting/rare_earth_convergence.md"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "workflow",
+      "risk_level": "low",
+      "old_ids": ["T4-4"]
+    },
+    {
+      "id": "FE-404",
+      "title": "自动化工作流与参数推荐系统",
+      "layer": "workflow",
+      "type": "new",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-401", "FE-403"],
+      "blocks": [],
+      "description": "整合所有技术为自动化工作流：(1) 根据输入结构自动选择赝势/轨道/DFT+U 参数，(2) 自动选择 SCF 策略（mixing 参数、是否启用约束、是否多起点），(3) 失败自动诊断和重试，(4) 通过 abacustest 或 PyABACUS 接口暴露。",
+      "acceptance_criteria": [
+        "端到端自动化：用户只需提供结构文件，系统自动完成计算",
+        "集成参数推荐、失败诊断、自动重试"
+      ],
+      "files_to_touch": [
+        "tools/rare_earth_workflow.py"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "workflow",
+      "risk_level": "low",
+      "old_ids": ["FE-500"]
+    }
+  ]
+}

@@ -1,7 +1,8 @@
 {
-  "request": "Solve f_in_valence rare-earth element norm-conserving pseudopotential SCF convergence problems in ABACUS: pseudopotential testing/generation, orbital optimization, DFT+U convergence, high ecutwfc performance, AI-guided initial charge guess, damped charge constraint, and cross-validation with VASP/all-electron codes across alloys, magnetic compounds, surface catalysis, and molecular catalysis scenarios.",
   "project_id": "f-electron-scf",
-  "phase": "decompose",
+  "name": "Rare-Earth f-electron Norm-Conserving Pseudopotential SCF Convergence",
+  "request": "Solve f_in_valence rare-earth element norm-conserving pseudopotential SCF convergence problems in ABACUS: pseudopotential testing/generation, orbital optimization, DFT+U convergence, high ecutwfc performance, AI-guided initial charge guess, damped charge constraint, and cross-validation with VASP/all-electron codes across alloys, magnetic compounds, surface catalysis, and molecular catalysis scenarios.",
+  "phase": "execute",
   "parsed_intent": {
     "domain": "rare-earth DFT+U convergence",
     "method": "SCF algorithm improvements + pseudopotential optimization",
@@ -17,22 +18,14 @@
       "rare-earth elements"
     ]
   },
-  "audit_results": [],
-  "tasks": [],
-  "current_task_id": null,
-  "drafts": {},
-  "gate_results": {},
-  "integration_results": [],
-  "human_decisions": [],
-  "review_results": [],
-  "human_approvals": [],
-  "brainstorm_results": [],
-  "blocked_reason": null,
   "metadata": {
     "created": "2026-02-11T12:00:00Z",
+    "last_updated": "2026-02-13T00:00:00Z",
     "brainstorm_applied": "2026-02-11T15:30:00Z",
+    "unified_task_system": "2026-02-13T00:00:00Z",
     "strategy": "defer-by-default with trigger-based promotion",
     "timeline": "5-6 months",
+    "id_scheme": "FE-{phase}{seq}, FE-D-{category}{seq} for deferred",
     "milestones": {
       "M1": "End of Month 1 - Architecture ready + basic convergence",
       "M2": "End of Month 2 - Occupation strategies working",
@@ -40,8 +33,43 @@
       "M4": "End of Month 5 - Production ready",
       "M5": "End of Month 6 - Release"
     },
-    "active_task_count": 18,
-    "deferred_task_count": 8,
-    "total_task_count": 26
+    "statistics": {
+      "total_tasks": 42,
+      "active_tasks": 34,
+      "deferred_tasks": 8,
+      "in_review": 1,
+      "in_progress": 0,
+      "done": 0,
+      "pending": 33
+    },
+    "phases": {
+      "Phase 0 (基础设施)": ["FE-000", "FE-001", "FE-002"],
+      "Phase 1 (代码移植)": ["FE-100", "FE-101", "FE-102", "FE-103", "FE-104", "FE-105", "FE-106", "FE-107", "FE-108", "FE-109", "FE-110", "FE-111", "FE-112", "FE-113"],
+      "Phase 2 (SCF算法)": ["FE-200", "FE-201", "FE-202", "FE-203", "FE-204", "FE-205"],
+      "Phase 3 (验证)": ["FE-300", "FE-301", "FE-302", "FE-303", "FE-304", "FE-305"],
+      "Phase 4 (自动化)": ["FE-400", "FE-401", "FE-402", "FE-403", "FE-404"],
+      "Deferred A (赝势)": ["FE-D-A1", "FE-D-A2", "FE-D-A3"],
+      "Deferred B (轨道)": ["FE-D-B1", "FE-D-B2"],
+      "Deferred C (ML)": ["FE-D-C1", "FE-D-C2", "FE-D-C3"]
+    },
+    "critical_path": "FE-100 → FE-101 → FE-105 → FE-200/201/202 → FE-204 → FE-205 → FE-302 → FE-304 → FE-400",
+    "parallel_opportunities": [
+      "FE-000 || FE-001 || FE-002 (Phase 0 全部可并行)",
+      "FE-100 || FE-107 (onsite_projector 与 deltaspin 可并行)",
+      "FE-200 || FE-201 || FE-202 (Phase 2 前三个可并行)",
+      "FE-300 || FE-301 (用户调研可提前启动)"
+    ],
+    "execution_timeline": {
+      "Week 1": "FE-100(补测试) + FE-107 [可并行]",
+      "Week 2": "FE-101 (DFT+U PW nspin=4 SCF)",
+      "Week 3": "FE-102 + FE-103 [可并行]",
+      "Week 4": "FE-104 + FE-105 [可并行]",
+      "Week 5": "FE-108 + FE-109 [可并行]",
+      "Week 6": "FE-110 + FE-111",
+      "Week 7": "FE-106 + FE-112 + FE-113",
+      "Week 8-10": "Phase 2 (FE-200~205)",
+      "Week 11-14": "Phase 3 (FE-300~305)",
+      "Week 15-20": "Phase 4 (FE-400~404)"
+    }
   }
 }

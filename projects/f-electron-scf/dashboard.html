@@ -360,15 +360,23 @@
 <body>
     <div class="header">
         <h1>🧪 f-electron-scf 项目看板</h1>
-        <p>稀土f电子模守恒赝势SCF收敛问题 - Brainstorm优化后</p>
+        <p>稀土f电子模守恒赝势SCF收敛问题 — 统一任务体系 (FE ID)</p>
         <div class="stats">
             <div class="stat">
                 <div class="stat-label">总任务数</div>
                 <div class="stat-value" id="total-tasks">-</div>
             </div>
             <div class="stat">
-                <div class="stat-label">活跃任务</div>
-                <div class="stat-value" style="color: #3498db;" id="active-tasks">-</div>
+                <div class="stat-label">待执行</div>
+                <div class="stat-value" style="color: #3498db;" id="pending-tasks">-</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">审核中</div>
+                <div class="stat-value" style="color: #9b59b6;" id="review-tasks">-</div>
+            </div>
+            <div class="stat">
+                <div class="stat-label">已完成</div>
+                <div class="stat-value" style="color: #2ecc71;" id="done-tasks">-</div>
             </div>
             <div class="stat">
                 <div class="stat-label">延迟任务</div>
@@ -376,11 +384,7 @@
             </div>
             <div class="stat">
                 <div class="stat-label">预计时间</div>
-                <div class="stat-value" style="color: #2ecc71;">5-6月</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">节省时间</div>
-                <div class="stat-value" style="color: #e74c3c;">40%</div>
+                <div class="stat-value" style="color: #95a5a6;">5-6月</div>
             </div>
         </div>
     </div>
@@ -457,11 +461,16 @@
 
         function updateStats() {
             const tasks = projectState.tasks || [];
-            const active = tasks.filter(t => t.status === 'pending').length;
+            const pending = tasks.filter(t => t.status === 'pending').length;
+            const inReview = tasks.filter(t => t.status === 'in_review').length;
+            const inProgress = tasks.filter(t => t.status === 'in_progress').length;
+            const done = tasks.filter(t => t.status === 'done').length;
             const deferred = tasks.filter(t => t.status === 'deferred').length;
 
             document.getElementById('total-tasks').textContent = tasks.length;
-            document.getElementById('active-tasks').textContent = active;
+            document.getElementById('pending-tasks').textContent = pending;
+            document.getElementById('review-tasks').textContent = inReview + inProgress;
+            document.getElementById('done-tasks').textContent = done;
             document.getElementById('deferred-tasks').textContent = deferred;
         }
 
@@ -469,13 +478,13 @@
             const board = document.getElementById('kanban-board');
             const tasks = projectState.tasks || [];
 
+            // FE unified ID grouping
             const phases = {
-                'PR 重构任务': tasks.filter(t => t.id.startsWith('PR-')),
-                'Phase 0': tasks.filter(t => t.id.startsWith('T0-')),
-                'Phase 1': tasks.filter(t => t.id.startsWith('T1-')),
-                'Phase 2': tasks.filter(t => t.id.startsWith('T2-')),
-                'Phase 3': tasks.filter(t => t.id.startsWith('T3-')),
-                'Phase 4': tasks.filter(t => t.id.startsWith('T4-')),
+                'Phase 0: 基础设施': tasks.filter(t => t.id.match(/^FE-00/)),
+                'Phase 1: 代码移植': tasks.filter(t => t.id.match(/^FE-1\d/) && t.status !== 'deferred'),
+                'Phase 2: SCF算法': tasks.filter(t => t.id.match(/^FE-2\d/)),
+                'Phase 3: 验证': tasks.filter(t => t.id.match(/^FE-3\d/)),
+                'Phase 4: 自动化': tasks.filter(t => t.id.match(/^FE-4\d/)),
                 '延迟任务': tasks.filter(t => t.status === 'deferred')
             };
 
@@ -507,6 +516,7 @@
             const statusEmoji = {
                 'pending': '⏳',
                 'in_progress': '🔄',
+                'in_review': '🔍',
                 'done': '✅',
                 'failed': '❌',
                 'deferred': '⏸️'
@@ -530,17 +540,16 @@
             const tasks = projectState.tasks || [];
 
             const phases = [
-                { name: 'PR 重构任务: zdy-tmp 合并', prefix: 'PR-' },
-                { name: 'Phase 0: 代码集成', prefix: 'T0-' },
-                { name: 'Phase 1: 基础收敛', prefix: 'T1-' },
-                { name: 'Phase 2: DFT+U策略', prefix: 'T2-' },
-                { name: 'Phase 3: 用户验证', prefix: 'T3-' },
-                { name: 'Phase 4: 生产就绪', prefix: 'T4-' }
+                { name: 'Phase 0: 基础设施与调研', filter: t => t.id.match(/^FE-00/) },
+                { name: 'Phase 1: 代码移植 zdy-tmp → develop', filter: t => t.id.match(/^FE-1\d/) },
+                { name: 'Phase 2: SCF 收敛算法改进', filter: t => t.id.match(/^FE-2\d/) },
+                { name: 'Phase 3: 验证与用户场景', filter: t => t.id.match(/^FE-3\d/) },
+                { name: 'Phase 4: 生产就绪自动化', filter: t => t.id.match(/^FE-4\d/) }
             ];
 
             content.innerHTML = '';
             phases.forEach(phase => {
-                const phaseTasks = tasks.filter(t => t.id.startsWith(phase.prefix));
+                const phaseTasks = tasks.filter(t => phase.filter(t) && t.status !== 'deferred');
                 if (phaseTasks.length === 0) return;
 
                 const section = document.createElement('div');
@@ -643,7 +652,13 @@
 
                 <div class="modal-section">
                     <h4>元数据</h4>
-                    <p><strong>状态:</strong> ${task.status}</p>
+                    <p><strong>状态:</strong> ${{
+                        'pending': '⏳ 待执行',
+                        'in_progress': '🔄 进行中',
+                        'in_review': '🔍 审核中',
+                        'done': '✅ 已完成',
+                        'deferred': '⏸️ 已延迟'
+                    }[task.status] || task.status}</p>
                     <p><strong>层级:</strong> ${task.layer}</p>
                     <p><strong>类型:</strong> ${task.type}</p>
                     <p><strong>风险:</strong> ${task.risk_level || 'low'}</p>

@@ -1,0 +1,185 @@
+{
+  "phase": "Phase 1: 代码移植 zdy-tmp → develop",
+  "tasks": [
+    {
+      "id": "FE-100",
+      "title": "onsite_projector nspin=1/2 支持",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "in_review",
+      "dependencies": [],
+      "blocks": ["FE-101", "FE-102", "FE-109"],
+      "description": "扩展 develop 的 onsite_projector 支持 nspin=1/2。当前 develop 仅支持 nspin=4。需要：(1) cal_occupations() 增加 isk_in 参数，(2) cal_becp() 增加 npwx 参数，(3) 适配 Onsite_Proj_tools（develop）vs FS_Nonlocal_tools（zdy-tmp）的 API 差异。",
+      "acceptance_criteria": [
+        "编译通过",
+        "现有 nspin=4 测试不受影响（回归 099_PW_DJ_SO）",
+        "新增 nspin=2 单元测试（npol=1 spin-up/down occupation、charge_mag）",
+        "npol=2 回归测试通过"
+      ],
+      "files_to_touch": [
+        "source/source_pw/module_pwdft/onsite_projector.h",
+        "source/source_pw/module_pwdft/onsite_projector.cpp",
+        "source/source_pw/module_pwdft/onsite_proj_tools.h",
+        "source/source_pw/module_pwdft/onsite_proj_tools.cpp"
+      ],
+      "estimated_effort": "1-2 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "old_ids": ["PR-1"],
+      "commit_hash": "d2364165c",
+      "review_notes": "代码已提交但验收未通过：零单元测试、零集成测试、无编译日志。需补充测试。"
+    },
+    {
+      "id": "FE-101",
+      "title": "DFT+U PW SCF（nspin=4）",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-100"],
+      "blocks": ["FE-102", "FE-103", "FE-105", "FE-106"],
+      "description": "在 PW 基组下支持 DFT+U SCF 计算（先 nspin=4）。核心工作：(1) 移植 zdy-tmp dftu_pw.cpp 的 PW 占据矩阵计算到 develop 的 Plus_U 类，(2) 添加 eff_pot_pw/cal_occup_m_pw 等 PW 相关方法，(3) 在 esolver_ks_pw.cpp 集成 DFT+U 调用。适配要点：DFTU→Plus_U 类名、GlobalC::ucell→参数传递、GlobalV::NSPIN→PARAM.inp.nspin。",
+      "acceptance_criteria": [
+        "CeO2 nspin=4 PW DFT+U SCF 可收敛",
+        "能量与 LCAO DFT+U 定性一致",
+        "编译通过，现有测试不受影响",
+        "nspin=1/2/4 的能量权重和对角系数单元测试",
+        "set_locale() 的 uom_array→locale 拷贝单元测试"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_pw.cpp",
+        "source/source_lcao/module_dftu/dftu.h",
+        "source/source_lcao/module_dftu/dftu.cpp",
+        "source/source_esolver/esolver_ks_pw.cpp",
+        "source/source_io/module_parameter/input_parameter.h"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["PR-2"]
+    },
+    {
+      "id": "FE-102",
+      "title": "DFT+U PW nspin=1/2 扩展",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-100", "FE-101"],
+      "blocks": ["FE-106"],
+      "description": "扩展 PW DFT+U 支持 nspin=1 和 nspin=2。在 dftu_pw.cpp 添加 nspin=1/2 分支，在 esolver_ks_pw.cpp 处理 nspin=2 的 isk 映射。",
+      "acceptance_criteria": [
+        "NiO nspin=2 PW DFT+U SCF 可收敛",
+        "能量与 LCAO 一致",
+        "新增 100_PW_DFTU_S2（nspin=2）和 101_PW_DFTU_S1（nspin=1）集成测试"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_pw.cpp",
+        "source/source_esolver/esolver_ks_pw.cpp"
+      ],
+      "estimated_effort": "2-3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["PR-3"]
+    },
+    {
+      "id": "FE-103",
+      "title": "DFT+U PW force",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-101"],
+      "blocks": ["FE-104", "FE-106"],
+      "description": "PW 基组下 DFT+U 力的计算。适配 forces_onsite.cpp 到 Plus_U 接口，确保 cal_force_dftu() 在 Onsite_Proj_tools 中正确工作。",
+      "acceptance_criteria": [
+        "CeO2 PW DFT+U 力与 LCAO 一致（误差 < 1 mRy/Bohr）",
+        "力的对称性正确"
+      ],
+      "files_to_touch": [
+        "source/source_pw/module_pwdft/forces_onsite.cpp",
+        "source/source_pw/module_pwdft/onsite_proj_tools.h",
+        "source/source_pw/module_pwdft/onsite_proj_tools.cpp"
+      ],
+      "estimated_effort": "2-3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["PR-4"]
+    },
+    {
+      "id": "FE-104",
+      "title": "DFT+U PW stress",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-103"],
+      "blocks": ["FE-106"],
+      "description": "PW 基组下 DFT+U 应力的计算。适配 stress_func_onsite.cpp 到 Plus_U 接口。",
+      "acceptance_criteria": [
+        "CeO2 PW DFT+U 应力与 LCAO 一致",
+        "应力张量对称性正确"
+      ],
+      "files_to_touch": [
+        "source/source_pw/module_pwdft/stress_func_onsite.cpp",
+        "source/source_pw/module_pwdft/onsite_proj_tools.h",
+        "source/source_pw/module_pwdft/onsite_proj_tools.cpp"
+      ],
+      "estimated_effort": "2 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "old_ids": ["PR-5"]
+    },
+    {
+      "id": "FE-105",
+      "title": "mixing_dftu（占据矩阵 mixing）",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-101"],
+      "blocks": ["FE-106", "FE-111", "FE-112", "FE-113", "FE-200"],
+      "description": "实现占据矩阵的 Broyden mixing，改善 DFT+U 收敛性。添加 mix_locale() 方法，mixing_dftu 输入参数，震荡体系自动开启 mixing_dftu。",
+      "acceptance_criteria": [
+        "mixing_dftu=true 时占据矩阵使用 Broyden mixing",
+        "震荡体系自动开启 mixing_dftu",
+        "不影响非 DFT+U 计算"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_occup.cpp",
+        "source/source_lcao/module_dftu/dftu.h",
+        "source/source_lcao/module_dftu/dftu.cpp",
+        "source/source_io/module_parameter/input_parameter.h",
+        "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"
+      ],
+      "estimated_effort": "3-4 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["PR-6"]
+    },
+    {
+      "id": "FE-106",
+      "title": "DFT+U PW GPU/DCU 加速适配",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-101", "FE-102", "FE-103", "FE-104"],
+      "blocks": [],
+      "description": "确保 PW DFT+U 在 GPU/DCU 上正确运行。适配 GPU kernel、device memory 操作。",
+      "acceptance_criteria": [
+        "CUDA 编译通过",
+        "GPU 结果与 CPU 一致"
+      ],
+      "files_to_touch": [
+        "source/source_pw/module_pwdft/kernels/",
+        "source/source_pw/module_pwdft/onsite_proj_tools.cpp"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["PR-7"]
+    }
+  ]
+}

@@ -1,125 +1,99 @@
 #!/usr/bin/env python3
-"""Build complete ProjectState from task fragments."""
+"""Build complete project_state.json from split task files.
+
+New unified FE ID system (2026-02-13):
+  tasks_phase0.json   → FE-0xx
+  tasks_phase1a.json  → FE-100~106
+  tasks_phase1b.json  → FE-107~113
+  tasks_phase2.json   → FE-2xx
+  tasks_phase3.json   → FE-3xx
+  tasks_phase4.json   → FE-4xx
+  tasks_deferred.json → FE-D-*
+"""
 
 import json
-import sys
 from pathlib import Path
 
-# Add pm-agent src to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent / "src"))
 
-from state import ProjectState, Task, Layer, TaskType, Scope, TaskStatus, Phase
-
-
-def load_tasks_from_json(file_path: str) -> list[Task]:
-    """Load tasks from a JSON file and convert to Task objects."""
-    data = json.loads(Path(file_path).read_text())
-    tasks = []
-
-    # Handle both direct task list and nested structure
+def load_tasks(file_path: Path) -> list[dict]:
+    """Load tasks from a JSON file, handling both formats."""
+    data = json.loads(file_path.read_text())
     if isinstance(data, list):
-        task_list = data
-    else:
-        # Flatten all task lists from the JSON
-        task_list = []
-        for key, value in data.items():
-            if isinstance(value, list):
-                task_list.extend(value)
-
-    for task_data in task_list:
-        task = Task(
-            id=task_data["id"],
-            title=task_data["title"],
-            layer=Layer(task_data["layer"]),
-            type=TaskType(task_data["type"]),
-            description=task_data["description"],
-            dependencies=task_data["dependencies"],
-            acceptance_criteria=task_data["acceptance_criteria"],
-            files_to_touch=task_data["files_to_touch"],
-            estimated_scope=Scope(task_data["estimated_scope"]),
-            specialist=task_data["specialist"],
-            gates=[],  # Will be populated if needed
-            status=TaskStatus(task_data.get("status", "pending")),
-            risk_level=task_data.get("risk_level", ""),
-            defer_trigger=task_data.get("defer_trigger", ""),
-        )
-        tasks.append(task)
-
+        return data
+    # Extract tasks from any list-valued key
+    tasks = []
+    for value in data.values():
+        if isinstance(value, list) and value and isinstance(value[0], dict):
+            tasks.extend(value)
     return tasks
 
 
 def main():
-    """Build and save complete ProjectState."""
-    base_dir = Path(__file__).parent
+    base = Path(__file__).parent
+
+    # Task source files in order
+    task_files = [
+        "tasks_phase0.json",
+        "tasks_phase1a.json",
+        "tasks_phase1b.json",
+        "tasks_phase2.json",
+        "tasks_phase3.json",
+        "tasks_phase4.json",
+        "tasks_deferred.json",
+    ]
+
+    all_tasks = []
+    for fname in task_files:
+        fpath = base / fname
+        if fpath.exists():
+            tasks = load_tasks(fpath)
+            all_tasks.extend(tasks)
+            print(f"  {fname}: {len(tasks)} tasks")
+        else:
+            print(f"  {fname}: NOT FOUND, skipping")
 
     # Load metadata
-    meta = json.loads((base_dir / "project_state_meta.json").read_text())
+    meta_path = base / "project_state_meta.json"
+    meta = json.loads(meta_path.read_text())
 
-    # Load all task files
-    active_tasks = load_tasks_from_json(base_dir / "active_tasks.json")
-    validation_tasks = load_tasks_from_json(base_dir / "validation_tasks.json")
-    deferred_tasks = load_tasks_from_json(base_dir / "deferred_tasks.json")
+    # Build project_state.json (flat format for dashboard)
+    state = {
+        "request": meta["request"],
+        "project_id": meta["project_id"],
+        "phase": meta["phase"],
+        "parsed_intent": meta["parsed_intent"],
+        "metadata": meta["metadata"],
+        "tasks": all_tasks,
+        "current_task_id": None,
+        "drafts": {},
+        "gate_results": {},
+        "integration_results": [],
+        "human_decisions": [],
+        "review_results": [],
+        "human_approvals": [],
+        "brainstorm_results": [],
+        "blocked_reason": None,
+    }
 
-    # Combine all tasks
-    all_tasks = active_tasks + validation_tasks + deferred_tasks
+    # Update statistics
+    stats = state["metadata"]["statistics"]
+    stats["total_tasks"] = len(all_tasks)
+    stats["active_tasks"] = sum(1 for t in all_tasks if t.get("status") != "deferred")
+    stats["deferred_tasks"] = sum(1 for t in all_tasks if t.get("status") == "deferred")
+    stats["in_review"] = sum(1 for t in all_tasks if t.get("status") == "in_review")
+    stats["in_progress"] = sum(1 for t in all_tasks if t.get("status") == "in_progress")
+    stats["done"] = sum(1 for t in all_tasks if t.get("status") == "done")
+    stats["pending"] = sum(1 for t in all_tasks if t.get("status") == "pending")
 
-    # Create ProjectState
-    state = ProjectState(
-        request=meta["request"],
-        project_id=meta["project_id"],
-        phase=Phase(meta["phase"]),
-        parsed_intent=meta["parsed_intent"],
-        tasks=all_tasks,
-    )
+    # Write output
+    out = base / "project_state.json"
+    out.write_text(json.dumps(state, ensure_ascii=False, indent=2))
 
-    # Save complete state
-    output_path = base_dir / "project_state.json"
-    state.save(output_path)
-
-    print(f"✓ Built ProjectState with {len(all_tasks)} tasks")
-    print(f"  - Active: {len([t for t in all_tasks if t.status == TaskStatus.PENDING])}")
-    print(f"  - Deferred: {len([t for t in all_tasks if t.status == TaskStatus.DEFERRED])}")
-    print(f"✓ Saved to: {output_path}")
-
-    # Print task summary
-    print("\n=== Task Summary ===")
-    print("\nPhase 0 (Code Integration - PR Tasks):")
-    for t in all_tasks:
-        if t.id.startswith("PR-"):
-            print(f"  {t.id}: {t.title} [{t.status.value}]")
-
-    print("\nPhase 0 (Code Integration - T0 Tasks):")
-    for t in all_tasks:
-        if t.id.startswith("T0-"):
-            print(f"  {t.id}: {t.title} [{t.status.value}]")
-
-    print("\nPhase 1 (Basic Convergence):")
-    for t in all_tasks:
-        if t.id.startswith("T1-"):
-            print(f"  {t.id}: {t.title} [{t.status.value}]")
-
-    print("\nPhase 2 (DFT+U Strategies):")
-    for t in all_tasks:
-        if t.id.startswith("T2-"):
-            print(f"  {t.id}: {t.title} [{t.status.value}]")
-            if t.defer_trigger:
-                print(f"       Trigger: {t.defer_trigger}")
-
-    print("\nPhase 3 (Validation):")
-    for t in all_tasks:
-        if t.id.startswith("T3-"):
-            print(f"  {t.id}: {t.title} [{t.status.value}]")
-
-    print("\nPhase 4 (Production):")
-    for t in all_tasks:
-        if t.id.startswith("T4-"):
-            print(f"  {t.id}: {t.title} [{t.status.value}]")
-
-    print("\nDeferred Tasks:")
-    for t in all_tasks:
-        if t.status == TaskStatus.DEFERRED:
-            print(f"  {t.id}: {t.title}")
-            print(f"       Trigger: {t.defer_trigger}")
+    print(f"\n✓ Built project_state.json: {len(all_tasks)} tasks")
+    print(f"  pending={stats['pending']}  in_review={stats['in_review']}  "
+          f"in_progress={stats['in_progress']}  done={stats['done']}  "
+          f"deferred={stats['deferred_tasks']}")
+    print(f"✓ Saved to {out}")
 
 
 if __name__ == "__main__":

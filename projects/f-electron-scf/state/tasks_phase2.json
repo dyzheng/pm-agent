@@ -1,0 +1,163 @@
+{
+  "phase": "Phase 2: SCF 收敛算法改进",
+  "tasks": [
+    {
+      "id": "FE-200",
+      "title": "自适应 Kerker 预处理参数",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-001", "FE-105"],
+      "blocks": ["FE-204"],
+      "description": "修改 charge_mixing_preconditioner.cpp，实现自适应 mixing_gg0：(1) 根据体系类型（金属/绝缘体/f电子）自动选择初始值，(2) 在 SCF 过程中根据残差变化动态调整，(3) 对 f 电子体系使用更保守的预处理。需要在 input_parameter.h 中添加 mixing_gg0_auto 选项。",
+      "acceptance_criteria": [
+        "自动检测体系中是否含f电子",
+        "根据体系类型自动调整 mixing_gg0",
+        "CeO2 收敛步数减少>20%",
+        "不影响非f电子体系性能"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing_preconditioner.cpp",
+        "source/source_estate/module_charge/charge_mixing.h",
+        "source/source_estate/module_charge/charge_mixing.cpp",
+        "source/source_io/module_parameter/input_parameter.h"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "old_ids": ["T1-1", "FE-200"]
+    },
+    {
+      "id": "FE-201",
+      "title": "分通道 mixing_beta 实现",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-001"],
+      "blocks": ["FE-204"],
+      "description": "在 charge_mixing 中实现按角动量通道分别设置 mixing_beta 的能力。f 电子通道使用更小的 mixing_beta（如 0.05-0.1），s/p/d 通道使用正常值（0.3-0.7）。实现方式：在实空间投影到原子轨道分量后分别 mixing，或在密度矩阵 mixing（LCAO）中按 l 分通道。",
+      "acceptance_criteria": [
+        "识别f通道并单独设置 mixing_beta",
+        "改善f电子体系收敛稳定性",
+        "含f电子体系的 SCF 收敛性改善",
+        "不影响无f电子体系的性能"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing_rho.cpp",
+        "source/source_estate/module_charge/charge_mixing_dmr.cpp",
+        "source/source_estate/module_charge/charge_mixing.h"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "old_ids": ["T1-2", "FE-201"]
+    },
+    {
+      "id": "FE-202",
+      "title": "占据矩阵随机初始化 + 多起点探索",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-001"],
+      "blocks": ["FE-203"],
+      "description": "在 dftu.cpp 中实现：(1) 随机占据矩阵初始化（在合理物理约束内随机），(2) 基于氧化态的化学直觉初始化（如 Ce4+ → f^0, Ce3+ → f^1），(3) 多起点并行探索接口（运行 N 个不同初始化的 SCF，选最低能量）。新增输入参数：omc_random, omc_nstart, omc_seed。",
+      "acceptance_criteria": [
+        "添加 omc_mode=random 选项",
+        "支持多起点并行运行",
+        "自动选择最低能量结果",
+        "CeO2 的 DFT+U 计算能通过多起点找到正确基态（与 VASP 一致）"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu.cpp",
+        "source/source_lcao/module_dftu/dftu.h",
+        "source/source_lcao/module_dftu/dftu_io.cpp",
+        "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["T1-4", "T2-1", "FE-202"]
+    },
+    {
+      "id": "FE-203",
+      "title": "占据矩阵退火策略",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-202"],
+      "blocks": ["FE-204"],
+      "description": "实现占据退火：(1) 初始阶段使用高 smearing 温度（如 0.1 Ry），使占据矩阵平滑化，(2) 逐步降低 smearing 到目标值（如 0.01 Ry），(3) 与 U-ramping 协同：先 ramping U 到目标值，再退火 smearing。在 dftu_occup.cpp 中实现退火调度器。",
+      "acceptance_criteria": [
+        "实现 smearing 温度退火",
+        "与 U-ramping 协同",
+        "EuO 等多极小值体系的收敛成功率提升>50%",
+        "验证收敛率改善"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_occup.cpp",
+        "source/source_lcao/module_dftu/dftu.cpp"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["T2-2", "FE-203"]
+    },
+    {
+      "id": "FE-204",
+      "title": "能量监控 + SCF 自动回退机制",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-200", "FE-201", "FE-203"],
+      "blocks": ["FE-205", "FE-302", "FE-303"],
+      "description": "在 SCF 主循环中实现：(1) 逐步监控总能量变化，检测震荡模式，(2) 当能量连续上升 N 步时，自动减小 mixing_beta 并回退到上一个低能量状态，(3) 当检测到周期性震荡时，切换 mixing 策略（如从 Broyden 切换到 Pulay 或 plain），(4) 输出诊断信息帮助用户理解收敛行为。",
+      "acceptance_criteria": [
+        "原本不收敛的f电子体系中>70%可通过自动回退收敛",
+        "监控 SCF 能量变化趋势",
+        "能量上升时自动减小 mixing_beta",
+        "回退到上一步收敛的电荷密度"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing.cpp",
+        "source/source_estate/module_charge/charge_mixing_rho.cpp"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["T1-3", "FE-204"]
+    },
+    {
+      "id": "FE-205",
+      "title": "constrained DFT 框架（f 电子数约束）",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-204"],
+      "blocks": ["FE-302"],
+      "description": "实现 constrained DFT：(1) 新模块 charge_constraint.cpp，添加惩罚势 V = λ·(n_f - n_target)^2 到哈密顿量，(2) 约束强度 λ 从大到小逐步释放（类似 U-ramping），(3) 支持按原子指定目标 f 电子数，(4) 与 DFT+U 的 omc 协同工作。这是确保 f 电子体系收敛到正确基态的关键手段。",
+      "acceptance_criteria": [
+        "Ce2O3 中 Ce 的 f 电子数可被约束到目标值±0.1",
+        "释放约束后保持",
+        "实现惩罚势 V_constraint",
+        "约束强度逐步释放",
+        "与 DFT+U 占据矩阵控制协同"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_constraint.cpp (NEW)",
+        "source/source_estate/module_charge/charge_constraint.h (NEW)",
+        "source/source_lcao/module_dftu/dftu.cpp",
+        "source/source_io/module_parameter/input_parameter.h"
+      ],
+      "estimated_effort": "2 weeks",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["T2-3", "FE-205"]
+    }
+  ]
+}

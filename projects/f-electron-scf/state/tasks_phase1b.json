@@ -1,0 +1,173 @@
+{
+  "phase": "Phase 1: 代码移植 zdy-tmp → develop（续：DeltaSpin + 收敛策略）",
+  "tasks": [
+    {
+      "id": "FE-107",
+      "title": "module_deltaspin 核心移植",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": ["FE-108", "FE-109"],
+      "description": "将 zdy-tmp 新增的 deltaspin 文件移植到 develop。新增 cal_h_lambda.cpp、cal_mw_helper.cpp、sc_parse_json.cpp。更新 spin_constrain.h/cpp（合并 zdy-tmp 增强到 develop 基础版本）。适配 include 路径和 GlobalC 去除。",
+      "acceptance_criteria": [
+        "所有 deltaspin 单元测试通过",
+        "编译通过"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_deltaspin/cal_h_lambda.cpp (NEW)",
+        "source/source_lcao/module_deltaspin/cal_mw_helper.cpp (NEW)",
+        "source/source_lcao/module_deltaspin/sc_parse_json.cpp (NEW)",
+        "source/source_lcao/module_deltaspin/spin_constrain.h",
+        "source/source_lcao/module_deltaspin/spin_constrain.cpp",
+        "source/source_lcao/module_deltaspin/CMakeLists.txt",
+        "source/source_lcao/module_deltaspin/test/"
+      ],
+      "estimated_effort": "3-4 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "old_ids": ["PR-8"]
+    },
+    {
+      "id": "FE-108",
+      "title": "DeltaSpin LCAO 算符更新",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-107"],
+      "blocks": ["FE-110", "FE-111"],
+      "description": "更新 LCAO 下的 DeltaSpin 算符。合并 zdy-tmp 对 dspin_lcao.h/cpp、dspin_force_stress.hpp 的改动。更新 esolver_ks_lcao.cpp 中的 DeltaSpin 集成点。",
+      "acceptance_criteria": [
+        "LCAO DeltaSpin SCF 正确",
+        "力/应力正确"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_operator_lcao/dspin_lcao.h",
+        "source/source_lcao/module_operator_lcao/dspin_lcao.cpp",
+        "source/source_lcao/module_operator_lcao/dspin_force_stress.hpp",
+        "source/source_esolver/esolver_ks_lcao.cpp"
+      ],
+      "estimated_effort": "2-3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["PR-9"]
+    },
+    {
+      "id": "FE-109",
+      "title": "DeltaSpin PW 支持",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-100", "FE-107"],
+      "blocks": ["FE-110"],
+      "description": "在 PW 基组下支持 DeltaSpin。在 esolver_ks_pw.cpp 集成 lambda loop，添加 cal_Mi_pw 等 PW 相关方法。",
+      "acceptance_criteria": [
+        "PW DeltaSpin SCF 可运行",
+        "磁矩约束有效"
+      ],
+      "files_to_touch": [
+        "source/source_esolver/esolver_ks_pw.cpp",
+        "source/source_lcao/module_deltaspin/spin_constrain.h",
+        "source/source_lcao/module_deltaspin/spin_constrain.cpp"
+      ],
+      "estimated_effort": "3-4 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["PR-10"]
+    },
+    {
+      "id": "FE-110",
+      "title": "DeltaSpin force/stress（LCAO + PW）",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-108", "FE-109"],
+      "blocks": [],
+      "description": "DeltaSpin 的力和应力计算，覆盖 LCAO 和 PW 两种基组。",
+      "acceptance_criteria": [
+        "DeltaSpin 力/应力与数值微分一致"
+      ],
+      "files_to_touch": [
+        "source/source_pw/module_pwdft/forces_onsite.cpp",
+        "source/source_pw/module_pwdft/stress_func_onsite.cpp"
+      ],
+      "estimated_effort": "2-3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["PR-11"]
+    },
+    {
+      "id": "FE-111",
+      "title": "DeltaSpin + DFTU 联合 + conserve_setting",
+      "layer": "infra",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-105", "FE-108"],
+      "blocks": [],
+      "description": "支持 DeltaSpin 和 DFT+U 同时使用。添加 conserve_setting 参数控制联合计算行为。",
+      "acceptance_criteria": [
+        "DeltaSpin + DFT+U 联合计算正确",
+        "conserve_setting 参数生效"
+      ],
+      "files_to_touch": [
+        "source/source_esolver/esolver_ks_pw.cpp",
+        "source/source_esolver/esolver_ks_lcao.cpp",
+        "source/source_io/module_parameter/input_parameter.h"
+      ],
+      "estimated_effort": "2-3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": ["PR-12"]
+    },
+    {
+      "id": "FE-112",
+      "title": "SCF 震荡检测 + 自动回退",
+      "layer": "algorithm",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-105"],
+      "blocks": ["FE-113"],
+      "description": "检测 SCF 能量震荡并自动调整策略。震荡体系自动调整 mixing 参数，不影响正常收敛体系。",
+      "acceptance_criteria": [
+        "震荡体系自动检测并调整 mixing 参数",
+        "不影响正常收敛体系"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing.cpp",
+        "source/source_esolver/esolver_ks.cpp"
+      ],
+      "estimated_effort": "2-3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "old_ids": ["PR-13"]
+    },
+    {
+      "id": "FE-113",
+      "title": "mixing_restart 与 mixing_dftu 协同修复",
+      "layer": "algorithm",
+      "type": "fix",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FE-105", "FE-112"],
+      "blocks": [],
+      "description": "修复 mixing_restart 与 mixing_dftu 的兼容性问题，包括 kpar > 1 时的正确性。",
+      "acceptance_criteria": [
+        "mixing_restart 后 mixing_dftu 状态正确",
+        "kpar > 1 时 mixing_dftu 正确"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_mixing.cpp"
+      ],
+      "estimated_effort": "1-2 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "old_ids": ["PR-14"]
+    }
+  ]
+}

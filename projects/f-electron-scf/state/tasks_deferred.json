@@ -1,0 +1,214 @@
+{
+  "category": "延迟任务（触发条件满足时执行）",
+  "deferred_tasks": [
+    {
+      "id": "FE-D-A1",
+      "title": "ONCVPSP 赝势生成环境搭建",
+      "layer": "infra",
+      "type": "external_dependency",
+      "scope": "external",
+      "status": "deferred",
+      "dependencies": [],
+      "blocks": ["FE-D-A2"],
+      "description": "搭建 ONCVPSP 赝势生成环境，准备自定义稀土 NC 赝势生成工具链。安装配置 ONCVPSP 4.0+，准备稀土元素全电子参考数据（NIST 原子数据库），建立赝势生成→UPF 转换→ABACUS 读取的完整工具链。",
+      "acceptance_criteria": [
+        "ONCVPSP 编译安装成功",
+        "测试生成一个简单元素赝势",
+        "准备稀土元素参考构型数据",
+        "建立赝势质量检测流程（对数导数、ghost state）"
+      ],
+      "files_to_touch": [
+        "tools/pseudopotential_generation/",
+        "tools/pseudopotential_generation/README.md"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "workflow",
+      "risk_level": "high",
+      "defer_trigger": "FE-304:accuracy_below_threshold",
+      "old_ids": ["D-A1", "FE-001"]
+    },
+    {
+      "id": "FE-D-A2",
+      "title": "自定义稀土 NC 赝势生成",
+      "layer": "workflow",
+      "type": "external_dependency",
+      "scope": "external",
+      "status": "deferred",
+      "dependencies": ["FE-D-A1"],
+      "blocks": ["FE-D-A3"],
+      "description": "使用 ONCVPSP 为 7 种稀土元素生成 f_in_valence 模守恒赝势。关键参数优化：参考构型（中性/离子化）、各通道截断半径、局域势选择。对每个赝势进行 ghost state 检测和基本可迁移性检查。",
+      "acceptance_criteria": [
+        "生成 Ce, Gd, La, Nd, Sm, Eu, Tb 的 f_in_valence 赝势",
+        "优化 4f/5s/5p/5d/6s 各通道截断半径",
+        "通过 ghost state 检测",
+        "可迁移性测试（多构型能量差 vs 全电子）"
+      ],
+      "files_to_touch": [
+        "pseudopotentials/rare_earth_custom/",
+        "pseudopotentials/rare_earth_custom/generation_log.md"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "workflow",
+      "risk_level": "high",
+      "defer_trigger": "FE-D-A1:completed",
+      "old_ids": ["D-A2", "FE-100(旧)"]
+    },
+    {
+      "id": "FE-D-A3",
+      "title": "新赝势全面验证",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "cross_code",
+      "status": "deferred",
+      "dependencies": ["FE-D-A2"],
+      "blocks": [],
+      "description": "使用新生成的赝势重新运行全部验证测试，确保质量改善。与 VASP PAW 对比，Delta-test 框架验证。",
+      "acceptance_criteria": [
+        "重新运行 FE-304 验证",
+        "误差降低到<2%",
+        "Delta-test 框架验证",
+        "与 VASP PAW 对比"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/custom_pp_validation.md"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "workflow",
+      "risk_level": "high",
+      "defer_trigger": "FE-D-A2:completed",
+      "old_ids": ["D-A3", "FE-101(旧)"]
+    },
+    {
+      "id": "FE-D-B1",
+      "title": "NAO 多 zeta 轨道生成与测试",
+      "layer": "workflow",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "deferred",
+      "dependencies": [],
+      "blocks": ["FE-D-B2"],
+      "description": "用 ABACUS-orbitals 为验证通过的赝势生成 NAO 轨道文件。系统测试组合：SZ/DZP/TZDP，截断半径 6/7/8/9/10 au。评估每种组合对 CeO2 晶格常数、带结构的影响。确定推荐的默认轨道组合。",
+      "acceptance_criteria": [
+        "生成 DZP 和 TZP 轨道文件",
+        "系统测试不同 zeta 数对精度的影响",
+        "LCAO vs PW 对比（能量、力、带结构）",
+        "确定最优轨道组合"
+      ],
+      "files_to_touch": [
+        "orbitals/rare_earth/",
+        "orbitals/rare_earth/optimization_report.md"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "defer_trigger": "FE-304:lcao_divergence_above_3pct",
+      "old_ids": ["D-B1", "FE-102(旧)"]
+    },
+    {
+      "id": "FE-D-B2",
+      "title": "Spillage 算法 f 轨道调优",
+      "layer": "algorithm",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "deferred",
+      "dependencies": ["FE-D-B1"],
+      "blocks": [],
+      "description": "如果标准 spillage 优化对 f 轨道效果不佳，修改 spillage 算法以更好处理高度局域的 f 轨道。",
+      "acceptance_criteria": [
+        "分析 f 轨道 spillage 优化瓶颈",
+        "调整 spillage 权重或优化策略",
+        "改善 f 轨道质量指标",
+        "与 PW 基组一致性提升"
+      ],
+      "files_to_touch": [
+        "source/source_basis/module_nao/",
+        "tools/ABACUS-orbitals/"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "defer_trigger": "FE-D-B1:spillage_issue_detected",
+      "old_ids": ["D-B2", "FE-103(旧)"]
+    },
+    {
+      "id": "FE-D-C1",
+      "title": "AI 训练数据收集",
+      "layer": "workflow",
+      "type": "data",
+      "scope": "cross_code",
+      "status": "deferred",
+      "dependencies": [],
+      "blocks": ["FE-D-C2"],
+      "description": "从验证计算中收集训练数据：(1) 结构信息（元素、坐标、晶格），(2) 收敛后的占据矩阵，(3) f 电子数、自旋态、轨道序，(4) SCF 收敛路径信息。目标：至少 500 个不同结构的数据点。",
+      "acceptance_criteria": [
+        "收集 100+ 个收敛的稀土体系计算",
+        "记录：结构、元素、占据矩阵、能量",
+        "覆盖不同氧化态、配位环境、磁序",
+        "数据清洗和标准化"
+      ],
+      "files_to_touch": [
+        "ml_models/training_data/",
+        "ml_models/training_data/dataset.json"
+      ],
+      "estimated_effort": "2-3 weeks",
+      "specialist": "workflow",
+      "risk_level": "high",
+      "defer_trigger": "FE-202:failure_rate_above_20pct",
+      "old_ids": ["D-C1", "FE-300(旧)"]
+    },
+    {
+      "id": "FE-D-C2",
+      "title": "GNN 占据矩阵模型训练",
+      "layer": "algorithm",
+      "type": "new",
+      "scope": "local",
+      "status": "deferred",
+      "dependencies": ["FE-D-C1"],
+      "blocks": ["FE-D-C3"],
+      "description": "训练轻量级模型预测初始占据矩阵：(1) 输入特征：原子类型、近邻环境、氧化态估计，(2) 输出：每个稀土原子的 f 电子占据数和轨道序，(3) 先尝试 MLP/随机森林，再考虑 GNN。",
+      "acceptance_criteria": [
+        "设计 GNN 架构（结构→占据矩阵）",
+        "训练/验证/测试集划分",
+        "模型精度：占据数预测误差<0.5 电子",
+        "推理速度<1 秒/结构"
+      ],
+      "files_to_touch": [
+        "ml_models/occupation_predictor/",
+        "ml_models/occupation_predictor/model.py",
+        "ml_models/occupation_predictor/train.py"
+      ],
+      "estimated_effort": "3-4 weeks",
+      "specialist": "workflow",
+      "risk_level": "high",
+      "defer_trigger": "FE-D-C1:completed",
+      "old_ids": ["D-C2", "FE-301(旧)"]
+    },
+    {
+      "id": "FE-D-C3",
+      "title": "ABACUS ML 集成",
+      "layer": "infra",
+      "type": "new",
+      "scope": "abacus",
+      "status": "deferred",
+      "dependencies": ["FE-D-C2"],
+      "blocks": [],
+      "description": "将训练好的模型集成到 ABACUS 工作流：(1) Python 脚本：读取 STRU 文件→模型预测→生成 initial_onsite.dm，(2) 或通过 PyABACUS 接口直接注入，(3) 新增 init_chg='ai' 选项（长期目标）。",
+      "acceptance_criteria": [
+        "模型推理接口集成到 ABACUS",
+        "添加 init_chg=ml 选项",
+        "自动从结构预测占据矩阵",
+        "与现有 omc 模式兼容",
+        "性能开销<5%"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/dftu_ml_init.cpp",
+        "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "abacus-develop",
+      "risk_level": "high",
+      "defer_trigger": "FE-D-C2:completed",
+      "old_ids": ["D-C3", "FE-302(旧)"]
+    }
+  ]
+}
