@@ -160,3 +160,58 @@ bash Autotest.sh -a /root/abacus-dftu-pw-port/build/abacus -n 4 -r "099_PW_DJ_SO
 - commit 到 worktree，不要 push
 - commit message 以 `feat: extend DFT+U PW to support nspin=1/2` 开头
 - 等待 PM review 后再 push
+
+## 完成情况
+
+- [x] **修改 1a**: `initialed_locale` 守卫 — `dftu_pw.cpp` 中 `copy_locale` 后添加 `if(initialed_locale == false)` 包裹投影计算
+- [x] **修改 1b**: nspin=1/2 占据矩阵计算分支 — CPU 和 GPU 代码块中添加 `is` 变量和 `else` 分支（`ib*nkb` index）
+- [x] **修改 1c**: reduce 循环改为 `size * fold`，添加 nspin=2 spin-down reduce 和 uom_array 保存
+- [x] **修改 1d**: 能量权重 `weight_eu` 和 `diag_coeff` 替代硬编码 `0.25` 和 `1.0`
+- [x] **修改 1e**: nspin=2 spin-down VU 计算（`eff_pot_pw[size/2 + index]`）
+- [x] **修改 1f**: Pauli→spin 变换用 `if(PARAM.inp.nspin == 4)` 包裹
+- [x] **修改 1g**: mixing 调用和 `initialed_locale = false`
+- [x] **修改 2a**: `dftu.h` 添加 `uom_array`、`uom_save` 成员和 `set_locale` 声明
+- [x] **修改 3**: `dftu.cpp` init() 中 nspin=2 时 `pot_index *= 2`，分配 `uom_array`/`uom_save`
+- [x] **修改 4**: `dftu_occup.cpp` 添加 `set_locale` 实现
+- [x] **修改 CMakeLists**: `module_dftu/CMakeLists.txt` 添加 `add_subdirectory(test)`
+
+### 单元测试
+
+- [x] 新建 `source/source_lcao/module_dftu/test/dftu_pw_test.cpp`（7 个测试用例）
+- [x] 新建 `source/source_lcao/module_dftu/test/CMakeLists.txt`
+- [x] 全部 7 个测试 PASS（EnergyWeightsNspin1/2/4, OccupNspin12Index, OccupNspin4Index, SetLocaleNspin4, SetLocaleNspin2）
+
+### 集成测试 case
+
+- [x] `tests/01_PW/815_PW_DFTU_S2/` — PW DFT+U nspin=2, Fe2 反铁磁
+- [x] `tests/01_PW/816_PW_DFTU_S1/` — PW DFT+U nspin=1, Fe2 非磁性
+- [x] 已加入 `CASES_CPU.txt`
+- [ ] result.ref 待生成（需要运行 `Autotest.sh -g`）
+
+### 修改文件清单（11 个文件）
+
+1. `source/source_lcao/module_dftu/dftu.h` — 添加 uom_array, uom_save, set_locale
+2. `source/source_lcao/module_dftu/dftu.cpp` — init() 中 eff_pot_pw 双倍分配和 uom 分配
+3. `source/source_lcao/module_dftu/dftu_occup.cpp` — 添加 set_locale 实现
+4. `source/source_lcao/module_dftu/dftu_pw.cpp` — 核心修改，nspin=1/2 全支持
+5. `source/source_lcao/module_dftu/CMakeLists.txt` — 添加 test 子目录
+6. `source/source_lcao/module_dftu/test/dftu_pw_test.cpp` — 单元测试（新建）
+7. `source/source_lcao/module_dftu/test/CMakeLists.txt` — 测试构建配置（新建）
+8. `tests/01_PW/815_PW_DFTU_S2/INPUT` — 集成测试（新建）
+9. `tests/01_PW/815_PW_DFTU_S2/STRU` — 集成测试（新建）
+10. `tests/01_PW/815_PW_DFTU_S2/KPT` — 集成测试（新建）
+11. `tests/01_PW/816_PW_DFTU_S1/` — 集成测试（新建，4 文件）
+12. `tests/01_PW/CASES_CPU.txt` — 添加新 case
+
+### 编译验证
+
+- [x] `cmake --build build -j$(nproc)` 编译通过，生成二进制 `abacus_2p`（368MB）
+- [x] 单元测试编译通过并全部 PASS
+- [ ] 集成测试待运行（需 MPI 环境 + Fe 赝势）
+
+### 分支信息
+
+- commit: `7c54a20e4`
+- 分支: `feat/dftu-pw-port`
+
+### 状态：已完成，编译通过，单元测试通过，已 commit，待验收
