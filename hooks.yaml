@@ -1,5 +1,5 @@
 # Review hook configuration for PM Agent pipeline
-# Hook execution order: ai_review -> brainstorm -> human_check
+# Hook execution order: ai_review -> brainstorm -> human_check -> regenerate
 
 hooks:
   after_audit:
@@ -39,6 +39,11 @@ hooks:
       enabled: true
       mode: interactive
       file_path: state/decompose_review.json
+    regenerate:
+      enabled: true
+      checks:
+        - dashboard
+        - dependency_graph
 
   after_task_complete:
     ai_review:
@@ -55,3 +60,8 @@ hooks:
     human_check:
       enabled: true
       mode: interactive
+    regenerate:
+      enabled: true
+      checks:
+        - dashboard
+        - dependency_graph

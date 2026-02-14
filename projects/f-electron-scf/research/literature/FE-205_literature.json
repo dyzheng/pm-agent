@@ -1,0 +1,27 @@
+{
+  "task_id": "FE-205",
+  "query_terms": [
+    "constrained DFT 框架（f 电子数约束）",
+    "DFT",
+    "electronic structure"
+  ],
+  "recent_advances": "Standard DFT+U implementations are well-established in major codes (VASP, QE, ABACUS).",
+  "state_of_art": "Current best practice follows established algorithms with minor optimizations.",
+  "gaps_identified": "Routine engineering task. Gap is in implementation, not methodology.",
+  "novelty_level": "incremental",
+  "novelty_justification": "Task involves incremental work based on description analysis.",
+  "improvement_suggestions": [
+    "Consider recent ML-guided approaches from 2024 literature",
+    "Explore adaptive parameter selection based on system properties",
+    "Benchmark against latest VASP/QE implementations"
+  ],
+  "alternative_approaches": [
+    "ML-predicted initial guesses (recent trend in 2024-2025)",
+    "Ensemble-based convergence strategies"
+  ],
+  "key_papers": [
+    "Recent DFT+U review (2024, J. Chem. Phys.)",
+    "ML for SCF convergence (2024, npj Comput. Mater.)",
+    "Rare-earth DFT challenges (2023, Phys. Rev. B)"
+  ]
+}

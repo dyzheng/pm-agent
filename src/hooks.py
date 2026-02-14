@@ -489,3 +489,59 @@ def _human_check_task(
         feedback=feedback,
         timestamp=time.strftime("%Y-%m-%dT%H:%M:%S"),
     )
+
+
+# -- Regenerate Hook ---------------------------------------------------------
+
+
+def run_regenerate(
+    project_dir: str | Path,
+    actions: list[str] | None = None,
+    hook_config: HookConfig | None = None,
+    hook_name: str = "after_decompose",
+) -> list[str]:
+    """Regenerate dashboard and/or dependency graph for a project.
+
+    Checks hook_config for regenerate settings, or uses actions directly.
+    Returns list of generated file paths.
+
+    Args:
+        project_dir: Path to the project directory.
+        actions: Explicit list of actions ("dashboard", "dependency_graph").
+            If None, reads from hook_config.
+        hook_config: Hook configuration to read regenerate settings from.
+        hook_name: Which hook point to read config from.
+    """
+    project_dir = Path(project_dir)
+    generated: list[str] = []
+
+    # Determine actions from config if not explicitly provided
+    if actions is None:
+        actions = []
+        if hook_config:
+            hook = hook_config.get_hook(hook_name)
+            if hook:
+                regen_config = hook.get("regenerate")
+                if regen_config and regen_config.enabled:
+                    actions = regen_config.checks  # reuse checks field for action list
+
+    if not actions:
+        return generated
+
+    if "dashboard" in actions:
+        try:
+            from tools.generate_dashboard import generate_dashboard
+            if generate_dashboard(project_dir):
+                generated.append(str(project_dir / "dashboard.html"))
+        except Exception as e:
+            print(f"  Dashboard regeneration failed: {e}")
+
+    if "dependency_graph" in actions:
+        try:
+            from tools.generate_graph import generate_graph
+            if generate_graph(project_dir):
+                generated.append(str(project_dir / "dependency_graph.dot"))
+        except Exception as e:
+            print(f"  Graph regeneration failed: {e}")
+
+    return generated

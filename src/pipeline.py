@@ -11,7 +11,7 @@ from typing import TYPE_CHECKING
 
 from src.branches import BranchRegistry
 from src.brainstorm import run_brainstorm
-from src.hooks import HookConfig, run_ai_review, run_human_check
+from src.hooks import HookConfig, run_ai_review, run_human_check, run_regenerate
 from src.phases.audit import run_audit
 from src.phases.decompose import run_decompose
 from src.phases.intake import run_intake
@@ -40,6 +40,7 @@ def run_pipeline(
     input_fn=None,
     max_retries: int = 3,
     state_mgr: StateManager | None = None,
+    project_dir: str | None = None,
 ) -> ProjectState:
     """Run the planning pipeline: intake -> audit -> decompose with hooks.
 
@@ -51,6 +52,7 @@ def run_pipeline(
         input_fn: Override for input() in interactive human checks (for testing).
         max_retries: Max retry attempts when a hook rejects.
         state_mgr: Optional StateManager for auto-saving checkpoints.
+        project_dir: Project directory path for regenerate hooks (dashboard/graph).
 
     Returns:
         Updated ProjectState after all phases and hooks complete.
@@ -102,6 +104,14 @@ def run_pipeline(
             max_retries=max_retries,
         )
         _checkpoint(state_mgr, "after_decompose")
+
+        # Regenerate dashboard/graph after decompose
+        if project_dir and not state.blocked_reason:
+            run_regenerate(
+                project_dir,
+                hook_config=hook_config,
+                hook_name="after_decompose",
+            )
 
     return state
 

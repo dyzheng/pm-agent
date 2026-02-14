@@ -1,733 +1,1023 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>f-electron-scf 项目看板</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rare-Earth f-electron Norm-Conserving Pseudopotential SCF Convergence - Dashboard</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0f1117;--surface:#1a1d27;--card:#222639;--border:#2e3348;
+  --text:#e2e4ed;--text2:#9498b0;--accent:#6c7aed;--accent2:#8b5cf6;
+  --green:#22c55e;--green-bg:rgba(34,197,94,.12);
+  --blue:#3b82f6;--blue-bg:rgba(59,130,246,.12);
+  --orange:#f59e0b;--orange-bg:rgba(245,158,11,.12);
+  --red:#ef4444;--red-bg:rgba(239,68,68,.12);
+  --purple:#a78bfa;--purple-bg:rgba(167,139,250,.12);
+  --gray:#6b7280;--gray-bg:rgba(107,114,128,.12);
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Noto Sans SC',sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+a{color:var(--accent);text-decoration:none}
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-            background: #f5f7fa;
-            color: #2c3e50;
-            padding: 20px;
-        }
+.header{padding:32px 40px 24px;border-bottom:1px solid var(--border);background:linear-gradient(135deg,#13151f 0%,#1a1d2e 100%)}
+.header h1{font-size:28px;font-weight:700;letter-spacing:-.5px;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .subtitle{color:var(--text2);font-size:14px;margin-top:4px}
 
-        .header {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+.stats-bar{display:flex;gap:16px;padding:20px 40px;flex-wrap:wrap}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 24px;min-width:120px;flex:1}
+.stat-card .label{font-size:12px;color:var(--text2);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+.stat-card .value{font-size:28px;font-weight:700}
+.stat-card .value.total{color:var(--accent)}
+.stat-card .value.pending{color:var(--blue)}
+.stat-card .value.progress{color:var(--orange)}
+.stat-card .value.review{color:var(--purple)}
+.stat-card .value.done{color:var(--green)}
+.stat-card .value.deferred{color:var(--gray)}
 
-        .header h1 {
-            font-size: 24px;
-            margin-bottom: 10px;
-        }
+.tabs{display:flex;gap:4px;padding:0 40px;border-bottom:1px solid var(--border);background:var(--surface)}
+.tab{padding:14px 24px;cursor:pointer;font-size:14px;font-weight:500;color:var(--text2);border-bottom:2px solid transparent;transition:all .2s;background:none;border-top:none;border-left:none;border-right:none}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
 
-        .header .stats {
-            display: flex;
-            gap: 30px;
-            margin-top: 15px;
-        }
+.content{padding:24px 40px 60px}
+.view{display:none}
+.view.active{display:block}
 
-        .stat {
-            display: flex;
-            flex-direction: column;
-        }
+/* Kanban */
+.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.column{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+.column-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.column-header .title{font-weight:600;font-size:15px}
+.column-header .count{background:var(--card);padding:2px 10px;border-radius:12px;font-size:12px;color:var(--text2)}
 
-        .stat-label {
-            font-size: 12px;
-            color: #7f8c8d;
-            margin-bottom: 5px;
-        }
+.task-card{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:10px;cursor:pointer;transition:all .15s;border-left:3px solid var(--blue)}
+.task-card:hover{border-color:var(--accent);transform:translateX(3px)}
+.task-card.status-pending{border-left-color:var(--blue)}
+.task-card.status-in_progress{border-left-color:var(--orange)}
+.task-card.status-in_review{border-left-color:var(--purple)}
+.task-card.status-done{border-left-color:var(--green)}
+.task-card.status-deferred{border-left-color:var(--gray)}
+.task-card.status-failed{border-left-color:var(--red)}
+.task-card .task-id{font-size:11px;color:var(--text2);margin-bottom:4px;font-family:monospace}
+.task-card .task-title{font-weight:500;font-size:14px;margin-bottom:8px;line-height:1.4}
+.task-card .task-meta{display:flex;gap:6px;flex-wrap:wrap}
 
-        .stat-value {
-            font-size: 24px;
-            font-weight: bold;
-        }
+.badge{font-size:10px;padding:2px 8px;border-radius:4px;font-weight:500}
+.badge.layer{background:var(--orange-bg);color:var(--orange)}
+.badge.risk-low{background:var(--green-bg);color:var(--green)}
+.badge.risk-medium{background:var(--orange-bg);color:var(--orange)}
+.badge.risk-high{background:var(--red-bg);color:var(--red)}
+.badge.type{background:var(--purple-bg);color:var(--purple)}
+.badge.batch{background:var(--blue-bg);color:var(--blue)}
+.badge.phase{background:var(--accent);background:rgba(108,122,237,.15);color:var(--accent)}
 
-        .tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
+/* Timeline */
+.timeline{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
+.phase-section{margin-bottom:28px}
+.phase-header{font-size:16px;font-weight:600;margin-bottom:14px;padding:12px 16px;background:var(--card);border-radius:8px;border-left:3px solid var(--accent)}
+.phase-tasks{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;margin-left:16px}
 
-        .tab {
-            padding: 10px 20px;
-            background: white;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
+/* Graph */
+.graph-container{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
+.graph-container h2{margin-bottom:16px;font-size:18px}
+#dep-graph-svg{width:100%;min-height:400px;border:1px solid var(--border);border-radius:8px;overflow:auto;background:var(--card);padding:16px}
+#dep-graph-svg svg{max-width:100%}
+.graph-fallback{padding:40px;text-align:center;color:var(--text2)}
+.graph-fallback pre{text-align:left;background:var(--card);padding:16px;border-radius:8px;margin-top:16px;overflow-x:auto;font-size:12px}
 
-        .tab:hover {
-            background: #ecf0f1;
-        }
+/* Deferred */
+.deferred-section{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px}
+.deferred-section h2{margin-bottom:16px;font-size:18px}
+.deferred-card{background:var(--card);border:1px solid var(--border);border-left:3px solid var(--orange);border-radius:8px;padding:16px;margin-bottom:12px}
+.deferred-card .trigger-info{background:rgba(245,158,11,.08);padding:10px 12px;border-radius:6px;margin-top:10px;font-size:13px}
+.deferred-card .trigger-label{font-weight:600;color:var(--orange);margin-bottom:4px;font-size:12px}
 
-        .tab.active {
-            background: #3498db;
-            color: white;
-        }
+/* Modal */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.6);z-index:1000;align-items:center;justify-content:center}
+.modal-overlay.active{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:640px;width:90%;max-height:80vh;overflow-y:auto}
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.modal-header h3{font-size:18px;font-weight:600}
+.modal-close{background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;padding:4px 8px}
+.modal-close:hover{color:var(--text)}
+.modal-section{margin-bottom:18px}
+.modal-section h4{font-size:12px;text-transform:uppercase;color:var(--text2);letter-spacing:.5px;margin-bottom:8px}
+.modal-section p,.modal-section li{font-size:14px;line-height:1.6}
+.modal-section ul{padding-left:20px}
+.modal-section code{background:var(--card);padding:2px 6px;border-radius:4px;font-size:13px}
 
-        .view {
-            display: none;
-        }
-
-        .view.active {
-            display: block;
-        }
-
-        /* Kanban Board */
-        .kanban {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .column {
-            background: white;
-            border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .column-header {
-            font-weight: bold;
-            margin-bottom: 15px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ecf0f1;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .column-count {
-            background: #ecf0f1;
-            padding: 2px 8px;
-            border-radius: 12px;
-            font-size: 12px;
-        }
-
-        .task-card {
-            background: #f8f9fa;
-            border-left: 4px solid #3498db;
-            padding: 12px;
-            margin-bottom: 10px;
-            border-radius: 4px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .task-card:hover {
-            transform: translateX(5px);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-
-        .task-card.risk-low { border-left-color: #2ecc71; }
-        .task-card.risk-medium { border-left-color: #f39c12; }
-        .task-card.risk-high { border-left-color: #e74c3c; }
-
-        .task-id {
-            font-size: 11px;
-            color: #7f8c8d;
-            margin-bottom: 5px;
-        }
-
-        .task-title {
-            font-weight: 500;
-            margin-bottom: 8px;
-            font-size: 14px;
-        }
-
-        .task-meta {
-            display: flex;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
-
-        .badge {
-            font-size: 10px;
-            padding: 2px 6px;
-            border-radius: 3px;
-            background: #ecf0f1;
-            color: #7f8c8d;
-        }
-
-        .badge.phase { background: #e8f4f8; color: #3498db; }
-        .badge.layer { background: #fef5e7; color: #f39c12; }
-        .badge.risk { background: #fadbd8; color: #e74c3c; }
-
-        /* Timeline View */
-        .timeline {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .phase-section {
-            margin-bottom: 30px;
-        }
-
-        .phase-header {
-            font-size: 18px;
-            font-weight: bold;
-            margin-bottom: 15px;
-            padding: 10px;
-            background: #ecf0f1;
-            border-radius: 6px;
-        }
-
-        .phase-tasks {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-            gap: 10px;
-            margin-left: 20px;
-        }
-
-        /* Dependency Graph */
-        .graph-container {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            min-height: 600px;
-        }
-
-        #dependency-graph {
-            width: 100%;
-            height: 600px;
-            border: 1px solid #ecf0f1;
-            border-radius: 4px;
-        }
-
-        /* Risk Matrix */
-        .risk-matrix {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .risk-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .risk-category {
-            padding: 20px;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .risk-category.low {
-            background: #d5f4e6;
-            border: 2px solid #2ecc71;
-        }
-
-        .risk-category.medium {
-            background: #fef5e7;
-            border: 2px solid #f39c12;
-        }
-
-        .risk-category.high {
-            background: #fadbd8;
-            border: 2px solid #e74c3c;
-        }
-
-        .risk-category h3 {
-            margin-bottom: 10px;
-        }
-
-        .risk-count {
-            font-size: 36px;
-            font-weight: bold;
-            margin: 10px 0;
-        }
-
-        /* Deferred Tasks */
-        .deferred-section {
-            background: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-
-        .deferred-card {
-            background: #fff3cd;
-            border-left: 4px solid #ffc107;
-            padding: 15px;
-            margin-bottom: 15px;
-            border-radius: 4px;
-        }
-
-        .trigger-info {
-            background: #f8f9fa;
-            padding: 10px;
-            margin-top: 10px;
-            border-radius: 4px;
-            font-size: 13px;
-        }
-
-        .trigger-label {
-            font-weight: bold;
-            color: #e67e22;
-            margin-bottom: 5px;
-        }
-
-        /* Modal */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0,0,0,0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal.active {
-            display: flex;
-        }
-
-        .modal-content {
-            background: white;
-            border-radius: 8px;
-            padding: 30px;
-            max-width: 600px;
-            max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-        }
-
-        .modal-header {
-            font-size: 20px;
-            font-weight: bold;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #ecf0f1;
-        }
-
-        .modal-close {
-            float: right;
-            font-size: 24px;
-            cursor: pointer;
-            color: #7f8c8d;
-        }
-
-        .modal-section {
-            margin-bottom: 20px;
-        }
-
-        .modal-section h4 {
-            margin-bottom: 10px;
-            color: #7f8c8d;
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-
-        .dependency-list {
-            list-style: none;
-            padding-left: 0;
-        }
-
-        .dependency-list li {
-            padding: 5px 0;
-            border-bottom: 1px solid #ecf0f1;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 40px;
-            color: #7f8c8d;
-        }
-    </style>
+.loading{text-align:center;padding:60px;color:var(--text2);font-size:16px}
+.error{text-align:center;padding:60px;color:var(--red)}
+</style>
 </head>
 <body>
-    <div class="header">
-        <h1>🧪 f-electron-scf 项目看板</h1>
-        <p>稀土f电子模守恒赝势SCF收敛问题 — 统一任务体系 (FE ID)</p>
-        <div class="stats">
-            <div class="stat">
-                <div class="stat-label">总任务数</div>
-                <div class="stat-value" id="total-tasks">-</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">待执行</div>
-                <div class="stat-value" style="color: #3498db;" id="pending-tasks">-</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">审核中</div>
-                <div class="stat-value" style="color: #9b59b6;" id="review-tasks">-</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">已完成</div>
-                <div class="stat-value" style="color: #2ecc71;" id="done-tasks">-</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">延迟任务</div>
-                <div class="stat-value" style="color: #f39c12;" id="deferred-tasks">-</div>
-            </div>
-            <div class="stat">
-                <div class="stat-label">预计时间</div>
-                <div class="stat-value" style="color: #95a5a6;">5-6月</div>
-            </div>
-        </div>
+
+<div class="header">
+  <h1>Rare-Earth f-electron Norm-Conserving Pseudopotential SCF Convergence</h1>
+  <div class="subtitle">f-electron-scf &mdash; Generated by pm-agent tools</div>
+</div>
+
+<div class="stats-bar" id="stats-bar"></div>
+
+<div class="tabs" id="tabs-bar">
+  <button class="tab active" data-view="kanban">Kanban</button>
+  <button class="tab" data-view="timeline">Timeline</button>
+  <button class="tab" data-view="graph">Dependencies</button>
+  <button class="tab" data-view="deferred">Deferred</button>
+</div>
+
+<div class="content">
+  <div id="kanban-view" class="view active"></div>
+  <div id="timeline-view" class="view"></div>
+  <div id="graph-view" class="view"></div>
+  <div id="deferred-view" class="view"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modal-title"></h3>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
     </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
 
-    <div class="tabs">
-        <button class="tab active" onclick="switchView('kanban')">📋 看板视图</button>
-        <button class="tab" onclick="switchView('timeline')">📅 时间线</button>
-        <button class="tab" onclick="switchView('graph')">🔗 依赖图</button>
-        <button class="tab" onclick="switchView('risk')">⚠️ 风险矩阵</button>
-        <button class="tab" onclick="switchView('deferred')">⏸️ 延迟任务</button>
-    </div>
+<script>
+// Task data embedded at generation time — no fetch needed, works with file:// protocol
+let tasks = [{"id": "FE-D-A1", "title": "ONCVPSP 赝势生成环境搭建", "layer": "infra", "type": "external_dependency", "scope": "external", "status": "deferred", "dependencies": [], "blocks": ["FE-D-A2"], "description": "搭建 ONCVPSP 赝势生成环境，准备自定义稀土 NC 赝势生成工具链。安装配置 ONCVPSP 4.0+，准备稀土元素全电子参考数据（NIST 原子数据库），建立赝势生成→UPF 转换→ABACUS 读取的完整工具链。", "acceptance_criteria": ["ONCVPSP 编译安装成功", "测试生成一个简单元素赝势", "准备稀土元素参考构型数据", "建立赝势质量检测流程（对数导数、ghost state）"], "files_to_touch": ["tools/pseudopotential_generation/", "tools/pseudopotential_generation/README.md"], "estimated_effort": "3-5 days", "specialist": "workflow", "risk_level": "high", "defer_trigger": "FE-304:accuracy_below_threshold", "old_ids": ["D-A1", "FE-001"]}, {"id": "FE-D-A2", "title": "自定义稀土 NC 赝势生成", "layer": "workflow", "type": "external_dependency", "scope": "external", "status": "deferred", "dependencies": ["FE-D-A1"], "blocks": ["FE-D-A3"], "description": "使用 ONCVPSP 为 7 种稀土元素生成 f_in_valence 模守恒赝势。关键参数优化：参考构型（中性/离子化）、各通道截断半径、局域势选择。对每个赝势进行 ghost state 检测和基本可迁移性检查。", "acceptance_criteria": ["生成 Ce, Gd, La, Nd, Sm, Eu, Tb 的 f_in_valence 赝势", "优化 4f/5s/5p/5d/6s 各通道截断半径", "通过 ghost state 检测", "可迁移性测试（多构型能量差 vs 全电子）"], "files_to_touch": ["pseudopotentials/rare_earth_custom/", "pseudopotentials/rare_earth_custom/generation_log.md"], "estimated_effort": "1-2 weeks", "specialist": "workflow", "risk_level": "high", "defer_trigger": "FE-D-A1:completed", "old_ids": ["D-A2", "FE-100(旧)"]}, {"id": "FE-D-A3", "title": "新赝势全面验证", "layer": "validation", "type": "validation", "scope": "cross_code", "status": "deferred", "dependencies": ["FE-D-A2"], "blocks": [], "description": "使用新生成的赝势重新运行全部验证测试，确保质量改善。与 VASP PAW 对比，Delta-test 框架验证。", "acceptance_criteria": ["重新运行 FE-304 验证", "误差降低到<2%", "Delta-test 框架验证", "与 VASP PAW 对比"], "files_to_touch": ["projects/f-electron-scf/validation/custom_pp_validation.md"], "estimated_effort": "1-2 weeks", "specialist": "workflow", "risk_level": "high", "defer_trigger": "FE-D-A2:completed", "old_ids": ["D-A3", "FE-101(旧)"]}, {"id": "FE-D-B1", "title": "NAO 多 zeta 轨道生成与测试", "layer": "workflow", "type": "extend", "scope": "abacus", "status": "deferred", "dependencies": [], "blocks": ["FE-D-B2"], "description": "用 ABACUS-orbitals 为验证通过的赝势生成 NAO 轨道文件。系统测试组合：SZ/DZP/TZDP，截断半径 6/7/8/9/10 au。评估每种组合对 CeO2 晶格常数、带结构的影响。确定推荐的默认轨道组合。", "acceptance_criteria": ["生成 DZP 和 TZP 轨道文件", "系统测试不同 zeta 数对精度的影响", "LCAO vs PW 对比（能量、力、带结构）", "确定最优轨道组合"], "files_to_touch": ["orbitals/rare_earth/", "orbitals/rare_earth/optimization_report.md"], "estimated_effort": "1-2 weeks", "specialist": "abacus-develop", "risk_level": "medium", "defer_trigger": "FE-304:lcao_divergence_above_3pct", "old_ids": ["D-B1", "FE-102(旧)"]}, {"id": "FE-D-B2", "title": "Spillage 算法 f 轨道调优", "layer": "algorithm", "type": "extend", "scope": "abacus", "status": "deferred", "dependencies": ["FE-D-B1"], "blocks": [], "description": "如果标准 spillage 优化对 f 轨道效果不佳，修改 spillage 算法以更好处理高度局域的 f 轨道。", "acceptance_criteria": ["分析 f 轨道 spillage 优化瓶颈", "调整 spillage 权重或优化策略", "改善 f 轨道质量指标", "与 PW 基组一致性提升"], "files_to_touch": ["source/source_basis/module_nao/", "tools/ABACUS-orbitals/"], "estimated_effort": "1-2 weeks", "specialist": "abacus-develop", "risk_level": "medium", "defer_trigger": "FE-D-B1:spillage_issue_detected", "old_ids": ["D-B2", "FE-103(旧)"]}, {"id": "FE-D-C1", "title": "AI 训练数据收集", "layer": "workflow", "type": "data", "scope": "cross_code", "status": "deferred", "dependencies": [], "blocks": ["FE-D-C2"], "description": "从验证计算中收集训练数据：(1) 结构信息（元素、坐标、晶格），(2) 收敛后的占据矩阵，(3) f 电子数、自旋态、轨道序，(4) SCF 收敛路径信息。目标：至少 500 个不同结构的数据点。", "acceptance_criteria": ["收集 100+ 个收敛的稀土体系计算", "记录：结构、元素、占据矩阵、能量", "覆盖不同氧化态、配位环境、磁序", "数据清洗和标准化"], "files_to_touch": ["ml_models/training_data/", "ml_models/training_data/dataset.json"], "estimated_effort": "2-3 weeks", "specialist": "workflow", "risk_level": "high", "defer_trigger": "FE-202:failure_rate_above_20pct", "old_ids": ["D-C1", "FE-300(旧)"]}, {"id": "FE-D-C2", "title": "GNN 占据矩阵模型训练", "layer": "algorithm", "type": "new", "scope": "local", "status": "deferred", "dependencies": ["FE-D-C1"], "blocks": ["FE-D-C3"], "description": "训练轻量级模型预测初始占据矩阵：(1) 输入特征：原子类型、近邻环境、氧化态估计，(2) 输出：每个稀土原子的 f 电子占据数和轨道序，(3) 先尝试 MLP/随机森林，再考虑 GNN。", "acceptance_criteria": ["设计 GNN 架构（结构→占据矩阵）", "训练/验证/测试集划分", "模型精度：占据数预测误差<0.5 电子", "推理速度<1 秒/结构"], "files_to_touch": ["ml_models/occupation_predictor/", "ml_models/occupation_predictor/model.py", "ml_models/occupation_predictor/train.py"], "estimated_effort": "3-4 weeks", "specialist": "workflow", "risk_level": "high", "defer_trigger": "FE-D-C1:completed", "old_ids": ["D-C2", "FE-301(旧)"]}, {"id": "FE-D-C3", "title": "ABACUS ML 集成", "layer": "infra", "type": "new", "scope": "abacus", "status": "deferred", "dependencies": ["FE-D-C2"], "blocks": [], "description": "将训练好的模型集成到 ABACUS 工作流：(1) Python 脚本：读取 STRU 文件→模型预测→生成 initial_onsite.dm，(2) 或通过 PyABACUS 接口直接注入，(3) 新增 init_chg='ai' 选项（长期目标）。", "acceptance_criteria": ["模型推理接口集成到 ABACUS", "添加 init_chg=ml 选项", "自动从结构预测占据矩阵", "与现有 omc 模式兼容", "性能开销<5%"], "files_to_touch": ["source/source_lcao/module_dftu/dftu_ml_init.cpp", "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"], "estimated_effort": "1-2 weeks", "specialist": "abacus-develop", "risk_level": "high", "defer_trigger": "FE-D-C2:completed", "old_ids": ["D-C3", "FE-302(旧)"]}, {"id": "FE-000", "title": "赝势库调研与收集", "layer": "core", "type": "research", "scope": "external", "status": "pending", "dependencies": [], "blocks": ["FE-302"], "description": "系统调研现有稀土f_in_valence模守恒赝势库：PseudoDojo (ONCVPSP), PSlibrary (QE), SG15, GBRV, JTH。收集可用赝势，记录每个赝势的参考构型、截断半径、lmax、验证状态。建立赝势库索引。", "acceptance_criteria": ["至少覆盖La/Ce/Nd/Sm/Eu/Gd/Tb 7种元素的赝势可用性报告", "每个元素至少1个f_in_valence赝势", "记录赝势来源、参数、质量评估", "建立赝势库目录结构"], "files_to_touch": ["pseudopotentials/rare_earth/", "pseudopotentials/rare_earth/README.md"], "estimated_effort": "1-2 days", "specialist": "workflow", "risk_level": "low", "old_ids": ["T0-4", "FE-000"]}, {"id": "FE-001", "title": "ABACUS DFT+U 代码深度审计", "layer": "core", "type": "research", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["FE-200", "FE-201", "FE-202"], "description": "详细审计ABACUS DFT+U实现：dftu.cpp（主逻辑、U-ramping、omc）、dftu_occup.cpp（占据矩阵mixing）、dftu_hamilt.cpp（哈密顿量）、dftu_yukawa.cpp（自动U）、dftu_pw.cpp（PW限制）。记录每个函数的输入输出、数据流、已知限制。特别关注f电子（l=3）的处理路径。", "acceptance_criteria": ["完整的代码审计文档，包含数据流图", "f电子处理路径分析", "已知限制和改进点清单"], "files_to_touch": ["projects/f-electron-scf/audit/dftu_audit.md"], "estimated_effort": "2-3 days", "specialist": "abacus-develop", "risk_level": "low", "old_ids": ["FE-002"]}, {"id": "FE-002", "title": "建立 DFT+U 回归测试套件", "layer": "core", "type": "infra", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["FE-101"], "description": "建立CeO2和GdN的DFT+U回归测试基线。包括LCAO和PW两种基组的参考结果。确保后续代码移植不破坏现有功能。", "acceptance_criteria": ["CeO2 LCAO DFT+U 基线结果", "GdN LCAO DFT+U 基线结果", "自动化回归测试脚本", "结果对比阈值定义"], "files_to_touch": ["projects/f-electron-scf/tests/regression/"], "estimated_effort": "1-2 days", "specialist": "abacus-develop", "risk_level": "low", "old_ids": ["T0-3"]}, {"id": "FE-100", "title": "onsite_projector nspin=1/2 支持", "layer": "infra", "type": "extend", "scope": "abacus", "status": "in_review", "dependencies": [], "blocks": ["FE-101", "FE-102", "FE-109"], "description": "扩展 develop 的 onsite_projector 支持 nspin=1/2。当前 develop 仅支持 nspin=4。需要：(1) cal_occupations() 增加 isk_in 参数，(2) cal_becp() 增加 npwx 参数，(3) 适配 Onsite_Proj_tools（develop）vs FS_Nonlocal_tools（zdy-tmp）的 API 差异。", "acceptance_criteria": ["编译通过", "现有 nspin=4 测试不受影响（回归 099_PW_DJ_SO）", "新增 nspin=2 单元测试（npol=1 spin-up/down occupation、charge_mag）", "npol=2 回归测试通过"], "files_to_touch": ["source/source_pw/module_pwdft/onsite_projector.h", "source/source_pw/module_pwdft/onsite_projector.cpp", "source/source_pw/module_pwdft/onsite_proj_tools.h", "source/source_pw/module_pwdft/onsite_proj_tools.cpp"], "estimated_effort": "1-2 days", "specialist": "abacus-develop", "risk_level": "low", "old_ids": ["PR-1"], "commit_hash": "d2364165c", "review_notes": "代码已提交但验收未通过：零单元测试、零集成测试、无编译日志。需补充测试。"}, {"id": "FE-101", "title": "DFT+U PW SCF（nspin=4）", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-100"], "blocks": ["FE-102", "FE-103", "FE-105", "FE-106"], "description": "在 PW 基组下支持 DFT+U SCF 计算（先 nspin=4）。核心工作：(1) 移植 zdy-tmp dftu_pw.cpp 的 PW 占据矩阵计算到 develop 的 Plus_U 类，(2) 添加 eff_pot_pw/cal_occup_m_pw 等 PW 相关方法，(3) 在 esolver_ks_pw.cpp 集成 DFT+U 调用。适配要点：DFTU→Plus_U 类名、GlobalC::ucell→参数传递、GlobalV::NSPIN→PARAM.inp.nspin。", "acceptance_criteria": ["CeO2 nspin=4 PW DFT+U SCF 可收敛", "能量与 LCAO DFT+U 定性一致", "编译通过，现有测试不受影响", "nspin=1/2/4 的能量权重和对角系数单元测试", "set_locale() 的 uom_array→locale 拷贝单元测试"], "files_to_touch": ["source/source_lcao/module_dftu/dftu_pw.cpp", "source/source_lcao/module_dftu/dftu.h", "source/source_lcao/module_dftu/dftu.cpp", "source/source_esolver/esolver_ks_pw.cpp", "source/source_io/module_parameter/input_parameter.h"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["PR-2"]}, {"id": "FE-102", "title": "DFT+U PW nspin=1/2 扩展", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-100", "FE-101"], "blocks": ["FE-106"], "description": "扩展 PW DFT+U 支持 nspin=1 和 nspin=2。在 dftu_pw.cpp 添加 nspin=1/2 分支，在 esolver_ks_pw.cpp 处理 nspin=2 的 isk 映射。", "acceptance_criteria": ["NiO nspin=2 PW DFT+U SCF 可收敛", "能量与 LCAO 一致", "新增 100_PW_DFTU_S2（nspin=2）和 101_PW_DFTU_S1（nspin=1）集成测试"], "files_to_touch": ["source/source_lcao/module_dftu/dftu_pw.cpp", "source/source_esolver/esolver_ks_pw.cpp"], "estimated_effort": "2-3 days", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["PR-3"]}, {"id": "FE-103", "title": "DFT+U PW force", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-101"], "blocks": ["FE-104", "FE-106"], "description": "PW 基组下 DFT+U 力的计算。适配 forces_onsite.cpp 到 Plus_U 接口，确保 cal_force_dftu() 在 Onsite_Proj_tools 中正确工作。", "acceptance_criteria": ["CeO2 PW DFT+U 力与 LCAO 一致（误差 < 1 mRy/Bohr）", "力的对称性正确"], "files_to_touch": ["source/source_pw/module_pwdft/forces_onsite.cpp", "source/source_pw/module_pwdft/onsite_proj_tools.h", "source/source_pw/module_pwdft/onsite_proj_tools.cpp"], "estimated_effort": "2-3 days", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["PR-4"]}, {"id": "FE-104", "title": "DFT+U PW stress", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-103"], "blocks": ["FE-106"], "description": "PW 基组下 DFT+U 应力的计算。适配 stress_func_onsite.cpp 到 Plus_U 接口。", "acceptance_criteria": ["CeO2 PW DFT+U 应力与 LCAO 一致", "应力张量对称性正确"], "files_to_touch": ["source/source_pw/module_pwdft/stress_func_onsite.cpp", "source/source_pw/module_pwdft/onsite_proj_tools.h", "source/source_pw/module_pwdft/onsite_proj_tools.cpp"], "estimated_effort": "2 days", "specialist": "abacus-develop", "risk_level": "low", "old_ids": ["PR-5"]}, {"id": "FE-105", "title": "mixing_dftu（占据矩阵 mixing）", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-101"], "blocks": ["FE-106", "FE-111", "FE-112", "FE-113", "FE-200"], "description": "实现占据矩阵的 Broyden mixing，改善 DFT+U 收敛性。添加 mix_locale() 方法，mixing_dftu 输入参数，震荡体系自动开启 mixing_dftu。", "acceptance_criteria": ["mixing_dftu=true 时占据矩阵使用 Broyden mixing", "震荡体系自动开启 mixing_dftu", "不影响非 DFT+U 计算"], "files_to_touch": ["source/source_lcao/module_dftu/dftu_occup.cpp", "source/source_lcao/module_dftu/dftu.h", "source/source_lcao/module_dftu/dftu.cpp", "source/source_io/module_parameter/input_parameter.h", "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"], "estimated_effort": "3-4 days", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["PR-6"]}, {"id": "FE-106", "title": "DFT+U PW GPU/DCU 加速适配", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-101", "FE-102", "FE-103", "FE-104"], "blocks": [], "description": "确保 PW DFT+U 在 GPU/DCU 上正确运行。适配 GPU kernel、device memory 操作。", "acceptance_criteria": ["CUDA 编译通过", "GPU 结果与 CPU 一致"], "files_to_touch": ["source/source_pw/module_pwdft/kernels/", "source/source_pw/module_pwdft/onsite_proj_tools.cpp"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["PR-7"]}, {"id": "FE-107", "title": "module_deltaspin 核心移植", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["FE-108", "FE-109"], "description": "将 zdy-tmp 新增的 deltaspin 文件移植到 develop。新增 cal_h_lambda.cpp、cal_mw_helper.cpp、sc_parse_json.cpp。更新 spin_constrain.h/cpp（合并 zdy-tmp 增强到 develop 基础版本）。适配 include 路径和 GlobalC 去除。", "acceptance_criteria": ["所有 deltaspin 单元测试通过", "编译通过"], "files_to_touch": ["source/source_lcao/module_deltaspin/cal_h_lambda.cpp (NEW)", "source/source_lcao/module_deltaspin/cal_mw_helper.cpp (NEW)", "source/source_lcao/module_deltaspin/sc_parse_json.cpp (NEW)", "source/source_lcao/module_deltaspin/spin_constrain.h", "source/source_lcao/module_deltaspin/spin_constrain.cpp", "source/source_lcao/module_deltaspin/CMakeLists.txt", "source/source_lcao/module_deltaspin/test/"], "estimated_effort": "3-4 days", "specialist": "abacus-develop", "risk_level": "low", "old_ids": ["PR-8"]}, {"id": "FE-108", "title": "DeltaSpin LCAO 算符更新", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-107"], "blocks": ["FE-110", "FE-111"], "description": "更新 LCAO 下的 DeltaSpin 算符。合并 zdy-tmp 对 dspin_lcao.h/cpp、dspin_force_stress.hpp 的改动。更新 esolver_ks_lcao.cpp 中的 DeltaSpin 集成点。", "acceptance_criteria": ["LCAO DeltaSpin SCF 正确", "力/应力正确"], "files_to_touch": ["source/source_lcao/module_operator_lcao/dspin_lcao.h", "source/source_lcao/module_operator_lcao/dspin_lcao.cpp", "source/source_lcao/module_operator_lcao/dspin_force_stress.hpp", "source/source_esolver/esolver_ks_lcao.cpp"], "estimated_effort": "2-3 days", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["PR-9"]}, {"id": "FE-109", "title": "DeltaSpin PW 支持", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-100", "FE-107"], "blocks": ["FE-110"], "description": "在 PW 基组下支持 DeltaSpin。在 esolver_ks_pw.cpp 集成 lambda loop，添加 cal_Mi_pw 等 PW 相关方法。", "acceptance_criteria": ["PW DeltaSpin SCF 可运行", "磁矩约束有效"], "files_to_touch": ["source/source_esolver/esolver_ks_pw.cpp", "source/source_lcao/module_deltaspin/spin_constrain.h", "source/source_lcao/module_deltaspin/spin_constrain.cpp"], "estimated_effort": "3-4 days", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["PR-10"]}, {"id": "FE-110", "title": "DeltaSpin force/stress（LCAO + PW）", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-108", "FE-109"], "blocks": [], "description": "DeltaSpin 的力和应力计算，覆盖 LCAO 和 PW 两种基组。", "acceptance_criteria": ["DeltaSpin 力/应力与数值微分一致"], "files_to_touch": ["source/source_pw/module_pwdft/forces_onsite.cpp", "source/source_pw/module_pwdft/stress_func_onsite.cpp"], "estimated_effort": "2-3 days", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["PR-11"]}, {"id": "FE-111", "title": "DeltaSpin + DFTU 联合 + conserve_setting", "layer": "infra", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-105", "FE-108"], "blocks": [], "description": "支持 DeltaSpin 和 DFT+U 同时使用。添加 conserve_setting 参数控制联合计算行为。", "acceptance_criteria": ["DeltaSpin + DFT+U 联合计算正确", "conserve_setting 参数生效"], "files_to_touch": ["source/source_esolver/esolver_ks_pw.cpp", "source/source_esolver/esolver_ks_lcao.cpp", "source/source_io/module_parameter/input_parameter.h"], "estimated_effort": "2-3 days", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["PR-12"]}, {"id": "FE-112", "title": "SCF 震荡检测 + 自动回退", "layer": "algorithm", "type": "extend", "scope": "abacus", "status": "pending", "dependencies": ["FE-105"], "blocks": ["FE-113"], "description": "检测 SCF 能量震荡并自动调整策略。震荡体系自动调整 mixing 参数，不影响正常收敛体系。", "acceptance_criteria": ["震荡体系自动检测并调整 mixing 参数", "不影响正常收敛体系"], "files_to_touch": ["source/source_estate/module_charge/charge_mixing.cpp", "source/source_esolver/esolver_ks.cpp"], "estimated_effort": "2-3 days", "specialist": "abacus-develop", "risk_level": "low", "old_ids": ["PR-13"]}, {"id": "FE-113", "title": "mixing_restart 与 mixing_dftu 协同修复", "layer": "algorithm", "type": "fix", "scope": "abacus", "status": "pending", "dependencies": ["FE-105", "FE-112"], "blocks": [], "description": "修复 mixing_restart 与 mixing_dftu 的兼容性问题，包括 kpar > 1 时的正确性。", "acceptance_criteria": ["mixing_restart 后 mixing_dftu 状态正确", "kpar > 1 时 mixing_dftu 正确"], "files_to_touch": ["source/source_estate/module_charge/charge_mixing.cpp"], "estimated_effort": "1-2 days", "specialist": "abacus-develop", "risk_level": "low", "old_ids": ["PR-14"]}, {"id": "FE-200", "title": "自适应 Kerker 预处理参数", "layer": "algorithm", "type": "algorithm", "scope": "abacus", "status": "pending", "dependencies": ["FE-001", "FE-105"], "blocks": ["FE-204"], "description": "修改 charge_mixing_preconditioner.cpp，实现自适应 mixing_gg0：(1) 根据体系类型（金属/绝缘体/f电子）自动选择初始值，(2) 在 SCF 过程中根据残差变化动态调整，(3) 对 f 电子体系使用更保守的预处理。需要在 input_parameter.h 中添加 mixing_gg0_auto 选项。", "acceptance_criteria": ["自动检测体系中是否含f电子", "根据体系类型自动调整 mixing_gg0", "CeO2 收敛步数减少>20%", "不影响非f电子体系性能"], "files_to_touch": ["source/source_estate/module_charge/charge_mixing_preconditioner.cpp", "source/source_estate/module_charge/charge_mixing.h", "source/source_estate/module_charge/charge_mixing.cpp", "source/source_io/module_parameter/input_parameter.h"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "low", "old_ids": ["T1-1", "FE-200"]}, {"id": "FE-201", "title": "分通道 mixing_beta 实现", "layer": "algorithm", "type": "algorithm", "scope": "abacus", "status": "pending", "dependencies": ["FE-001"], "blocks": ["FE-204"], "description": "在 charge_mixing 中实现按角动量通道分别设置 mixing_beta 的能力。f 电子通道使用更小的 mixing_beta（如 0.05-0.1），s/p/d 通道使用正常值（0.3-0.7）。实现方式：在实空间投影到原子轨道分量后分别 mixing，或在密度矩阵 mixing（LCAO）中按 l 分通道。", "acceptance_criteria": ["识别f通道并单独设置 mixing_beta", "改善f电子体系收敛稳定性", "含f电子体系的 SCF 收敛性改善", "不影响无f电子体系的性能"], "files_to_touch": ["source/source_estate/module_charge/charge_mixing_rho.cpp", "source/source_estate/module_charge/charge_mixing_dmr.cpp", "source/source_estate/module_charge/charge_mixing.h"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "low", "old_ids": ["T1-2", "FE-201"]}, {"id": "FE-202", "title": "占据矩阵随机初始化 + 多起点探索", "layer": "algorithm", "type": "algorithm", "scope": "abacus", "status": "pending", "dependencies": ["FE-001"], "blocks": ["FE-203"], "description": "在 dftu.cpp 中实现：(1) 随机占据矩阵初始化（在合理物理约束内随机），(2) 基于氧化态的化学直觉初始化（如 Ce4+ → f^0, Ce3+ → f^1），(3) 多起点并行探索接口（运行 N 个不同初始化的 SCF，选最低能量）。新增输入参数：omc_random, omc_nstart, omc_seed。", "acceptance_criteria": ["添加 omc_mode=random 选项", "支持多起点并行运行", "自动选择最低能量结果", "CeO2 的 DFT+U 计算能通过多起点找到正确基态（与 VASP 一致）"], "files_to_touch": ["source/source_lcao/module_dftu/dftu.cpp", "source/source_lcao/module_dftu/dftu.h", "source/source_lcao/module_dftu/dftu_io.cpp", "source/source_io/module_parameter/read_input_item_exx_dftu.cpp"], "estimated_effort": "1 week", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["T1-4", "T2-1", "FE-202"]}, {"id": "FE-203", "title": "占据矩阵退火策略", "layer": "algorithm", "type": "algorithm", "scope": "abacus", "status": "pending", "dependencies": ["FE-202"], "blocks": ["FE-204"], "description": "实现占据退火：(1) 初始阶段使用高 smearing 温度（如 0.1 Ry），使占据矩阵平滑化，(2) 逐步降低 smearing 到目标值（如 0.01 Ry），(3) 与 U-ramping 协同：先 ramping U 到目标值，再退火 smearing。在 dftu_occup.cpp 中实现退火调度器。", "acceptance_criteria": ["实现 smearing 温度退火", "与 U-ramping 协同", "EuO 等多极小值体系的收敛成功率提升>50%", "验证收敛率改善"], "files_to_touch": ["source/source_lcao/module_dftu/dftu_occup.cpp", "source/source_lcao/module_dftu/dftu.cpp"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["T2-2", "FE-203"]}, {"id": "FE-204", "title": "能量监控 + SCF 自动回退机制", "layer": "algorithm", "type": "algorithm", "scope": "abacus", "status": "pending", "dependencies": ["FE-200", "FE-201", "FE-203"], "blocks": ["FE-205", "FE-302", "FE-303"], "description": "在 SCF 主循环中实现：(1) 逐步监控总能量变化，检测震荡模式，(2) 当能量连续上升 N 步时，自动减小 mixing_beta 并回退到上一个低能量状态，(3) 当检测到周期性震荡时，切换 mixing 策略（如从 Broyden 切换到 Pulay 或 plain），(4) 输出诊断信息帮助用户理解收敛行为。", "acceptance_criteria": ["原本不收敛的f电子体系中>70%可通过自动回退收敛", "监控 SCF 能量变化趋势", "能量上升时自动减小 mixing_beta", "回退到上一步收敛的电荷密度"], "files_to_touch": ["source/source_estate/module_charge/charge_mixing.cpp", "source/source_estate/module_charge/charge_mixing_rho.cpp"], "estimated_effort": "1 week", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["T1-3", "FE-204"]}, {"id": "FE-205", "title": "constrained DFT 框架（f 电子数约束）", "layer": "algorithm", "type": "algorithm", "scope": "abacus", "status": "pending", "dependencies": ["FE-204"], "blocks": ["FE-302"], "description": "实现 constrained DFT：(1) 新模块 charge_constraint.cpp，添加惩罚势 V = λ·(n_f - n_target)^2 到哈密顿量，(2) 约束强度 λ 从大到小逐步释放（类似 U-ramping），(3) 支持按原子指定目标 f 电子数，(4) 与 DFT+U 的 omc 协同工作。这是确保 f 电子体系收敛到正确基态的关键手段。", "acceptance_criteria": ["Ce2O3 中 Ce 的 f 电子数可被约束到目标值±0.1", "释放约束后保持", "实现惩罚势 V_constraint", "约束强度逐步释放", "与 DFT+U 占据矩阵控制协同"], "files_to_touch": ["source/source_estate/module_charge/charge_constraint.cpp (NEW)", "source/source_estate/module_charge/charge_constraint.h (NEW)", "source/source_lcao/module_dftu/dftu.cpp", "source/source_io/module_parameter/input_parameter.h"], "estimated_effort": "2 weeks", "specialist": "abacus-develop", "risk_level": "medium", "old_ids": ["T2-3", "FE-205"]}, {"id": "FE-300", "title": "用户需求调研", "layer": "workflow", "type": "research", "scope": "external", "status": "pending", "dependencies": [], "blocks": ["FE-301"], "description": "调研实际用户的稀土计算需求，收集3-5个具体体系和性质要求，识别真实痛点。覆盖不同应用场景（氧化物/合金/催化等）。", "acceptance_criteria": ["收集至少3个实际研究项目的计算需求", "记录：元素、结构、目标性质、当前痛点", "覆盖不同应用场景（氧化物/合金/催化等）", "形成需求文档"], "files_to_touch": ["projects/f-electron-scf/user_requirements.md"], "estimated_effort": "3-5 days", "specialist": "workflow", "risk_level": "low", "old_ids": ["T3-1"]}, {"id": "FE-301", "title": "选择 2-3 个代表性验证体系", "layer": "workflow", "type": "research", "scope": "cross_code", "status": "pending", "dependencies": ["FE-300"], "blocks": ["FE-304"], "description": "基于用户需求，选择2-3个代表性体系作为验证目标，必须覆盖：简单氧化物基线、磁序、一个应用场景。每个体系有明确的参考数据来源。", "acceptance_criteria": ["选择标准：覆盖关键物理（f电子、磁性、化学环境）", "示例组合：CeO2（基线）+ GdN（磁性）+ CeO2(111)表面（催化）", "或：CeO2 + NdFeB（合金磁性）+ 稀土MOF（分子）", "每个体系有明确的参考数据来源"], "files_to_touch": ["projects/f-electron-scf/validation_systems.md"], "estimated_effort": "2-3 days", "specialist": "workflow", "risk_level": "low", "old_ids": ["T3-2"]}, {"id": "FE-302", "title": "简单氧化物验证（CeO2, Gd2O3, La2O3）", "layer": "validation", "type": "validation", "scope": "cross_code", "status": "pending", "dependencies": ["FE-000", "FE-204"], "blocks": ["FE-303", "FE-304"], "description": "基准验证：ABACUS vs VASP PAW 对比 CeO2/Gd2O3/La2O3 的晶格常数、体模量、带隙、磁矩（如适用）。PBE 和 PBE+U 两种泛函。记录 SCF 收敛步数和计算时间。", "acceptance_criteria": ["晶格常数误差<1%", "体模量误差<10%", "带隙定性一致", "SCF 收敛步数和计算时间记录"], "files_to_touch": ["projects/f-electron-scf/validation/oxide_benchmark/"], "estimated_effort": "1 week", "specialist": "workflow", "risk_level": "medium", "old_ids": ["FE-400"]}, {"id": "FE-303", "title": "合金与磁性化合物验证", "layer": "validation", "type": "validation", "scope": "cross_code", "status": "pending", "dependencies": ["FE-302", "FE-204"], "blocks": ["FE-304"], "description": "中等难度验证：(1) NdFeB/SmCo5 合金的磁矩和磁各向异性，(2) GdN/EuO 的磁序和交换耦合，(3) TbMnO3 的多铁性。重点关注 DFT+U 参数敏感性和 SCF 收敛可靠性。", "acceptance_criteria": ["磁矩与 VASP/实验值偏差<10%", "SCF 收敛成功率>90%"], "files_to_touch": ["projects/f-electron-scf/validation/magnetic_benchmark/"], "estimated_effort": "1-2 weeks", "specialist": "workflow", "risk_level": "medium", "old_ids": ["FE-401"]}, {"id": "FE-304", "title": "跨代码验证（ABACUS vs VASP）", "layer": "validation", "type": "validation", "scope": "cross_code", "status": "pending", "dependencies": ["FE-302", "FE-301"], "blocks": ["FE-305", "FE-400"], "description": "对选定的验证体系，运行 ABACUS 和 VASP 计算，对比晶格常数、磁矩、带隙、形成能等关键性质。如果误差>5%且可追溯到赝势，触发 FE-D-A1。", "acceptance_criteria": ["ABACUS vs VASP 结构性质误差<2%", "能量误差<10%", "磁矩误差<0.1 μB", "如果误差>5%且可追溯到赝势，触发 FE-D-A1"], "files_to_touch": ["projects/f-electron-scf/validation/cross_code/", "projects/f-electron-scf/validation/comparison_report.md"], "estimated_effort": "1-2 weeks", "specialist": "workflow", "risk_level": "medium", "old_ids": ["T3-3"]}, {"id": "FE-305", "title": "收敛可靠性测试", "layer": "validation", "type": "validation", "scope": "cross_code", "status": "pending", "dependencies": ["FE-304"], "blocks": ["FE-400"], "description": "对每个验证体系运行10次不同随机种子的计算，统计收敛率和能量一致性。", "acceptance_criteria": ["每个体系运行10次（不同随机种子）", "收敛率>90%", "收敛结果能量标准差<1 meV", "记录失败案例的诊断信息"], "files_to_touch": ["projects/f-electron-scf/validation/reliability_test.py", "projects/f-electron-scf/validation/reliability_report.md"], "estimated_effort": "1 week", "specialist": "workflow", "risk_level": "low", "old_ids": ["T3-4"]}, {"id": "FE-400", "title": "自动参数选择", "layer": "workflow", "type": "new", "scope": "abacus", "status": "pending", "dependencies": ["FE-304", "FE-305"], "blocks": ["FE-401", "FE-402", "FE-403"], "description": "实现自动参数选择工具：输入结构文件+元素列表，输出推荐的 mixing_beta、Kerker 参数、U 值、占据策略。检测 f 元素并应用最佳实践参数。", "acceptance_criteria": ["检测f元素并应用最佳实践参数", "输出推荐 INPUT 文件", "Python 脚本或 ABACUS 预处理器", "文档说明参数选择逻辑"], "files_to_touch": ["tools/rare_earth_auto_setup.py", "tools/rare_earth_auto_setup_README.md"], "estimated_effort": "1 week", "specialist": "workflow", "risk_level": "low", "old_ids": ["T4-1"]}, {"id": "FE-401", "title": "失败诊断 + 自动重试", "layer": "workflow", "type": "new", "scope": "abacus", "status": "pending", "dependencies": ["FE-400"], "blocks": ["FE-404"], "description": "实现 SCF 失败自动诊断和重试机制：监控收敛模式（震荡/发散/慢收敛），自动调整参数重试。最多3次重试策略。", "acceptance_criteria": ["识别失败模式（震荡/发散/慢收敛）", "自动调整策略：减小 beta/切换退火/尝试随机初始化", "最多3次重试策略", "输出诊断日志", "失败后给出明确错误信息和建议"], "files_to_touch": ["tools/scf_auto_retry.py", "source/source_estate/module_esolver/esolver_ks.cpp"], "estimated_effort": "1-2 weeks", "specialist": "workflow", "risk_level": "medium", "old_ids": ["T4-2"]}, {"id": "FE-402", "title": "abacustest 工作流集成", "layer": "workflow", "type": "extend", "scope": "abacus-test", "status": "pending", "dependencies": ["FE-400"], "blocks": [], "description": "将稀土收敛工作流集成到 abacustest，提供预配置模板和自动化 VASP 对比。", "acceptance_criteria": ["添加稀土 DFT+U 工作流模板到 abacustest", "预配置 INPUT 文件（常见场景）", "自动 VASP 对比（如果有参考数据）", "集成到 abacustest 文档"], "files_to_touch": ["abacustest/workflows/rare_earth_dftu/", "abacustest/workflows/rare_earth_dftu/README.md"], "estimated_effort": "1 week", "specialist": "abacus-test", "risk_level": "low", "old_ids": ["T4-3"]}, {"id": "FE-403", "title": "文档与示例", "layer": "workflow", "type": "new", "scope": "abacus", "status": "pending", "dependencies": ["FE-400"], "blocks": ["FE-404"], "description": "编写完整的用户文档和示例：教程、示例库、故障排除指南。", "acceptance_criteria": ["教程：《ABACUS 稀土 DFT+U 计算指南》", "示例库：5-10 个收敛体系的 INPUT 文件和分析", "故障排除指南：常见失败模式和解决方案", "发布到 ABACUS 文档网站"], "files_to_touch": ["docs/advanced/rare_earth_dftu_tutorial.md", "examples/rare_earth/", "docs/troubleshooting/rare_earth_convergence.md"], "estimated_effort": "1 week", "specialist": "workflow", "risk_level": "low", "old_ids": ["T4-4"]}, {"id": "FE-404", "title": "自动化工作流与参数推荐系统", "layer": "workflow", "type": "new", "scope": "abacus", "status": "pending", "dependencies": ["FE-401", "FE-403"], "blocks": [], "description": "整合所有技术为自动化工作流：(1) 根据输入结构自动选择赝势/轨道/DFT+U 参数，(2) 自动选择 SCF 策略（mixing 参数、是否启用约束、是否多起点），(3) 失败自动诊断和重试，(4) 通过 abacustest 或 PyABACUS 接口暴露。", "acceptance_criteria": ["端到端自动化：用户只需提供结构文件，系统自动完成计算", "集成参数推荐、失败诊断、自动重试"], "files_to_touch": ["tools/rare_earth_workflow.py"], "estimated_effort": "1-2 weeks", "specialist": "workflow", "risk_level": "low", "old_ids": ["FE-500"]}];
 
-    <div id="kanban-view" class="view active">
-        <div class="kanban" id="kanban-board"></div>
-    </div>
+function init() {
+  render();
+}
 
-    <div id="timeline-view" class="view">
-        <div class="timeline" id="timeline-content"></div>
-    </div>
+function render() {
+  renderStats();
+  renderKanban();
+  renderTimeline();
+  renderGraph();
+  renderDeferred();
+}
 
-    <div id="graph-view" class="view">
-        <div class="graph-container">
-            <h2>任务依赖关系图</h2>
-            <div id="dependency-graph"></div>
-        </div>
-    </div>
+function renderStats() {
+  const bar = document.getElementById('stats-bar');
+  const counts = {
+    total: tasks.length,
+    pending: tasks.filter(t => t.status === 'pending').length,
+    in_progress: tasks.filter(t => t.status === 'in_progress').length,
+    in_review: tasks.filter(t => t.status === 'in_review').length,
+    done: tasks.filter(t => t.status === 'done').length,
+    deferred: tasks.filter(t => t.status === 'deferred').length,
+  };
+  bar.innerHTML = [
+    ['Total', counts.total, 'total'],
+    ['Pending', counts.pending, 'pending'],
+    ['In Progress', counts.in_progress, 'progress'],
+    ['In Review', counts.in_review, 'review'],
+    ['Done', counts.done, 'done'],
+    ['Deferred', counts.deferred, 'deferred'],
+  ].map(([label, val, cls]) =>
+    `<div class="stat-card"><div class="label">${label}</div><div class="value ${cls}">${val}</div></div>`
+  ).join('');
+}
 
-    <div id="risk-view" class="view">
-        <div class="risk-matrix">
-            <h2>风险分布矩阵</h2>
-            <div class="risk-grid" id="risk-grid"></div>
-        </div>
-    </div>
+/* --- Kanban --- */
+function detectGrouping() {
+  // Auto-detect best grouping strategy
+  const hasPhase = tasks.some(t => t.phase || (t.id && /^[A-Z]+-\d/.test(t.id)));
+  const hasBatch = tasks.some(t => t.batch !== undefined && t.batch !== null);
 
-    <div id="deferred-view" class="view">
-        <div class="deferred-section" id="deferred-content"></div>
-    </div>
+  if (hasPhase) return 'phase';
+  if (hasBatch) return 'batch';
+  return 'status';
+}
 
-    <div class="modal" id="task-modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <span class="modal-close" onclick="closeModal()">&times;</span>
-                <div id="modal-title"></div>
-            </div>
-            <div id="modal-body"></div>
-        </div>
-    </div>
+function groupByPhase() {
+  // Try to extract phase from task ID pattern (FE-0xx, PB-1xx, SC-0xx)
+  const groups = {};
+  tasks.forEach(t => {
+    let phase = t.phase || '';
+    if (!phase && t.id) {
+      const m = t.id.match(/^[A-Z]+-(\d)/);
+      if (m) phase = 'Phase ' + m[1];
+      else if (t.id.match(/^[A-Z]+-D/)) phase = 'Deferred';
+    }
+    if (!phase) phase = 'Other';
+    (groups[phase] = groups[phase] || []).push(t);
+  });
+  return groups;
+}
 
-    <script>
-        let projectState = null;
+function groupByBatch() {
+  const groups = {};
+  tasks.forEach(t => {
+    const batch = t.batch !== undefined ? 'Batch ' + t.batch : 'Unassigned';
+    (groups[batch] = groups[batch] || []).push(t);
+  });
+  return groups;
+}
 
-        // Load project state
-        async function loadProjectState() {
-            try {
-                // Add timestamp to prevent caching
-                const timestamp = new Date().getTime();
-                const response = await fetch(`state/project_state.json?v=${timestamp}`);
-                projectState = await response.json();
-                console.log(`Loaded ${projectState.tasks.length} tasks from project_state.json`);
-                renderDashboard();
-            } catch (error) {
-                console.error('Failed to load project state:', error);
-                document.body.innerHTML = '<div class="loading">❌ 无法加载项目数据。请确保 state/project_state.json 文件存在。</div>';
-            }
-        }
+function groupByStatus() {
+  const order = ['pending', 'in_progress', 'in_review', 'done', 'deferred'];
+  const labels = {pending:'Pending',in_progress:'In Progress',in_review:'In Review',done:'Done',deferred:'Deferred'};
+  const groups = {};
+  order.forEach(s => { groups[labels[s] || s] = []; });
+  tasks.forEach(t => {
+    const label = labels[t.status] || t.status || 'Pending';
+    (groups[label] = groups[label] || []).push(t);
+  });
+  return groups;
+}
 
-        function renderDashboard() {
-            updateStats();
-            renderKanban();
-            renderTimeline();
-            renderRiskMatrix();
-            renderDeferred();
-        }
+function renderKanban() {
+  const view = document.getElementById('kanban-view');
+  const strategy = detectGrouping();
+  let groups;
+  if (strategy === 'phase') groups = groupByPhase();
+  else if (strategy === 'batch') groups = groupByBatch();
+  else groups = groupByStatus();
 
-        function updateStats() {
-            const tasks = projectState.tasks || [];
-            const pending = tasks.filter(t => t.status === 'pending').length;
-            const inReview = tasks.filter(t => t.status === 'in_review').length;
-            const inProgress = tasks.filter(t => t.status === 'in_progress').length;
-            const done = tasks.filter(t => t.status === 'done').length;
-            const deferred = tasks.filter(t => t.status === 'deferred').length;
+  let html = '<div class="kanban">';
+  for (const [name, items] of Object.entries(groups)) {
+    if (items.length === 0) continue;
+    html += `<div class="column">
+      <div class="column-header">
+        <span class="title">${name}</span>
+        <span class="count">${items.length}</span>
+      </div>`;
+    items.forEach(t => { html += taskCard(t); });
+    html += '</div>';
+  }
+  html += '</div>';
+  view.innerHTML = html;
+  bindCardClicks(view);
+}
 
-            document.getElementById('total-tasks').textContent = tasks.length;
-            document.getElementById('pending-tasks').textContent = pending;
-            document.getElementById('review-tasks').textContent = inReview + inProgress;
-            document.getElementById('done-tasks').textContent = done;
-            document.getElementById('deferred-tasks').textContent = deferred;
-        }
+function taskCard(t) {
+  const statusIcon = {pending:'\u23f3',in_progress:'\ud83d\udd04',in_review:'\ud83d\udd0d',done:'\u2705',failed:'\u274c',deferred:'\u23f8\ufe0f'}[t.status] || '';
+  let meta = '';
+  if (t.layer) meta += `<span class="badge layer">${t.layer}</span>`;
+  if (t.type) meta += `<span class="badge type">${t.type}</span>`;
+  if (t.risk_level) meta += `<span class="badge risk-${t.risk_level}">${t.risk_level}</span>`;
+  if (t.batch !== undefined && t.batch !== null) meta += `<span class="badge batch">B${t.batch}</span>`;
+  return `<div class="task-card status-${t.status}" data-id="${t.id}">
+    <div class="task-id">${statusIcon} ${t.id}</div>
+    <div class="task-title">${esc(t.title)}</div>
+    <div class="task-meta">${meta}</div>
+  </div>`;
+}
 
-        function renderKanban() {
-            const board = document.getElementById('kanban-board');
-            const tasks = projectState.tasks || [];
+/* --- Timeline --- */
+function renderTimeline() {
+  const view = document.getElementById('timeline-view');
+  const groups = groupByPhase();
+  let html = '<div class="timeline">';
+  for (const [name, items] of Object.entries(groups)) {
+    const active = items.filter(t => t.status !== 'deferred');
+    if (active.length === 0) continue;
+    html += `<div class="phase-section">
+      <div class="phase-header">${name} (${active.length})</div>
+      <div class="phase-tasks">`;
+    active.forEach(t => { html += taskCard(t); });
+    html += '</div></div>';
+  }
+  html += '</div>';
+  view.innerHTML = html;
+  bindCardClicks(view);
+}
 
-            // FE unified ID grouping
-            const phases = {
-                'Phase 0: 基础设施': tasks.filter(t => t.id.match(/^FE-00/)),
-                'Phase 1: 代码移植': tasks.filter(t => t.id.match(/^FE-1\d/) && t.status !== 'deferred'),
-                'Phase 2: SCF算法': tasks.filter(t => t.id.match(/^FE-2\d/)),
-                'Phase 3: 验证': tasks.filter(t => t.id.match(/^FE-3\d/)),
-                'Phase 4: 自动化': tasks.filter(t => t.id.match(/^FE-4\d/)),
-                '延迟任务': tasks.filter(t => t.status === 'deferred')
-            };
+/* --- Dependency Graph (text-based) --- */
+function renderGraph() {
+  const view = document.getElementById('graph-view');
+  const withDeps = tasks.filter(t => (t.dependencies && t.dependencies.length > 0) || tasks.some(o => (o.dependencies || []).includes(t.id)));
+  if (withDeps.length === 0) {
+    view.innerHTML = '<div class="graph-container"><h2>Dependencies</h2><div class="graph-fallback">No dependency information available.</div></div>';
+    return;
+  }
 
-            board.innerHTML = '';
-            for (const [phase, phaseTasks] of Object.entries(phases)) {
-                const column = document.createElement('div');
-                column.className = 'column';
-                column.innerHTML = `
-                    <div class="column-header">
-                        <span>${phase}</span>
-                        <span class="column-count">${phaseTasks.length}</span>
-                    </div>
-                `;
+  // Build adjacency for a simple text-based visualization
+  let dot = 'digraph G {\\n  rankdir=LR;\\n';
+  const statusColor = {pending:'#3b82f6',in_progress:'#f59e0b',in_review:'#a78bfa',done:'#22c55e',deferred:'#6b7280',failed:'#ef4444'};
+  tasks.forEach(t => {
+    const c = statusColor[t.status] || '#3b82f6';
+    const label = t.id + '\\\\n' + (t.title||'').substring(0,25);
+    dot += `  "${t.id}" [label="${label}" fillcolor="${c}" style="filled,rounded" shape=box];\\n`;
+  });
+  tasks.forEach(t => {
+    (t.dependencies || []).forEach(d => { dot += `  "${d}" -> "${t.id}";\\n`; });
+    (t.suspended_dependencies || []).forEach(d => { dot += `  "${d}" -> "${t.id}" [style=dashed color=gray];\\n`; });
+  });
+  dot += '}';
 
-                phaseTasks.forEach(task => {
-                    const card = createTaskCard(task);
-                    column.appendChild(card);
-                });
+  // Show as text + link to SVG if available
+  let html = '<div class="graph-container"><h2>Task Dependencies</h2>';
+  html += '<div id="dep-graph-svg">';
+  // Inline SVG if embedded at generation time
+  const inlineSvg = document.getElementById('embedded-svg');
+  if (inlineSvg && inlineSvg.textContent.trim()) {
+    html += inlineSvg.textContent;
+  } else {
+    html += '<div class="graph-fallback">';
+    html += '<p>Dependency graph (DOT format). Run <code>python -m tools.generate_graph</code> to generate SVG.</p>';
+    html += '<pre>' + dot.replace(/\\n/g, '\n') + '</pre>';
+    html += '</div>';
+  }
+  html += '</div></div>';
+  view.innerHTML = html;
+}
 
-                board.appendChild(column);
-            }
-        }
+/* --- Deferred --- */
+function renderDeferred() {
+  const view = document.getElementById('deferred-view');
+  const deferred = tasks.filter(t => t.status === 'deferred');
+  let html = '<div class="deferred-section"><h2>Deferred Tasks</h2>';
+  if (deferred.length === 0) {
+    html += '<div style="text-align:center;padding:40px;color:var(--text2)">No deferred tasks</div>';
+  } else {
+    deferred.forEach(t => {
+      html += `<div class="deferred-card" data-id="${t.id}">
+        <div class="task-id">${t.id}</div>
+        <div class="task-title" style="font-size:15px;margin:8px 0">${esc(t.title)}</div>
+        <div class="task-meta">`;
+      if (t.layer) html += `<span class="badge layer">${t.layer}</span>`;
+      if (t.risk_level) html += `<span class="badge risk-${t.risk_level}">${t.risk_level}</span>`;
+      html += '</div>';
+      if (t.defer_trigger) {
+        html += `<div class="trigger-info"><div class="trigger-label">Trigger Condition</div><div>${esc(t.defer_trigger)}</div></div>`;
+      }
+      if (t.description) {
+        html += `<div style="margin-top:10px;font-size:13px;color:var(--text2)">${esc(t.description).substring(0,200)}</div>`;
+      }
+      html += '</div>';
+    });
+  }
+  html += '</div>';
+  view.innerHTML = html;
+  bindCardClicks(view);
+}
 
-        function createTaskCard(task) {
-            const card = document.createElement('div');
-            card.className = `task-card risk-${task.risk_level || 'low'}`;
-            card.onclick = () => showTaskDetails(task);
+/* --- Modal --- */
+function showModal(task) {
+  const overlay = document.getElementById('modal-overlay');
+  document.getElementById('modal-title').textContent = task.id + ': ' + task.title;
+  const statusLabels = {pending:'Pending',in_progress:'In Progress',in_review:'In Review',done:'Done',deferred:'Deferred',failed:'Failed'};
+  let body = '';
+  if (task.description) body += `<div class="modal-section"><h4>Description</h4><p>${esc(task.description)}</p></div>`;
+  body += '<div class="modal-section"><h4>Metadata</h4>';
+  body += `<p><strong>Status:</strong> ${statusLabels[task.status]||task.status}</p>`;
+  if (task.layer) body += `<p><strong>Layer:</strong> ${task.layer}</p>`;
+  if (task.type) body += `<p><strong>Type:</strong> ${task.type}</p>`;
+  if (task.risk_level) body += `<p><strong>Risk:</strong> ${task.risk_level}</p>`;
+  if (task.specialist) body += `<p><strong>Specialist:</strong> ${task.specialist}</p>`;
+  if (task.batch !== undefined) body += `<p><strong>Batch:</strong> ${task.batch}</p>`;
+  body += '</div>';
+  if (task.defer_trigger) body += `<div class="modal-section"><h4>Trigger Condition</h4><p style="background:var(--orange-bg);padding:10px;border-radius:6px">${esc(task.defer_trigger)}</p></div>`;
+  const deps = task.dependencies || [];
+  if (deps.length) body += `<div class="modal-section"><h4>Dependencies (${deps.length})</h4><ul>${deps.map(d=>'<li>'+d+'</li>').join('')}</ul></div>`;
+  const criteria = task.acceptance_criteria || [];
+  if (criteria.length) body += `<div class="modal-section"><h4>Acceptance Criteria</h4><ul>${criteria.map(c=>'<li>'+esc(c)+'</li>').join('')}</ul></div>`;
+  const files = task.files_to_touch || [];
+  if (files.length) body += `<div class="modal-section"><h4>Files</h4><ul>${files.map(f=>'<li><code>'+esc(f)+'</code></li>').join('')}</ul></div>`;
+  document.getElementById('modal-body').innerHTML = body;
+  overlay.classList.add('active');
+}
 
-            const statusEmoji = {
-                'pending': '⏳',
-                'in_progress': '🔄',
-                'in_review': '🔍',
-                'done': '✅',
-                'failed': '❌',
-                'deferred': '⏸️'
-            }[task.status] || '📝';
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+}
 
-            card.innerHTML = `
-                <div class="task-id">${statusEmoji} ${task.id}</div>
-                <div class="task-title">${task.title}</div>
-                <div class="task-meta">
-                    <span class="badge layer">${task.layer}</span>
-                    ${task.risk_level ? `<span class="badge risk">${task.risk_level}</span>` : ''}
-                    ${task.defer_trigger ? '<span class="badge">🔔 有触发条件</span>' : ''}
-                </div>
-            `;
+document.getElementById('modal-overlay').addEventListener('click', e => {
+  if (e.target.id === 'modal-overlay') closeModal();
+});
 
-            return card;
-        }
+/* --- Tabs --- */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.view + '-view').classList.add('active');
+  });
+});
 
-        function renderTimeline() {
-            const content = document.getElementById('timeline-content');
-            const tasks = projectState.tasks || [];
+/* --- Helpers --- */
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
-            const phases = [
-                { name: 'Phase 0: 基础设施与调研', filter: t => t.id.match(/^FE-00/) },
-                { name: 'Phase 1: 代码移植 zdy-tmp → develop', filter: t => t.id.match(/^FE-1\d/) },
-                { name: 'Phase 2: SCF 收敛算法改进', filter: t => t.id.match(/^FE-2\d/) },
-                { name: 'Phase 3: 验证与用户场景', filter: t => t.id.match(/^FE-3\d/) },
-                { name: 'Phase 4: 生产就绪自动化', filter: t => t.id.match(/^FE-4\d/) }
-            ];
+function bindCardClicks(container) {
+  container.querySelectorAll('.task-card, .deferred-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = card.dataset.id;
+      const task = tasks.find(t => t.id === id);
+      if (task) showModal(task);
+    });
+  });
+}
 
-            content.innerHTML = '';
-            phases.forEach(phase => {
-                const phaseTasks = tasks.filter(t => phase.filter(t) && t.status !== 'deferred');
-                if (phaseTasks.length === 0) return;
-
-                const section = document.createElement('div');
-                section.className = 'phase-section';
-                section.innerHTML = `<div class="phase-header">${phase.name} (${phaseTasks.length}个任务)</div>`;
-
-                const tasksContainer = document.createElement('div');
-                tasksContainer.className = 'phase-tasks';
-                phaseTasks.forEach(task => {
-                    tasksContainer.appendChild(createTaskCard(task));
-                });
-
-                section.appendChild(tasksContainer);
-                content.appendChild(section);
-            });
-        }
-
-        function renderRiskMatrix() {
-            const grid = document.getElementById('risk-grid');
-            const tasks = projectState.tasks || [];
-
-            const riskCounts = {
-                low: tasks.filter(t => t.risk_level === 'low' || !t.risk_level).length,
-                medium: tasks.filter(t => t.risk_level === 'medium').length,
-                high: tasks.filter(t => t.risk_level === 'high').length
-            };
-
-            grid.innerHTML = `
-                <div class="risk-category low">
-                    <h3>🟢 低风险</h3>
-                    <div class="risk-count">${riskCounts.low}</div>
-                    <p>可立即执行</p>
-                </div>
-                <div class="risk-category medium">
-                    <h3>🟡 中风险</h3>
-                    <div class="risk-count">${riskCounts.medium}</div>
-                    <p>需要验证</p>
-                </div>
-                <div class="risk-category high">
-                    <h3>🔴 高风险</h3>
-                    <div class="risk-count">${riskCounts.high}</div>
-                    <p>已延迟</p>
-                </div>
-            `;
-        }
-
-        function renderDeferred() {
-            const content = document.getElementById('deferred-content');
-            const tasks = projectState.tasks || [];
-            const deferred = tasks.filter(t => t.status === 'deferred');
-
-            content.innerHTML = '<h2>⏸️ 延迟任务及触发条件</h2>';
-
-            if (deferred.length === 0) {
-                content.innerHTML += '<p style="text-align: center; padding: 40px; color: #7f8c8d;">暂无延迟任务</p>';
-                return;
-            }
-
-            deferred.forEach(task => {
-                const card = document.createElement('div');
-                card.className = 'deferred-card';
-                card.innerHTML = `
-                    <div class="task-id">${task.id}</div>
-                    <div class="task-title" style="font-size: 16px; margin: 10px 0;">${task.title}</div>
-                    <div class="task-meta">
-                        <span class="badge risk">${task.risk_level}</span>
-                        <span class="badge layer">${task.layer}</span>
-                    </div>
-                    ${task.defer_trigger ? `
-                        <div class="trigger-info">
-                            <div class="trigger-label">🔔 触发条件:</div>
-                            <div>${task.defer_trigger}</div>
-                        </div>
-                    ` : ''}
-                    <div style="margin-top: 10px; font-size: 13px; color: #7f8c8d;">
-                        ${task.description}
-                    </div>
-                `;
-                card.onclick = () => showTaskDetails(task);
-                content.appendChild(card);
-            });
-        }
-
-        function showTaskDetails(task) {
-            const modal = document.getElementById('task-modal');
-            const title = document.getElementById('modal-title');
-            const body = document.getElementById('modal-body');
-
-            title.innerHTML = `${task.id}: ${task.title}`;
-
-            const deps = task.dependencies || [];
-            const criteria = task.acceptance_criteria || [];
-            const files = task.files_to_touch || [];
-
-            body.innerHTML = `
-                <div class="modal-section">
-                    <h4>描述</h4>
-                    <p>${task.description}</p>
-                </div>
-
-                <div class="modal-section">
-                    <h4>元数据</h4>
-                    <p><strong>状态:</strong> ${{
-                        'pending': '⏳ 待执行',
-                        'in_progress': '🔄 进行中',
-                        'in_review': '🔍 审核中',
-                        'done': '✅ 已完成',
-                        'deferred': '⏸️ 已延迟'
-                    }[task.status] || task.status}</p>
-                    <p><strong>层级:</strong> ${task.layer}</p>
-                    <p><strong>类型:</strong> ${task.type}</p>
-                    <p><strong>风险:</strong> ${task.risk_level || 'low'}</p>
-                    <p><strong>负责人:</strong> ${task.specialist}</p>
-                </div>
-
-                ${task.defer_trigger ? `
-                    <div class="modal-section">
-                        <h4>触发条件</h4>
-                        <p style="background: #fff3cd; padding: 10px; border-radius: 4px;">
-                            ${task.defer_trigger}
-                        </p>
-                    </div>
-                ` : ''}
-
-                ${deps.length > 0 ? `
-                    <div class="modal-section">
-                        <h4>依赖任务 (${deps.length})</h4>
-                        <ul class="dependency-list">
-                            ${deps.map(d => `<li>${d}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-
-                ${criteria.length > 0 ? `
-                    <div class="modal-section">
-                        <h4>验收标准</h4>
-                        <ul>
-                            ${criteria.map(c => `<li>${c}</li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-
-                ${files.length > 0 ? `
-                    <div class="modal-section">
-                        <h4>涉及文件</h4>
-                        <ul>
-                            ${files.map(f => `<li><code>${f}</code></li>`).join('')}
-                        </ul>
-                    </div>
-                ` : ''}
-            `;
-
-            modal.classList.add('active');
-        }
-
-        function closeModal() {
-            document.getElementById('task-modal').classList.remove('active');
-        }
-
-        function switchView(viewName) {
-            // Update tabs
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            event.target.classList.add('active');
-
-            // Update views
-            document.querySelectorAll('.view').forEach(view => view.classList.remove('active'));
-            document.getElementById(`${viewName}-view`).classList.add('active');
-        }
-
-        // Close modal on outside click
-        document.getElementById('task-modal').addEventListener('click', (e) => {
-            if (e.target.id === 'task-modal') {
-                closeModal();
-            }
-        });
-
-        // Load data on page load
-        loadProjectState();
-    </script>
+init();
+</script>
+<!-- Embedded SVG for dependency graph (avoids file:// CORS issues) -->
+<script type="text/plain" id="embedded-svg"><?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN"
+ "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Generated by graphviz version 2.43.0 (0)
+ -->
+<!-- Title: Dependencies Pages: 1 -->
+<svg width="2397pt" height="667pt"
+ viewBox="0.00 0.00 2397.00 667.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 663)">
+<title>Dependencies</title>
+<polygon fill="white" stroke="transparent" points="-4,4 -4,-663 2393,-663 2393,4 -4,4"/>
+<text text-anchor="middle" x="1194.5" y="-7.8" font-family="Times,serif" font-size="14.00">Rare&#45;Earth f&#45;electron Norm&#45;Conserving Pseudopotential SCF Convergence Dependency Graph</text>
+<!-- FE&#45;D&#45;A1 -->
+<g id="node1" class="node">
+<title>FE&#45;D&#45;A1</title>
+<path fill="#95a5a6" stroke="black" stroke-width="3" d="M176.5,-59C176.5,-59 20.5,-59 20.5,-59 14.5,-59 8.5,-53 8.5,-47 8.5,-47 8.5,-35 8.5,-35 8.5,-29 14.5,-23 20.5,-23 20.5,-23 176.5,-23 176.5,-23 182.5,-23 188.5,-29 188.5,-35 188.5,-35 188.5,-47 188.5,-47 188.5,-53 182.5,-59 176.5,-59"/>
+<text text-anchor="middle" x="98.5" y="-44.2" font-family="Times,serif" font-size="11.00">FE&#45;D&#45;A1</text>
+<text text-anchor="middle" x="98.5" y="-32.2" font-family="Times,serif" font-size="11.00">ONCVPSP 赝势生成环境搭建</text>
+</g>
+<!-- FE&#45;D&#45;A2 -->
+<g id="node2" class="node">
+<title>FE&#45;D&#45;A2</title>
+<path fill="#95a5a6" stroke="black" stroke-width="3" d="M395.5,-59C395.5,-59 262.5,-59 262.5,-59 256.5,-59 250.5,-53 250.5,-47 250.5,-47 250.5,-35 250.5,-35 250.5,-29 256.5,-23 262.5,-23 262.5,-23 395.5,-23 395.5,-23 401.5,-23 407.5,-29 407.5,-35 407.5,-35 407.5,-47 407.5,-47 407.5,-53 401.5,-59 395.5,-59"/>
+<text text-anchor="middle" x="329" y="-44.2" font-family="Times,serif" font-size="11.00">FE&#45;D&#45;A2</text>
+<text text-anchor="middle" x="329" y="-32.2" font-family="Times,serif" font-size="11.00">自定义稀土 NC 赝势生成</text>
+</g>
+<!-- FE&#45;D&#45;A1&#45;&gt;FE&#45;D&#45;A2 -->
+<g id="edge1" class="edge">
+<title>FE&#45;D&#45;A1&#45;&gt;FE&#45;D&#45;A2</title>
+<path fill="none" stroke="black" d="M188.83,-41C205.62,-41 223.17,-41 239.92,-41"/>
+<polygon fill="black" stroke="black" points="240.24,-44.5 250.24,-41 240.24,-37.5 240.24,-44.5"/>
+</g>
+<!-- FE&#45;D&#45;A3 -->
+<g id="node3" class="node">
+<title>FE&#45;D&#45;A3</title>
+<path fill="#95a5a6" stroke="black" stroke-width="3" d="M610,-59C610,-59 528,-59 528,-59 522,-59 516,-53 516,-47 516,-47 516,-35 516,-35 516,-29 522,-23 528,-23 528,-23 610,-23 610,-23 616,-23 622,-29 622,-35 622,-35 622,-47 622,-47 622,-53 616,-59 610,-59"/>
+<text text-anchor="middle" x="569" y="-44.2" font-family="Times,serif" font-size="11.00">FE&#45;D&#45;A3</text>
+<text text-anchor="middle" x="569" y="-32.2" font-family="Times,serif" font-size="11.00">新赝势全面验证</text>
+</g>
+<!-- FE&#45;D&#45;A2&#45;&gt;FE&#45;D&#45;A3 -->
+<g id="edge2" class="edge">
+<title>FE&#45;D&#45;A2&#45;&gt;FE&#45;D&#45;A3</title>
+<path fill="none" stroke="black" d="M407.6,-41C439.27,-41 475.41,-41 505.36,-41"/>
+<polygon fill="black" stroke="black" points="505.68,-44.5 515.68,-41 505.68,-37.5 505.68,-44.5"/>
+</g>
+<!-- FE&#45;D&#45;B1 -->
+<g id="node4" class="node">
+<title>FE&#45;D&#45;B1</title>
+<path fill="#95a5a6" stroke="black" stroke-width="2" d="M177,-113C177,-113 20,-113 20,-113 14,-113 8,-107 8,-101 8,-101 8,-89 8,-89 8,-83 14,-77 20,-77 20,-77 177,-77 177,-77 183,-77 189,-83 189,-89 189,-89 189,-101 189,-101 189,-107 183,-113 177,-113"/>
+<text text-anchor="middle" x="98.5" y="-98.2" font-family="Times,serif" font-size="11.00">FE&#45;D&#45;B1</text>
+<text text-anchor="middle" x="98.5" y="-86.2" font-family="Times,serif" font-size="11.00">NAO 多 zeta 轨道生成与测试</text>
+</g>
+<!-- FE&#45;D&#45;B2 -->
+<g id="node5" class="node">
+<title>FE&#45;D&#45;B2</title>
+<path fill="#95a5a6" stroke="black" stroke-width="2" d="M394,-113C394,-113 264,-113 264,-113 258,-113 252,-107 252,-101 252,-101 252,-89 252,-89 252,-83 258,-77 264,-77 264,-77 394,-77 394,-77 400,-77 406,-83 406,-89 406,-89 406,-101 406,-101 406,-107 400,-113 394,-113"/>
+<text text-anchor="middle" x="329" y="-98.2" font-family="Times,serif" font-size="11.00">FE&#45;D&#45;B2</text>
+<text text-anchor="middle" x="329" y="-86.2" font-family="Times,serif" font-size="11.00">Spillage 算法 f 轨道调优</text>
+</g>
+<!-- FE&#45;D&#45;B1&#45;&gt;FE&#45;D&#45;B2 -->
+<g id="edge3" class="edge">
+<title>FE&#45;D&#45;B1&#45;&gt;FE&#45;D&#45;B2</title>
+<path fill="none" stroke="black" d="M189.15,-95C206.5,-95 224.65,-95 241.88,-95"/>
+<polygon fill="black" stroke="black" points="241.91,-98.5 251.91,-95 241.91,-91.5 241.91,-98.5"/>
+</g>
+<!-- FE&#45;D&#45;C1 -->
+<g id="node6" class="node">
+<title>FE&#45;D&#45;C1</title>
+<path fill="#95a5a6" stroke="black" stroke-width="3" d="M141.5,-167C141.5,-167 55.5,-167 55.5,-167 49.5,-167 43.5,-161 43.5,-155 43.5,-155 43.5,-143 43.5,-143 43.5,-137 49.5,-131 55.5,-131 55.5,-131 141.5,-131 141.5,-131 147.5,-131 153.5,-137 153.5,-143 153.5,-143 153.5,-155 153.5,-155 153.5,-161 147.5,-167 141.5,-167"/>
+<text text-anchor="middle" x="98.5" y="-152.2" font-family="Times,serif" font-size="11.00">FE&#45;D&#45;C1</text>
+<text text-anchor="middle" x="98.5" y="-140.2" font-family="Times,serif" font-size="11.00">AI 训练数据收集</text>
+</g>
+<!-- FE&#45;D&#45;C2 -->
+<g id="node7" class="node">
+<title>FE&#45;D&#45;C2</title>
+<path fill="#95a5a6" stroke="black" stroke-width="3" d="M392.5,-167C392.5,-167 265.5,-167 265.5,-167 259.5,-167 253.5,-161 253.5,-155 253.5,-155 253.5,-143 253.5,-143 253.5,-137 259.5,-131 265.5,-131 265.5,-131 392.5,-131 392.5,-131 398.5,-131 404.5,-137 404.5,-143 404.5,-143 404.5,-155 404.5,-155 404.5,-161 398.5,-167 392.5,-167"/>
+<text text-anchor="middle" x="329" y="-152.2" font-family="Times,serif" font-size="11.00">FE&#45;D&#45;C2</text>
+<text text-anchor="middle" x="329" y="-140.2" font-family="Times,serif" font-size="11.00">GNN 占据矩阵模型训练</text>
+</g>
+<!-- FE&#45;D&#45;C1&#45;&gt;FE&#45;D&#45;C2 -->
+<g id="edge4" class="edge">
+<title>FE&#45;D&#45;C1&#45;&gt;FE&#45;D&#45;C2</title>
+<path fill="none" stroke="black" d="M153.65,-149C180.45,-149 213.41,-149 243.44,-149"/>
+<polygon fill="black" stroke="black" points="243.49,-152.5 253.49,-149 243.49,-145.5 243.49,-152.5"/>
+</g>
+<!-- FE&#45;D&#45;C3 -->
+<g id="node8" class="node">
+<title>FE&#45;D&#45;C3</title>
+<path fill="#95a5a6" stroke="black" stroke-width="3" d="M616,-167C616,-167 522,-167 522,-167 516,-167 510,-161 510,-155 510,-155 510,-143 510,-143 510,-137 516,-131 522,-131 522,-131 616,-131 616,-131 622,-131 628,-137 628,-143 628,-143 628,-155 628,-155 628,-161 622,-167 616,-167"/>
+<text text-anchor="middle" x="569" y="-152.2" font-family="Times,serif" font-size="11.00">FE&#45;D&#45;C3</text>
+<text text-anchor="middle" x="569" y="-140.2" font-family="Times,serif" font-size="11.00">ABACUS ML 集成</text>
+</g>
+<!-- FE&#45;D&#45;C2&#45;&gt;FE&#45;D&#45;C3 -->
+<g id="edge5" class="edge">
+<title>FE&#45;D&#45;C2&#45;&gt;FE&#45;D&#45;C3</title>
+<path fill="none" stroke="black" d="M404.65,-149C435.02,-149 469.88,-149 499.57,-149"/>
+<polygon fill="black" stroke="black" points="499.85,-152.5 509.85,-149 499.85,-145.5 499.85,-152.5"/>
+</g>
+<!-- FE&#45;000 -->
+<g id="node9" class="node">
+<title>FE&#45;000</title>
+<path fill="#3498db" stroke="black" d="M1131,-493C1131,-493 1036,-493 1036,-493 1030,-493 1024,-487 1024,-481 1024,-481 1024,-469 1024,-469 1024,-463 1030,-457 1036,-457 1036,-457 1131,-457 1131,-457 1137,-457 1143,-463 1143,-469 1143,-469 1143,-481 1143,-481 1143,-487 1137,-493 1131,-493"/>
+<text text-anchor="middle" x="1083.5" y="-478.2" font-family="Times,serif" font-size="11.00">FE&#45;000</text>
+<text text-anchor="middle" x="1083.5" y="-466.2" font-family="Times,serif" font-size="11.00">赝势库调研与收集</text>
+</g>
+<!-- FE&#45;302 -->
+<g id="node34" class="node">
+<title>FE&#45;302</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M1465,-493C1465,-493 1237,-493 1237,-493 1231,-493 1225,-487 1225,-481 1225,-481 1225,-469 1225,-469 1225,-463 1231,-457 1237,-457 1237,-457 1465,-457 1465,-457 1471,-457 1477,-463 1477,-469 1477,-469 1477,-481 1477,-481 1477,-487 1471,-493 1465,-493"/>
+<text text-anchor="middle" x="1351" y="-478.2" font-family="Times,serif" font-size="11.00">FE&#45;302</text>
+<text text-anchor="middle" x="1351" y="-466.2" font-family="Times,serif" font-size="11.00">简单氧化物验证（CeO2, Gd2O3, La2O3）</text>
+</g>
+<!-- FE&#45;000&#45;&gt;FE&#45;302 -->
+<g id="edge36" class="edge">
+<title>FE&#45;000&#45;&gt;FE&#45;302</title>
+<path fill="none" stroke="black" d="M1143.09,-475C1164.46,-475 1189.6,-475 1214.86,-475"/>
+<polygon fill="black" stroke="black" points="1214.92,-478.5 1224.92,-475 1214.92,-471.5 1214.92,-478.5"/>
+</g>
+<!-- FE&#45;001 -->
+<g id="node10" class="node">
+<title>FE&#45;001</title>
+<path fill="#3498db" stroke="black" d="M413,-605C413,-605 245,-605 245,-605 239,-605 233,-599 233,-593 233,-593 233,-581 233,-581 233,-575 239,-569 245,-569 245,-569 413,-569 413,-569 419,-569 425,-575 425,-581 425,-581 425,-593 425,-593 425,-599 419,-605 413,-605"/>
+<text text-anchor="middle" x="329" y="-590.2" font-family="Times,serif" font-size="11.00">FE&#45;001</text>
+<text text-anchor="middle" x="329" y="-578.2" font-family="Times,serif" font-size="11.00">ABACUS DFT+U 代码深度审计</text>
+</g>
+<!-- FE&#45;200 -->
+<g id="node26" class="node">
+<title>FE&#45;200</title>
+<path fill="#3498db" stroke="black" d="M898,-551C898,-551 757,-551 757,-551 751,-551 745,-545 745,-539 745,-539 745,-527 745,-527 745,-521 751,-515 757,-515 757,-515 898,-515 898,-515 904,-515 910,-521 910,-527 910,-527 910,-539 910,-539 910,-545 904,-551 898,-551"/>
+<text text-anchor="middle" x="827.5" y="-536.2" font-family="Times,serif" font-size="11.00">FE&#45;200</text>
+<text text-anchor="middle" x="827.5" y="-524.2" font-family="Times,serif" font-size="11.00">自适应 Kerker 预处理参数</text>
+</g>
+<!-- FE&#45;001&#45;&gt;FE&#45;200 -->
+<g id="edge26" class="edge">
+<title>FE&#45;001&#45;&gt;FE&#45;200</title>
+<path fill="none" stroke="black" d="M409.03,-568.99C426.1,-565.59 444.1,-562.36 461,-560 553.69,-547.08 660.52,-540.09 734.65,-536.49"/>
+<polygon fill="black" stroke="black" points="735.06,-539.97 744.89,-536 734.73,-532.98 735.06,-539.97"/>
+</g>
+<!-- FE&#45;201 -->
+<g id="node27" class="node">
+<title>FE&#45;201</title>
+<path fill="#3498db" stroke="black" d="M893,-659C893,-659 762,-659 762,-659 756,-659 750,-653 750,-647 750,-647 750,-635 750,-635 750,-629 756,-623 762,-623 762,-623 893,-623 893,-623 899,-623 905,-629 905,-635 905,-635 905,-647 905,-647 905,-653 899,-659 893,-659"/>
+<text text-anchor="middle" x="827.5" y="-644.2" font-family="Times,serif" font-size="11.00">FE&#45;201</text>
+<text text-anchor="middle" x="827.5" y="-632.2" font-family="Times,serif" font-size="11.00">分通道 mixing_beta 实现</text>
+</g>
+<!-- FE&#45;001&#45;&gt;FE&#45;201 -->
+<g id="edge28" class="edge">
+<title>FE&#45;001&#45;&gt;FE&#45;201</title>
+<path fill="none" stroke="black" d="M409.03,-605.01C426.1,-608.41 444.1,-611.64 461,-614 555.8,-627.21 665.38,-634.22 739.65,-637.75"/>
+<polygon fill="black" stroke="black" points="739.74,-641.26 749.89,-638.23 740.06,-634.27 739.74,-641.26"/>
+</g>
+<!-- FE&#45;202 -->
+<g id="node28" class="node">
+<title>FE&#45;202</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M663,-605C663,-605 475,-605 475,-605 469,-605 463,-599 463,-593 463,-593 463,-581 463,-581 463,-575 469,-569 475,-569 475,-569 663,-569 663,-569 669,-569 675,-575 675,-581 675,-581 675,-593 675,-593 675,-599 669,-605 663,-605"/>
+<text text-anchor="middle" x="569" y="-590.2" font-family="Times,serif" font-size="11.00">FE&#45;202</text>
+<text text-anchor="middle" x="569" y="-578.2" font-family="Times,serif" font-size="11.00">占据矩阵随机初始化 + 多起点探索</text>
+</g>
+<!-- FE&#45;001&#45;&gt;FE&#45;202 -->
+<g id="edge29" class="edge">
+<title>FE&#45;001&#45;&gt;FE&#45;202</title>
+<path fill="none" stroke="black" d="M425.09,-587C434.22,-587 443.54,-587 452.83,-587"/>
+<polygon fill="black" stroke="black" points="452.9,-590.5 462.9,-587 452.9,-583.5 452.9,-590.5"/>
+</g>
+<!-- FE&#45;002 -->
+<g id="node11" class="node">
+<title>FE&#45;002</title>
+<path fill="#3498db" stroke="black" d="M170.5,-509C170.5,-509 26.5,-509 26.5,-509 20.5,-509 14.5,-503 14.5,-497 14.5,-497 14.5,-485 14.5,-485 14.5,-479 20.5,-473 26.5,-473 26.5,-473 170.5,-473 170.5,-473 176.5,-473 182.5,-479 182.5,-485 182.5,-485 182.5,-497 182.5,-497 182.5,-503 176.5,-509 170.5,-509"/>
+<text text-anchor="middle" x="98.5" y="-494.2" font-family="Times,serif" font-size="11.00">FE&#45;002</text>
+<text text-anchor="middle" x="98.5" y="-482.2" font-family="Times,serif" font-size="11.00">建立 DFT+U 回归测试套件</text>
+</g>
+<!-- FE&#45;100 -->
+<g id="node12" class="node">
+<title>FE&#45;100</title>
+<path fill="#9b59b6" stroke="black" d="M185,-302C185,-302 12,-302 12,-302 6,-302 0,-296 0,-290 0,-290 0,-278 0,-278 0,-272 6,-266 12,-266 12,-266 185,-266 185,-266 191,-266 197,-272 197,-278 197,-278 197,-290 197,-290 197,-296 191,-302 185,-302"/>
+<text text-anchor="middle" x="98.5" y="-287.2" font-family="Times,serif" font-size="11.00">FE&#45;100</text>
+<text text-anchor="middle" x="98.5" y="-275.2" font-family="Times,serif" font-size="11.00">onsite_projector nspin=1/2 支持</text>
+</g>
+<!-- FE&#45;101 -->
+<g id="node13" class="node">
+<title>FE&#45;101</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M406.5,-302C406.5,-302 251.5,-302 251.5,-302 245.5,-302 239.5,-296 239.5,-290 239.5,-290 239.5,-278 239.5,-278 239.5,-272 245.5,-266 251.5,-266 251.5,-266 406.5,-266 406.5,-266 412.5,-266 418.5,-272 418.5,-278 418.5,-278 418.5,-290 418.5,-290 418.5,-296 412.5,-302 406.5,-302"/>
+<text text-anchor="middle" x="329" y="-287.2" font-family="Times,serif" font-size="11.00">FE&#45;101</text>
+<text text-anchor="middle" x="329" y="-275.2" font-family="Times,serif" font-size="11.00">DFT+U PW SCF（nspin=4）</text>
+</g>
+<!-- FE&#45;100&#45;&gt;FE&#45;101 -->
+<g id="edge6" class="edge">
+<title>FE&#45;100&#45;&gt;FE&#45;101</title>
+<path fill="none" stroke="black" d="M197.07,-284C207.73,-284 218.59,-284 229.27,-284"/>
+<polygon fill="black" stroke="black" points="229.44,-287.5 239.44,-284 229.44,-280.5 229.44,-287.5"/>
+</g>
+<!-- FE&#45;102 -->
+<g id="node14" class="node">
+<title>FE&#45;102</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M642,-221C642,-221 496,-221 496,-221 490,-221 484,-215 484,-209 484,-209 484,-197 484,-197 484,-191 490,-185 496,-185 496,-185 642,-185 642,-185 648,-185 654,-191 654,-197 654,-197 654,-209 654,-209 654,-215 648,-221 642,-221"/>
+<text text-anchor="middle" x="569" y="-206.2" font-family="Times,serif" font-size="11.00">FE&#45;102</text>
+<text text-anchor="middle" x="569" y="-194.2" font-family="Times,serif" font-size="11.00">DFT+U PW nspin=1/2 扩展</text>
+</g>
+<!-- FE&#45;100&#45;&gt;FE&#45;102 -->
+<g id="edge7" class="edge">
+<title>FE&#45;100&#45;&gt;FE&#45;102</title>
+<path fill="none" stroke="black" d="M185.94,-266C201.58,-262.89 217.76,-259.77 233,-257 314.04,-242.28 406.49,-227.53 473.71,-217.17"/>
+<polygon fill="black" stroke="black" points="474.51,-220.59 483.86,-215.61 473.45,-213.67 474.51,-220.59"/>
+</g>
+<!-- FE&#45;109 -->
+<g id="node21" class="node">
+<title>FE&#45;109</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M379,-428C379,-428 279,-428 279,-428 273,-428 267,-422 267,-416 267,-416 267,-404 267,-404 267,-398 273,-392 279,-392 279,-392 379,-392 379,-392 385,-392 391,-398 391,-404 391,-404 391,-416 391,-416 391,-422 385,-428 379,-428"/>
+<text text-anchor="middle" x="329" y="-413.2" font-family="Times,serif" font-size="11.00">FE&#45;109</text>
+<text text-anchor="middle" x="329" y="-401.2" font-family="Times,serif" font-size="11.00">DeltaSpin PW 支持</text>
+</g>
+<!-- FE&#45;100&#45;&gt;FE&#45;109 -->
+<g id="edge17" class="edge">
+<title>FE&#45;100&#45;&gt;FE&#45;109</title>
+<path fill="none" stroke="black" d="M132.24,-302.05C172.88,-324.46 242.22,-362.7 286.54,-387.14"/>
+<polygon fill="black" stroke="black" points="284.88,-390.22 295.32,-391.98 288.26,-384.09 284.88,-390.22"/>
+</g>
+<!-- FE&#45;101&#45;&gt;FE&#45;102 -->
+<g id="edge8" class="edge">
+<title>FE&#45;101&#45;&gt;FE&#45;102</title>
+<path fill="none" stroke="black" d="M376.11,-265.89C401.09,-256.29 432.57,-244.55 461,-235 472.06,-231.28 483.82,-227.55 495.36,-224"/>
+<polygon fill="black" stroke="black" points="496.43,-227.34 504.97,-221.08 494.39,-220.64 496.43,-227.34"/>
+</g>
+<!-- FE&#45;103 -->
+<g id="node15" class="node">
+<title>FE&#45;103</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M613.5,-313C613.5,-313 524.5,-313 524.5,-313 518.5,-313 512.5,-307 512.5,-301 512.5,-301 512.5,-289 512.5,-289 512.5,-283 518.5,-277 524.5,-277 524.5,-277 613.5,-277 613.5,-277 619.5,-277 625.5,-283 625.5,-289 625.5,-289 625.5,-301 625.5,-301 625.5,-307 619.5,-313 613.5,-313"/>
+<text text-anchor="middle" x="569" y="-298.2" font-family="Times,serif" font-size="11.00">FE&#45;103</text>
+<text text-anchor="middle" x="569" y="-286.2" font-family="Times,serif" font-size="11.00">DFT+U PW force</text>
+</g>
+<!-- FE&#45;101&#45;&gt;FE&#45;103 -->
+<g id="edge9" class="edge">
+<title>FE&#45;101&#45;&gt;FE&#45;103</title>
+<path fill="none" stroke="black" d="M418.62,-288.1C446.39,-289.38 476.52,-290.77 502.41,-291.97"/>
+<polygon fill="black" stroke="black" points="502.32,-295.47 512.47,-292.43 502.64,-288.48 502.32,-295.47"/>
+</g>
+<!-- FE&#45;105 -->
+<g id="node17" class="node">
+<title>FE&#45;105</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M656.5,-405C656.5,-405 481.5,-405 481.5,-405 475.5,-405 469.5,-399 469.5,-393 469.5,-393 469.5,-381 469.5,-381 469.5,-375 475.5,-369 481.5,-369 481.5,-369 656.5,-369 656.5,-369 662.5,-369 668.5,-375 668.5,-381 668.5,-381 668.5,-393 668.5,-393 668.5,-399 662.5,-405 656.5,-405"/>
+<text text-anchor="middle" x="569" y="-390.2" font-family="Times,serif" font-size="11.00">FE&#45;105</text>
+<text text-anchor="middle" x="569" y="-378.2" font-family="Times,serif" font-size="11.00">mixing_dftu（占据矩阵 mixing）</text>
+</g>
+<!-- FE&#45;101&#45;&gt;FE&#45;105 -->
+<g id="edge11" class="edge">
+<title>FE&#45;101&#45;&gt;FE&#45;105</title>
+<path fill="none" stroke="black" d="M371.73,-302.06C412.22,-319.58 473.74,-346.2 517.09,-364.97"/>
+<polygon fill="black" stroke="black" points="515.75,-368.2 526.32,-368.96 518.53,-361.78 515.75,-368.2"/>
+</g>
+<!-- FE&#45;106 -->
+<g id="node18" class="node">
+<title>FE&#45;106</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M1169,-305C1169,-305 998,-305 998,-305 992,-305 986,-299 986,-293 986,-293 986,-281 986,-281 986,-275 992,-269 998,-269 998,-269 1169,-269 1169,-269 1175,-269 1181,-275 1181,-281 1181,-281 1181,-293 1181,-293 1181,-299 1175,-305 1169,-305"/>
+<text text-anchor="middle" x="1083.5" y="-290.2" font-family="Times,serif" font-size="11.00">FE&#45;106</text>
+<text text-anchor="middle" x="1083.5" y="-278.2" font-family="Times,serif" font-size="11.00">DFT+U PW GPU/DCU 加速适配</text>
+</g>
+<!-- FE&#45;101&#45;&gt;FE&#45;106 -->
+<g id="edge12" class="edge">
+<title>FE&#45;101&#45;&gt;FE&#45;106</title>
+<path fill="none" stroke="black" d="M418.65,-271.69C432.79,-270.16 447.28,-268.83 461,-268 641.39,-257.02 851.65,-268.53 975.55,-277.81"/>
+<polygon fill="black" stroke="black" points="975.56,-281.32 985.8,-278.58 976.09,-274.34 975.56,-281.32"/>
+</g>
+<!-- FE&#45;102&#45;&gt;FE&#45;106 -->
+<g id="edge13" class="edge">
+<title>FE&#45;102&#45;&gt;FE&#45;106</title>
+<path fill="none" stroke="black" d="M654.26,-198.08C731.43,-196.37 847.65,-200.94 942,-235 960.32,-241.61 960.29,-251.88 978,-260 982.3,-261.97 986.76,-263.82 991.32,-265.54"/>
+<polygon fill="black" stroke="black" points="990.19,-268.85 1000.79,-268.91 992.54,-262.26 990.19,-268.85"/>
+</g>
+<!-- FE&#45;104 -->
+<g id="node16" class="node">
+<title>FE&#45;104</title>
+<path fill="#3498db" stroke="black" d="M875,-351C875,-351 780,-351 780,-351 774,-351 768,-345 768,-339 768,-339 768,-327 768,-327 768,-321 774,-315 780,-315 780,-315 875,-315 875,-315 881,-315 887,-321 887,-327 887,-327 887,-339 887,-339 887,-345 881,-351 875,-351"/>
+<text text-anchor="middle" x="827.5" y="-336.2" font-family="Times,serif" font-size="11.00">FE&#45;104</text>
+<text text-anchor="middle" x="827.5" y="-324.2" font-family="Times,serif" font-size="11.00">DFT+U PW stress</text>
+</g>
+<!-- FE&#45;103&#45;&gt;FE&#45;104 -->
+<g id="edge10" class="edge">
+<title>FE&#45;103&#45;&gt;FE&#45;104</title>
+<path fill="none" stroke="black" d="M625.66,-303.25C664.45,-308.99 716.46,-316.7 757.83,-322.83"/>
+<polygon fill="black" stroke="black" points="757.43,-326.31 767.83,-324.31 758.45,-319.38 757.43,-326.31"/>
+</g>
+<!-- FE&#45;103&#45;&gt;FE&#45;106 -->
+<g id="edge14" class="edge">
+<title>FE&#45;103&#45;&gt;FE&#45;106</title>
+<path fill="none" stroke="black" d="M625.82,-294.13C709.51,-292.82 869.04,-290.33 975.61,-288.67"/>
+<polygon fill="black" stroke="black" points="975.81,-292.17 985.75,-288.51 975.7,-285.17 975.81,-292.17"/>
+</g>
+<!-- FE&#45;104&#45;&gt;FE&#45;106 -->
+<g id="edge15" class="edge">
+<title>FE&#45;104&#45;&gt;FE&#45;106</title>
+<path fill="none" stroke="black" d="M887.09,-322.39C913.42,-317.62 945.33,-311.84 975.67,-306.35"/>
+<polygon fill="black" stroke="black" points="976.67,-309.72 985.89,-304.5 975.43,-302.83 976.67,-309.72"/>
+</g>
+<!-- FE&#45;111 -->
+<g id="node23" class="node">
+<title>FE&#45;111</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M930,-497C930,-497 725,-497 725,-497 719,-497 713,-491 713,-485 713,-485 713,-473 713,-473 713,-467 719,-461 725,-461 725,-461 930,-461 930,-461 936,-461 942,-467 942,-473 942,-473 942,-485 942,-485 942,-491 936,-497 930,-497"/>
+<text text-anchor="middle" x="827.5" y="-482.2" font-family="Times,serif" font-size="11.00">FE&#45;111</text>
+<text text-anchor="middle" x="827.5" y="-470.2" font-family="Times,serif" font-size="11.00">DeltaSpin + DFTU 联合 + conserve...</text>
+</g>
+<!-- FE&#45;105&#45;&gt;FE&#45;111 -->
+<g id="edge21" class="edge">
+<title>FE&#45;105&#45;&gt;FE&#45;111</title>
+<path fill="none" stroke="black" d="M657.24,-405.08C664.09,-407.68 670.76,-410.64 677,-414 696.1,-424.3 694.04,-436.43 713,-447 719.99,-450.9 727.5,-454.35 735.19,-457.4"/>
+<polygon fill="black" stroke="black" points="734.06,-460.72 744.66,-460.93 736.51,-454.16 734.06,-460.72"/>
+</g>
+<!-- FE&#45;112 -->
+<g id="node24" class="node">
+<title>FE&#45;112</title>
+<path fill="#3498db" stroke="black" d="M896.5,-405C896.5,-405 758.5,-405 758.5,-405 752.5,-405 746.5,-399 746.5,-393 746.5,-393 746.5,-381 746.5,-381 746.5,-375 752.5,-369 758.5,-369 758.5,-369 896.5,-369 896.5,-369 902.5,-369 908.5,-375 908.5,-381 908.5,-381 908.5,-393 908.5,-393 908.5,-399 902.5,-405 896.5,-405"/>
+<text text-anchor="middle" x="827.5" y="-390.2" font-family="Times,serif" font-size="11.00">FE&#45;112</text>
+<text text-anchor="middle" x="827.5" y="-378.2" font-family="Times,serif" font-size="11.00">SCF 震荡检测 + 自动回退</text>
+</g>
+<!-- FE&#45;105&#45;&gt;FE&#45;112 -->
+<g id="edge23" class="edge">
+<title>FE&#45;105&#45;&gt;FE&#45;112</title>
+<path fill="none" stroke="black" d="M668.8,-387C690.98,-387 714.39,-387 736.2,-387"/>
+<polygon fill="black" stroke="black" points="736.43,-390.5 746.43,-387 736.43,-383.5 736.43,-390.5"/>
+</g>
+<!-- FE&#45;113 -->
+<g id="node25" class="node">
+<title>FE&#45;113</title>
+<path fill="#3498db" stroke="black" d="M1177,-428C1177,-428 990,-428 990,-428 984,-428 978,-422 978,-416 978,-416 978,-404 978,-404 978,-398 984,-392 990,-392 990,-392 1177,-392 1177,-392 1183,-392 1189,-398 1189,-404 1189,-404 1189,-416 1189,-416 1189,-422 1183,-428 1177,-428"/>
+<text text-anchor="middle" x="1083.5" y="-413.2" font-family="Times,serif" font-size="11.00">FE&#45;113</text>
+<text text-anchor="middle" x="1083.5" y="-401.2" font-family="Times,serif" font-size="11.00">mixing_restart 与 mixing_dftu 协...</text>
+</g>
+<!-- FE&#45;105&#45;&gt;FE&#45;113 -->
+<g id="edge24" class="edge">
+<title>FE&#45;105&#45;&gt;FE&#45;113</title>
+<path fill="none" stroke="black" d="M651.3,-405.07C671.36,-408.77 692.88,-412.12 713,-414 798.1,-421.96 894.71,-420.55 967.79,-417.37"/>
+<polygon fill="black" stroke="black" points="968.11,-420.86 977.94,-416.91 967.79,-413.87 968.11,-420.86"/>
+</g>
+<!-- FE&#45;105&#45;&gt;FE&#45;200 -->
+<g id="edge27" class="edge">
+<title>FE&#45;105&#45;&gt;FE&#45;200</title>
+<path fill="none" stroke="black" d="M664.86,-405.24C669.18,-407.8 673.26,-410.71 677,-414 709.94,-443.03 679.86,-477.19 713,-506 719.66,-511.79 727.35,-516.4 735.51,-520.05"/>
+<polygon fill="black" stroke="black" points="734.32,-523.34 744.91,-523.78 736.91,-516.83 734.32,-523.34"/>
+</g>
+<!-- FE&#45;107 -->
+<g id="node19" class="node">
+<title>FE&#45;107</title>
+<path fill="#3498db" stroke="black" d="M171.5,-455C171.5,-455 25.5,-455 25.5,-455 19.5,-455 13.5,-449 13.5,-443 13.5,-443 13.5,-431 13.5,-431 13.5,-425 19.5,-419 25.5,-419 25.5,-419 171.5,-419 171.5,-419 177.5,-419 183.5,-425 183.5,-431 183.5,-431 183.5,-443 183.5,-443 183.5,-449 177.5,-455 171.5,-455"/>
+<text text-anchor="middle" x="98.5" y="-440.2" font-family="Times,serif" font-size="11.00">FE&#45;107</text>
+<text text-anchor="middle" x="98.5" y="-428.2" font-family="Times,serif" font-size="11.00">module_deltaspin 核心移植</text>
+</g>
+<!-- FE&#45;108 -->
+<g id="node20" class="node">
+<title>FE&#45;108</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M399,-482C399,-482 259,-482 259,-482 253,-482 247,-476 247,-470 247,-470 247,-458 247,-458 247,-452 253,-446 259,-446 259,-446 399,-446 399,-446 405,-446 411,-452 411,-458 411,-458 411,-470 411,-470 411,-476 405,-482 399,-482"/>
+<text text-anchor="middle" x="329" y="-467.2" font-family="Times,serif" font-size="11.00">FE&#45;108</text>
+<text text-anchor="middle" x="329" y="-455.2" font-family="Times,serif" font-size="11.00">DeltaSpin LCAO 算符更新</text>
+</g>
+<!-- FE&#45;107&#45;&gt;FE&#45;108 -->
+<g id="edge16" class="edge">
+<title>FE&#45;107&#45;&gt;FE&#45;108</title>
+<path fill="none" stroke="black" d="M183.61,-446.94C200.84,-448.98 219.06,-451.13 236.54,-453.19"/>
+<polygon fill="black" stroke="black" points="236.39,-456.7 246.73,-454.4 237.21,-449.75 236.39,-456.7"/>
+</g>
+<!-- FE&#45;107&#45;&gt;FE&#45;109 -->
+<g id="edge18" class="edge">
+<title>FE&#45;107&#45;&gt;FE&#45;109</title>
+<path fill="none" stroke="black" d="M183.61,-427.06C207.67,-424.22 233.64,-421.15 256.84,-418.41"/>
+<polygon fill="black" stroke="black" points="257.42,-421.86 266.94,-417.22 256.6,-414.91 257.42,-421.86"/>
+</g>
+<!-- FE&#45;110 -->
+<g id="node22" class="node">
+<title>FE&#45;110</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M665,-459C665,-459 473,-459 473,-459 467,-459 461,-453 461,-447 461,-447 461,-435 461,-435 461,-429 467,-423 473,-423 473,-423 665,-423 665,-423 671,-423 677,-429 677,-435 677,-435 677,-447 677,-447 677,-453 671,-459 665,-459"/>
+<text text-anchor="middle" x="569" y="-444.2" font-family="Times,serif" font-size="11.00">FE&#45;110</text>
+<text text-anchor="middle" x="569" y="-432.2" font-family="Times,serif" font-size="11.00">DeltaSpin force/stress（LCAO + ...</text>
+</g>
+<!-- FE&#45;108&#45;&gt;FE&#45;110 -->
+<g id="edge19" class="edge">
+<title>FE&#45;108&#45;&gt;FE&#45;110</title>
+<path fill="none" stroke="black" d="M411.24,-456.15C423.9,-454.93 437.2,-453.64 450.48,-452.36"/>
+<polygon fill="black" stroke="black" points="450.99,-455.82 460.61,-451.38 450.32,-448.86 450.99,-455.82"/>
+</g>
+<!-- FE&#45;108&#45;&gt;FE&#45;111 -->
+<g id="edge22" class="edge">
+<title>FE&#45;108&#45;&gt;FE&#45;111</title>
+<path fill="none" stroke="black" d="M411.06,-466.48C427.59,-466.98 444.85,-467.51 461,-468 541.44,-470.44 631.84,-473.16 702.6,-475.28"/>
+<polygon fill="black" stroke="black" points="702.8,-478.79 712.9,-475.59 703.01,-471.8 702.8,-478.79"/>
+</g>
+<!-- FE&#45;109&#45;&gt;FE&#45;110 -->
+<g id="edge20" class="edge">
+<title>FE&#45;109&#45;&gt;FE&#45;110</title>
+<path fill="none" stroke="black" d="M391.29,-417.98C409.52,-420.36 430.13,-423.04 450.67,-425.72"/>
+<polygon fill="black" stroke="black" points="450.38,-429.21 460.74,-427.03 451.28,-422.27 450.38,-429.21"/>
+</g>
+<!-- FE&#45;112&#45;&gt;FE&#45;113 -->
+<g id="edge25" class="edge">
+<title>FE&#45;112&#45;&gt;FE&#45;113</title>
+<path fill="none" stroke="black" d="M908.52,-394.25C927.3,-395.95 947.68,-397.79 967.66,-399.6"/>
+<polygon fill="black" stroke="black" points="967.46,-403.1 977.74,-400.51 968.09,-396.13 967.46,-403.1"/>
+</g>
+<!-- FE&#45;204 -->
+<g id="node30" class="node">
+<title>FE&#45;204</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M1165.5,-572C1165.5,-572 1001.5,-572 1001.5,-572 995.5,-572 989.5,-566 989.5,-560 989.5,-560 989.5,-548 989.5,-548 989.5,-542 995.5,-536 1001.5,-536 1001.5,-536 1165.5,-536 1165.5,-536 1171.5,-536 1177.5,-542 1177.5,-548 1177.5,-548 1177.5,-560 1177.5,-560 1177.5,-566 1171.5,-572 1165.5,-572"/>
+<text text-anchor="middle" x="1083.5" y="-557.2" font-family="Times,serif" font-size="11.00">FE&#45;204</text>
+<text text-anchor="middle" x="1083.5" y="-545.2" font-family="Times,serif" font-size="11.00">能量监控 + SCF 自动回退机制</text>
+</g>
+<!-- FE&#45;200&#45;&gt;FE&#45;204 -->
+<g id="edge31" class="edge">
+<title>FE&#45;200&#45;&gt;FE&#45;204</title>
+<path fill="none" stroke="black" d="M910.27,-539.76C932.25,-541.58 956.31,-543.57 979.29,-545.47"/>
+<polygon fill="black" stroke="black" points="979.16,-548.97 989.41,-546.3 979.74,-541.99 979.16,-548.97"/>
+</g>
+<!-- FE&#45;201&#45;&gt;FE&#45;204 -->
+<g id="edge32" class="edge">
+<title>FE&#45;201&#45;&gt;FE&#45;204</title>
+<path fill="none" stroke="black" d="M905.01,-624.68C917.47,-621.49 930.17,-617.9 942,-614 974,-603.45 1008.83,-588.6 1035.81,-576.31"/>
+<polygon fill="black" stroke="black" points="1037.38,-579.44 1045.01,-572.08 1034.46,-573.08 1037.38,-579.44"/>
+</g>
+<!-- FE&#45;203 -->
+<g id="node29" class="node">
+<title>FE&#45;203</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M875,-605C875,-605 780,-605 780,-605 774,-605 768,-599 768,-593 768,-593 768,-581 768,-581 768,-575 774,-569 780,-569 780,-569 875,-569 875,-569 881,-569 887,-575 887,-581 887,-581 887,-593 887,-593 887,-599 881,-605 875,-605"/>
+<text text-anchor="middle" x="827.5" y="-590.2" font-family="Times,serif" font-size="11.00">FE&#45;203</text>
+<text text-anchor="middle" x="827.5" y="-578.2" font-family="Times,serif" font-size="11.00">占据矩阵退火策略</text>
+</g>
+<!-- FE&#45;202&#45;&gt;FE&#45;203 -->
+<g id="edge30" class="edge">
+<title>FE&#45;202&#45;&gt;FE&#45;203</title>
+<path fill="none" stroke="black" d="M675.07,-587C702.91,-587 732.27,-587 757.64,-587"/>
+<polygon fill="black" stroke="black" points="757.89,-590.5 767.89,-587 757.89,-583.5 757.89,-590.5"/>
+</g>
+<!-- FE&#45;203&#45;&gt;FE&#45;204 -->
+<g id="edge33" class="edge">
+<title>FE&#45;203&#45;&gt;FE&#45;204</title>
+<path fill="none" stroke="black" d="M887.09,-579.39C914.46,-575.83 947.86,-571.49 979.26,-567.41"/>
+<polygon fill="black" stroke="black" points="979.91,-570.86 989.37,-566.1 979,-563.92 979.91,-570.86"/>
+</g>
+<!-- FE&#45;205 -->
+<g id="node31" class="node">
+<title>FE&#45;205</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M1457,-547C1457,-547 1245,-547 1245,-547 1239,-547 1233,-541 1233,-535 1233,-535 1233,-523 1233,-523 1233,-517 1239,-511 1245,-511 1245,-511 1457,-511 1457,-511 1463,-511 1469,-517 1469,-523 1469,-523 1469,-535 1469,-535 1469,-541 1463,-547 1457,-547"/>
+<text text-anchor="middle" x="1351" y="-532.2" font-family="Times,serif" font-size="11.00">FE&#45;205</text>
+<text text-anchor="middle" x="1351" y="-520.2" font-family="Times,serif" font-size="11.00">constrained DFT 框架（f 电子数约束）</text>
+</g>
+<!-- FE&#45;204&#45;&gt;FE&#45;205 -->
+<g id="edge34" class="edge">
+<title>FE&#45;204&#45;&gt;FE&#45;205</title>
+<path fill="none" stroke="black" d="M1177.73,-545.22C1192.32,-543.85 1207.6,-542.41 1222.79,-540.98"/>
+<polygon fill="black" stroke="black" points="1223.12,-544.46 1232.75,-540.04 1222.47,-537.49 1223.12,-544.46"/>
+</g>
+<!-- FE&#45;204&#45;&gt;FE&#45;302 -->
+<g id="edge37" class="edge">
+<title>FE&#45;204&#45;&gt;FE&#45;302</title>
+<path fill="none" stroke="black" d="M1128.26,-535.98C1155.71,-525.13 1192.04,-511.61 1225,-502 1232.89,-499.7 1241.11,-497.5 1249.4,-495.42"/>
+<polygon fill="black" stroke="black" points="1250.27,-498.81 1259.16,-493.04 1248.61,-492.01 1250.27,-498.81"/>
+</g>
+<!-- FE&#45;303 -->
+<g id="node35" class="node">
+<title>FE&#45;303</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M1676,-543C1676,-543 1556,-543 1556,-543 1550,-543 1544,-537 1544,-531 1544,-531 1544,-519 1544,-519 1544,-513 1550,-507 1556,-507 1556,-507 1676,-507 1676,-507 1682,-507 1688,-513 1688,-519 1688,-519 1688,-531 1688,-531 1688,-537 1682,-543 1676,-543"/>
+<text text-anchor="middle" x="1616" y="-528.2" font-family="Times,serif" font-size="11.00">FE&#45;303</text>
+<text text-anchor="middle" x="1616" y="-516.2" font-family="Times,serif" font-size="11.00">合金与磁性化合物验证</text>
+</g>
+<!-- FE&#45;204&#45;&gt;FE&#45;303 -->
+<g id="edge39" class="edge">
+<title>FE&#45;204&#45;&gt;FE&#45;303</title>
+<path fill="none" stroke="black" d="M1177.6,-560.5C1257.33,-564.63 1375.07,-567.31 1477,-556 1497.15,-553.76 1518.65,-549.75 1538.54,-545.33"/>
+<polygon fill="black" stroke="black" points="1539.5,-548.7 1548.47,-543.06 1537.94,-541.88 1539.5,-548.7"/>
+</g>
+<!-- FE&#45;300 -->
+<g id="node32" class="node">
+<title>FE&#45;300</title>
+<path fill="#3498db" stroke="black" d="M1118,-251C1118,-251 1049,-251 1049,-251 1043,-251 1037,-245 1037,-239 1037,-239 1037,-227 1037,-227 1037,-221 1043,-215 1049,-215 1049,-215 1118,-215 1118,-215 1124,-215 1130,-221 1130,-227 1130,-227 1130,-239 1130,-239 1130,-245 1124,-251 1118,-251"/>
+<text text-anchor="middle" x="1083.5" y="-236.2" font-family="Times,serif" font-size="11.00">FE&#45;300</text>
+<text text-anchor="middle" x="1083.5" y="-224.2" font-family="Times,serif" font-size="11.00">用户需求调研</text>
+</g>
+<!-- FE&#45;301 -->
+<g id="node33" class="node">
+<title>FE&#45;301</title>
+<path fill="#3498db" stroke="black" d="M1423.5,-348C1423.5,-348 1278.5,-348 1278.5,-348 1272.5,-348 1266.5,-342 1266.5,-336 1266.5,-336 1266.5,-324 1266.5,-324 1266.5,-318 1272.5,-312 1278.5,-312 1278.5,-312 1423.5,-312 1423.5,-312 1429.5,-312 1435.5,-318 1435.5,-324 1435.5,-324 1435.5,-336 1435.5,-336 1435.5,-342 1429.5,-348 1423.5,-348"/>
+<text text-anchor="middle" x="1351" y="-333.2" font-family="Times,serif" font-size="11.00">FE&#45;301</text>
+<text text-anchor="middle" x="1351" y="-321.2" font-family="Times,serif" font-size="11.00">选择 2&#45;3 个代表性验证体系</text>
+</g>
+<!-- FE&#45;300&#45;&gt;FE&#45;301 -->
+<g id="edge35" class="edge">
+<title>FE&#45;300&#45;&gt;FE&#45;301</title>
+<path fill="none" stroke="black" d="M1130.23,-243.16C1148.68,-247.69 1170.04,-253.47 1189,-260 1228.61,-273.63 1272.09,-292.8 1303.87,-307.64"/>
+<polygon fill="black" stroke="black" points="1302.39,-310.8 1312.93,-311.89 1305.37,-304.47 1302.39,-310.8"/>
+</g>
+<!-- FE&#45;304 -->
+<g id="node36" class="node">
+<title>FE&#45;304</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M1707,-442C1707,-442 1525,-442 1525,-442 1519,-442 1513,-436 1513,-430 1513,-430 1513,-418 1513,-418 1513,-412 1519,-406 1525,-406 1525,-406 1707,-406 1707,-406 1713,-406 1719,-412 1719,-418 1719,-418 1719,-430 1719,-430 1719,-436 1713,-442 1707,-442"/>
+<text text-anchor="middle" x="1616" y="-427.2" font-family="Times,serif" font-size="11.00">FE&#45;304</text>
+<text text-anchor="middle" x="1616" y="-415.2" font-family="Times,serif" font-size="11.00">跨代码验证（ABACUS vs VASP）</text>
+</g>
+<!-- FE&#45;301&#45;&gt;FE&#45;304 -->
+<g id="edge41" class="edge">
+<title>FE&#45;301&#45;&gt;FE&#45;304</title>
+<path fill="none" stroke="black" d="M1402.4,-348.01C1445.84,-363.54 1508.67,-385.99 1554.76,-402.47"/>
+<polygon fill="black" stroke="black" points="1553.73,-405.82 1564.33,-405.89 1556.09,-399.23 1553.73,-405.82"/>
+</g>
+<!-- FE&#45;302&#45;&gt;FE&#45;303 -->
+<g id="edge38" class="edge">
+<title>FE&#45;302&#45;&gt;FE&#45;303</title>
+<path fill="none" stroke="black" d="M1446.95,-493.05C1475.39,-498.46 1506.3,-504.33 1533.77,-509.56"/>
+<polygon fill="black" stroke="black" points="1533.24,-513.02 1543.72,-511.45 1534.55,-506.14 1533.24,-513.02"/>
+</g>
+<!-- FE&#45;302&#45;&gt;FE&#45;304 -->
+<g id="edge40" class="edge">
+<title>FE&#45;302&#45;&gt;FE&#45;304</title>
+<path fill="none" stroke="black" d="M1445.09,-456.95C1466.75,-452.75 1489.93,-448.25 1511.99,-443.98"/>
+<polygon fill="black" stroke="black" points="1512.88,-447.37 1522.03,-442.03 1511.55,-440.5 1512.88,-447.37"/>
+</g>
+<!-- FE&#45;305 -->
+<g id="node37" class="node">
+<title>FE&#45;305</title>
+<path fill="#3498db" stroke="black" d="M1849,-419C1849,-419 1767,-419 1767,-419 1761,-419 1755,-413 1755,-407 1755,-407 1755,-395 1755,-395 1755,-389 1761,-383 1767,-383 1767,-383 1849,-383 1849,-383 1855,-383 1861,-389 1861,-395 1861,-395 1861,-407 1861,-407 1861,-413 1855,-419 1849,-419"/>
+<text text-anchor="middle" x="1808" y="-404.2" font-family="Times,serif" font-size="11.00">FE&#45;305</text>
+<text text-anchor="middle" x="1808" y="-392.2" font-family="Times,serif" font-size="11.00">收敛可靠性测试</text>
+</g>
+<!-- FE&#45;304&#45;&gt;FE&#45;305 -->
+<g id="edge42" class="edge">
+<title>FE&#45;304&#45;&gt;FE&#45;305</title>
+<path fill="none" stroke="black" d="M1719.23,-411.62C1727.88,-410.58 1736.44,-409.54 1744.64,-408.55"/>
+<polygon fill="black" stroke="black" points="1745.3,-412 1754.8,-407.32 1744.45,-405.05 1745.3,-412"/>
+</g>
+<!-- FE&#45;400 -->
+<g id="node38" class="node">
+<title>FE&#45;400</title>
+<path fill="#3498db" stroke="black" d="M1978,-442C1978,-442 1909,-442 1909,-442 1903,-442 1897,-436 1897,-430 1897,-430 1897,-418 1897,-418 1897,-412 1903,-406 1909,-406 1909,-406 1978,-406 1978,-406 1984,-406 1990,-412 1990,-418 1990,-418 1990,-430 1990,-430 1990,-436 1984,-442 1978,-442"/>
+<text text-anchor="middle" x="1943.5" y="-427.2" font-family="Times,serif" font-size="11.00">FE&#45;400</text>
+<text text-anchor="middle" x="1943.5" y="-415.2" font-family="Times,serif" font-size="11.00">自动参数选择</text>
+</g>
+<!-- FE&#45;304&#45;&gt;FE&#45;400 -->
+<g id="edge43" class="edge">
+<title>FE&#45;304&#45;&gt;FE&#45;400</title>
+<path fill="none" stroke="black" d="M1719.1,-427.53C1762.81,-428.56 1814.41,-429.14 1861,-428 1869.35,-427.8 1878.17,-427.47 1886.81,-427.1"/>
+<polygon fill="black" stroke="black" points="1886.99,-430.59 1896.82,-426.64 1886.67,-423.6 1886.99,-430.59"/>
+</g>
+<!-- FE&#45;305&#45;&gt;FE&#45;400 -->
+<g id="edge44" class="edge">
+<title>FE&#45;305&#45;&gt;FE&#45;400</title>
+<path fill="none" stroke="black" d="M1861.38,-410.02C1869.69,-411.46 1878.31,-412.94 1886.69,-414.39"/>
+<polygon fill="black" stroke="black" points="1886.32,-417.87 1896.77,-416.12 1887.51,-410.97 1886.32,-417.87"/>
+</g>
+<!-- FE&#45;401 -->
+<g id="node39" class="node">
+<title>FE&#45;401</title>
+<path fill="#3498db" stroke="black" stroke-width="2" d="M2154,-442C2154,-442 2043,-442 2043,-442 2037,-442 2031,-436 2031,-430 2031,-430 2031,-418 2031,-418 2031,-412 2037,-406 2043,-406 2043,-406 2154,-406 2154,-406 2160,-406 2166,-412 2166,-418 2166,-418 2166,-430 2166,-430 2166,-436 2160,-442 2154,-442"/>
+<text text-anchor="middle" x="2098.5" y="-427.2" font-family="Times,serif" font-size="11.00">FE&#45;401</text>
+<text text-anchor="middle" x="2098.5" y="-415.2" font-family="Times,serif" font-size="11.00">失败诊断 + 自动重试</text>
+</g>
+<!-- FE&#45;400&#45;&gt;FE&#45;401 -->
+<g id="edge45" class="edge">
+<title>FE&#45;400&#45;&gt;FE&#45;401</title>
+<path fill="none" stroke="black" d="M1990.41,-424C1999.98,-424 2010.31,-424 2020.66,-424"/>
+<polygon fill="black" stroke="black" points="2020.98,-427.5 2030.98,-424 2020.98,-420.5 2020.98,-427.5"/>
+</g>
+<!-- FE&#45;402 -->
+<g id="node40" class="node">
+<title>FE&#45;402</title>
+<path fill="#3498db" stroke="black" d="M2159,-388C2159,-388 2038,-388 2038,-388 2032,-388 2026,-382 2026,-376 2026,-376 2026,-364 2026,-364 2026,-358 2032,-352 2038,-352 2038,-352 2159,-352 2159,-352 2165,-352 2171,-358 2171,-364 2171,-364 2171,-376 2171,-376 2171,-382 2165,-388 2159,-388"/>
+<text text-anchor="middle" x="2098.5" y="-373.2" font-family="Times,serif" font-size="11.00">FE&#45;402</text>
+<text text-anchor="middle" x="2098.5" y="-361.2" font-family="Times,serif" font-size="11.00">abacustest 工作流集成</text>
+</g>
+<!-- FE&#45;400&#45;&gt;FE&#45;402 -->
+<g id="edge46" class="edge">
+<title>FE&#45;400&#45;&gt;FE&#45;402</title>
+<path fill="none" stroke="black" d="M1990.41,-407.8C2004.98,-402.65 2021.34,-396.88 2036.79,-391.43"/>
+<polygon fill="black" stroke="black" points="2038.01,-394.71 2046.27,-388.08 2035.68,-388.11 2038.01,-394.71"/>
+</g>
+<!-- FE&#45;403 -->
+<g id="node41" class="node">
+<title>FE&#45;403</title>
+<path fill="#3498db" stroke="black" d="M2126.5,-496C2126.5,-496 2070.5,-496 2070.5,-496 2064.5,-496 2058.5,-490 2058.5,-484 2058.5,-484 2058.5,-472 2058.5,-472 2058.5,-466 2064.5,-460 2070.5,-460 2070.5,-460 2126.5,-460 2126.5,-460 2132.5,-460 2138.5,-466 2138.5,-472 2138.5,-472 2138.5,-484 2138.5,-484 2138.5,-490 2132.5,-496 2126.5,-496"/>
+<text text-anchor="middle" x="2098.5" y="-481.2" font-family="Times,serif" font-size="11.00">FE&#45;403</text>
+<text text-anchor="middle" x="2098.5" y="-469.2" font-family="Times,serif" font-size="11.00">文档与示例</text>
+</g>
+<!-- FE&#45;400&#45;&gt;FE&#45;403 -->
+<g id="edge47" class="edge">
+<title>FE&#45;400&#45;&gt;FE&#45;403</title>
+<path fill="none" stroke="black" d="M1990.41,-440.2C2008.84,-446.71 2030.12,-454.22 2048.83,-460.82"/>
+<polygon fill="black" stroke="black" points="2047.76,-464.15 2058.35,-464.18 2050.09,-457.55 2047.76,-464.15"/>
+</g>
+<!-- FE&#45;404 -->
+<g id="node42" class="node">
+<title>FE&#45;404</title>
+<path fill="#3498db" stroke="black" d="M2377,-469C2377,-469 2219,-469 2219,-469 2213,-469 2207,-463 2207,-457 2207,-457 2207,-445 2207,-445 2207,-439 2213,-433 2219,-433 2219,-433 2377,-433 2377,-433 2383,-433 2389,-439 2389,-445 2389,-445 2389,-457 2389,-457 2389,-463 2383,-469 2377,-469"/>
+<text text-anchor="middle" x="2298" y="-454.2" font-family="Times,serif" font-size="11.00">FE&#45;404</text>
+<text text-anchor="middle" x="2298" y="-442.2" font-family="Times,serif" font-size="11.00">自动化工作流与参数推荐系统</text>
+</g>
+<!-- FE&#45;401&#45;&gt;FE&#45;404 -->
+<g id="edge48" class="edge">
+<title>FE&#45;401&#45;&gt;FE&#45;404</title>
+<path fill="none" stroke="black" d="M2166.09,-433.1C2176.02,-434.46 2186.43,-435.88 2196.87,-437.31"/>
+<polygon fill="black" stroke="black" points="2196.49,-440.79 2206.87,-438.68 2197.43,-433.86 2196.49,-440.79"/>
+</g>
+<!-- FE&#45;403&#45;&gt;FE&#45;404 -->
+<g id="edge49" class="edge">
+<title>FE&#45;403&#45;&gt;FE&#45;404</title>
+<path fill="none" stroke="black" d="M2138.52,-472.67C2155.43,-470.35 2176.07,-467.53 2196.81,-464.7"/>
+<polygon fill="black" stroke="black" points="2197.54,-468.13 2206.98,-463.31 2196.59,-461.19 2197.54,-468.13"/>
+</g>
+</g>
+</svg>
+</script>
 </body>
 </html>

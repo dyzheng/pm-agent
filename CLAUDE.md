@@ -55,7 +55,7 @@ Each phase is a pure function: `(ProjectState) -> ProjectState`. This signature 
 ### Supporting Modules
 
 - **`src/pipeline.py`** — Top-level orchestrator wiring intake → audit → decompose with hook integration. Entry point: `run_pipeline(state, ...)`.
-- **`src/hooks.py`** — AI review checks + human approval gates between phases, configured via `hooks.yaml`. Check functions: `completeness`, `branch_awareness`, `developable_respect`, `dependency_order`, `scope_sanity`, `no_frozen_mutation`. Entry points: `run_ai_review()`, `run_human_check()`.
+- **`src/hooks.py`** — AI review checks + human approval gates between phases, configured via `hooks.yaml`. Check functions: `completeness`, `branch_awareness`, `developable_respect`, `dependency_order`, `scope_sanity`, `no_frozen_mutation`. Entry points: `run_ai_review()`, `run_human_check()`, `run_regenerate()`.
 - **`src/branches.py`** — `BranchRegistry` tracking in-development branches per component, loaded from `branches.yaml`. Detects capabilities that are being actively worked on.
 - **`src/review.py`** — `Reviewer` protocol + `MockReviewer` for human review of task drafts. Methods: `review()`, `review_gate_failure()`.
 - **`src/specialist.py`** — `SpecialistBackend` protocol + `MockSpecialist` for agent dispatch. Method: `execute(brief) -> Draft`.
@@ -81,9 +81,95 @@ AST-based live code analysis for when the static registry can't answer a questio
 
 - **`capabilities.yaml`** — Static capability registry for the deepmodeling ecosystem
 - **`branches.yaml`** — In-development branch tracking (component → branch entries with status)
-- **`hooks.yaml`** — AI review checks and human approval gates per phase (`after_audit`, `after_decompose`)
+- **`hooks.yaml`** — AI review checks, human approval gates, and regenerate hooks per phase (`after_audit`, `after_decompose`, `after_task_complete`)
+
+### Research Review & Literature Analysis (`src/phases/research_review.py`, `src/phases/literature_review.py`)
+
+**NEW (2026-02):** Intelligent task assessment with context-isolated literature review.
+
+**Research Review** evaluates tasks on three dimensions:
+- **Feasibility** (high/medium/low/blocked): Technical maturity, dependency complexity, effort estimation
+- **Novelty** (frontier/advanced/incremental/routine): Innovation level, alignment with state-of-the-art
+- **Scientific Value** (critical/high/medium/low): Contribution to project goals, critical path importance
+- **Priority Score**: 0-100 weighted score (0.5×Value + 0.3×Feasibility + 0.2×Novelty)
+
+**Literature Review** queries recent papers (2024-2026) with context isolation:
+- Launches independent agents for high-priority tasks (≥80 score)
+- Each agent performs WebSearch → WebFetch → Gap analysis in isolated context (~50k tokens)
+- Returns condensed results (<500 tokens/task) to main session
+- Identifies state-of-the-art approaches, gaps, and improvement suggestions
+- Stores literature findings in `projects/{project}/research/literature/{task_id}_literature.json`
+
+**Context Efficiency**: Avoids explosion by isolating literature analysis to agents (630k → 21k tokens in main session for 42 tasks).
+
+**Tools:**
+- **`tools/review_f_electron.py`** — Fast heuristic-based task review (no external calls)
+- **`tools/enhanced_review.py`** — Literature-enhanced review with agent-based paper search
+- **`tools/literature_search.py`** — Standalone literature search for specific tasks
+
+### Shared Project Tools (`tools/`)
+
+Cross-project utilities for dashboard, dependency graph, and state management.
+
+- **`tools/state_loader.py`** — Unified state loader that auto-detects project state format (flat `project_state.json`, `*_plan.json`, or raw state with annotations). Normalizes tasks to common schema (`id`, `title`, `status`, `dependencies` + optional fields).
+- **`tools/generate_dashboard.py`** — Generates `dashboard.html` with dark-theme UI (kanban, timeline, dependency graph, deferred views). Auto-detects grouping strategy (phase/batch/status).
+- **`tools/generate_graph.py`** — Generates `dependency_graph.dot` (and SVG if graphviz available) from project state.
+- **`tools/build_state.py`** — Assembles `state/project_state.json` from split `tasks_*.json` files + `project_state_meta.json`.
+
+```bash
+# Generate dashboard for one project
+python -m tools.generate_dashboard projects/f-electron-scf
+
+# Generate for all projects
+python -m tools.generate_dashboard --all
+
+# Generate dependency graph
+python -m tools.generate_graph projects/f-electron-scf
+python -m tools.generate_graph --all
+
+# Build state from split files
+python -m tools.build_state projects/f-electron-scf
+python -m tools.build_state --all
+
+# Run research review (fast, heuristic-based)
+python tools/review_f_electron.py
+
+# Run enhanced review with literature analysis (requires WebSearch/WebFetch)
+python tools/enhanced_review.py --project projects/f-electron-scf --max-lit-tasks 5
+
+# Search literature for a specific task
+python tools/literature_search.py FE-205 --output projects/f-electron-scf/research/FE-205_literature.md
+```
+
+The `regenerate` hook in `hooks.yaml` auto-triggers dashboard and graph regeneration after decompose and task completion when `project_dir` is passed to `run_pipeline()`.
 
 ## Key Patterns
+
+### Running Research Review
+
+```bash
+# Step 1: Fast task review (heuristic-based, ~30 seconds)
+python tools/review_f_electron.py
+# Output: projects/f-electron-scf/research_review.md
+
+# Step 2: Enhanced review with literature (5-10 minutes for 5 tasks)
+python tools/enhanced_review.py --max-lit-tasks 5
+# Output:
+#   - projects/f-electron-scf/research_review_enhanced.md
+#   - projects/f-electron-scf/research/literature/*.json
+#   - projects/f-electron-scf/optimization_plan.md
+
+# Step 3: Review results and update task descriptions
+# Literature findings are stored in:
+#   - projects/{project}/research/literature/{task_id}_literature.json
+#   - projects/{project}/research/literature/summary.json
+```
+
+**Context Isolation Architecture:**
+- Main session runs fast heuristic review (5k tokens)
+- For high-priority tasks (score ≥80), launches independent agents
+- Each agent: WebSearch → WebFetch papers → Analyze → Return condensed result (<500 tokens)
+- Main session only reads condensed results, avoiding context explosion (630k → 21k tokens)
 
 ### Adding a New Phase
 
