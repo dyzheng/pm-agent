@@ -1,0 +1,38 @@
+{
+  "request": "Test project",
+  "parsed_intent": {},
+  "audit_results": [],
+  "tasks": [
+    {
+      "id": "TEST-001",
+      "title": "Test task",
+      "description": "A test task",
+      "layer": "core",
+      "type": "new",
+      "dependencies": [],
+      "acceptance_criteria": ["Tests pass"],
+      "files_to_touch": ["src/test.py"],
+      "estimated_scope": "medium",
+      "specialist": "python-dev",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": []
+    }
+  ],
+  "current_task_id": null,
+  "drafts": {},
+  "gate_results": {},
+  "integration_results": [],
+  "phase": "execute",
+  "human_decisions": [],
+  "review_results": [],
+  "human_approvals": [],
+  "brainstorm_results": [],
+  "blocked_reason": null
+}
