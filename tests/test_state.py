@@ -51,7 +51,8 @@ class TestLayerEnum:
         assert Layer.ALGORITHM.value == "algorithm"
         assert Layer.INFRA.value == "infra"
         assert Layer.CORE.value == "core"
-        assert len(Layer) == 4
+        assert Layer.VALIDATION.value == "validation"
+        assert len(Layer) == 5
 
 
 class TestTaskTypeEnum:
@@ -62,7 +63,7 @@ class TestTaskTypeEnum:
         assert TaskType.TEST.value == "test"
         assert TaskType.INTEGRATION.value == "integration"
         assert TaskType.EXTERNAL_DEPENDENCY.value == "external_dependency"
-        assert len(TaskType) == 6
+        assert len(TaskType) == 11  # Added ALGORITHM, DATA, INFRA, RESEARCH, VALIDATION
 
 
 class TestScopeEnum:
@@ -447,9 +448,11 @@ class TestTaskStatusEnum:
     def test_task_status_enum_values(self) -> None:
         assert TaskStatus.PENDING.value == "pending"
         assert TaskStatus.IN_PROGRESS.value == "in_progress"
+        assert TaskStatus.IN_REVIEW.value == "in_review"
         assert TaskStatus.DONE.value == "done"
         assert TaskStatus.FAILED.value == "failed"
-        assert len(TaskStatus) == 5
+        assert TaskStatus.DEFERRED.value == "deferred"
+        assert len(TaskStatus) == 6
 
 
 class TestTaskWithNewFields:

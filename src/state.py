@@ -33,6 +33,7 @@ class Layer(Enum):
     ALGORITHM = "algorithm"
     INFRA = "infra"
     CORE = "core"
+    VALIDATION = "validation"
 
 
 class TaskType(Enum):
@@ -44,6 +45,11 @@ class TaskType(Enum):
     TEST = "test"
     INTEGRATION = "integration"
     EXTERNAL_DEPENDENCY = "external_dependency"
+    ALGORITHM = "algorithm"
+    DATA = "data"
+    INFRA = "infra"
+    RESEARCH = "research"
+    VALIDATION = "validation"
 
 
 class Scope(Enum):
@@ -95,6 +101,7 @@ class TaskStatus(Enum):
 
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
+    IN_REVIEW = "in_review"
     DONE = "done"
     FAILED = "failed"
     DEFERRED = "deferred"
@@ -161,7 +168,7 @@ class Task:
             dependencies=data["dependencies"],
             acceptance_criteria=data["acceptance_criteria"],
             files_to_touch=data["files_to_touch"],
-            estimated_scope=Scope(data["estimated_scope"]),
+            estimated_scope=Scope(data.get("estimated_scope", "medium")),
             specialist=data["specialist"],
             gates=[GateType(g) for g in data.get("gates", [])],
             status=TaskStatus(data.get("status", "pending")),
