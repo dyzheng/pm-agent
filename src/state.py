@@ -466,6 +466,9 @@ class ProjectState:
     human_approvals: list[HumanApproval] = field(default_factory=list)
     brainstorm_results: list[BrainstormResult] = field(default_factory=list)
     blocked_reason: str | None = None
+    optimization_history: list[str] = field(default_factory=list)
+    last_optimization: str | None = None
+    optimization_metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the full state to a JSON-compatible dict."""
@@ -485,6 +488,9 @@ class ProjectState:
             "human_approvals": [h.to_dict() for h in self.human_approvals],
             "brainstorm_results": [b.to_dict() for b in self.brainstorm_results],
             "blocked_reason": self.blocked_reason,
+            "optimization_history": self.optimization_history,
+            "last_optimization": self.last_optimization,
+            "optimization_metadata": self.optimization_metadata,
         }
 
     @classmethod
@@ -525,6 +531,9 @@ class ProjectState:
                 for b in data.get("brainstorm_results", [])
             ],
             blocked_reason=data.get("blocked_reason"),
+            optimization_history=data.get("optimization_history", []),
+            last_optimization=data.get("last_optimization"),
+            optimization_metadata=data.get("optimization_metadata", {}),
         )
 
     def save(self, path: str | Path) -> None:
