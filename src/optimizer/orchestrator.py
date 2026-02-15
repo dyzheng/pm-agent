@@ -215,6 +215,198 @@ class ProjectOptimizer:
         return "\n".join(summary_parts)
 
     def execute_plan(self, plan: OptimizationPlan, approved_action_ids: list[str]) -> OptimizationResult:
-        """Execute approved actions from plan (placeholder)."""
-        # TODO: Implement in later task
-        raise NotImplementedError("execute_plan will be implemented in Task 7")
+        """Execute approved actions from plan."""
+        import time
+        start_time = time.time()
+
+        # Backup state before execution
+        self._backup_state()
+
+        changes_made = []
+        success = True
+
+        for action in plan.actions:
+            if action.action_id not in approved_action_ids:
+                continue
+
+            try:
+                self._execute_action(action)
+                changes_made.append(f"Executed {action.action_id}: {action.description}")
+                logger.info(f"Executed action: {action.action_id}")
+            except Exception as e:
+                changes_made.append(f"Failed {action.action_id}: {str(e)}")
+                success = False
+                logger.error(f"Failed to execute action {action.action_id}: {e}")
+
+        # Save updated state
+        self.state.save(self.project_dir / "state" / "project_state.json")
+
+        # Regenerate artifacts
+        self._regenerate_artifacts()
+
+        result = OptimizationResult(
+            action_id=f"plan-{plan.project_id}",
+            success=success,
+            message=f"Executed {len([c for c in changes_made if 'Executed' in c])} actions",
+            changes_made=changes_made
+        )
+
+        return result
+
+    def _backup_state(self) -> None:
+        """Create backup of project state before execution."""
+        import shutil
+        backup_dir = self.project_dir / "optimization" / "backups"
+        backup_dir.mkdir(parents=True, exist_ok=True)
+
+        timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+        backup_path = backup_dir / f"{timestamp}_state_backup.json"
+
+        state_path = self.project_dir / "state" / "project_state.json"
+        if state_path.exists():
+            shutil.copy(state_path, backup_path)
+            logger.info(f"Created state backup: {backup_path}")
+
+    def _execute_action(self, action: OptimizationAction) -> None:
+        """Execute a single action based on type."""
+        # Validate before executing
+        is_valid, error_msg = self._validate_action(action)
+        if not is_valid:
+            raise ValueError(f"Invalid action {action.action_id}: {error_msg}")
+
+        if action.action_type == "add_tests":
+            self._execute_add_tests(action)
+        elif action.action_type == "add_docs":
+            self._execute_add_docs(action)
+        elif action.action_type == "split_task":
+            self._execute_split_task(action)
+        elif action.action_type == "clarify_deliverable":
+            self._execute_clarify_deliverable(action)
+        else:
+            raise ValueError(f"Unknown action type: {action.action_type}")
+
+    def _validate_action(self, action: OptimizationAction) -> tuple[bool, str]:
+        """Validate action before execution."""
+        # Check target task exists
+        if not any(t.id == action.target_task_id for t in self.state.tasks):
+            return False, f"Target task {action.target_task_id} not found"
+
+        if action.action_type == "split_task":
+            # Check task isn't already split
+            parent_id = action.target_task_id
+            if any(t.id.startswith(f"{parent_id}-") for t in self.state.tasks):
+                return False, f"Task {parent_id} already has subtasks"
+
+        return True, ""
+
+    def _execute_add_tests(self, action: OptimizationAction) -> None:
+        """Execute add_tests action."""
+        from src.state import Task, Layer, TaskType, Scope
+
+        # Generate new task ID
+        existing_ids = [t.id for t in self.state.tasks]
+        task_counter = 1
+        while f"OPT-{task_counter:03d}" in existing_ids:
+            task_counter += 1
+        new_id = f"OPT-{task_counter:03d}"
+
+        # Get target task to inherit properties
+        target_task = next((t for t in self.state.tasks if t.id == action.target_task_id), None)
+
+        # Create new test task
+        new_task = Task(
+            id=new_id,
+            title=f"Tests for {action.target_task_id}",
+            description=action.description,
+            layer=target_task.layer if target_task else Layer.CORE,
+            type=TaskType.TEST,
+            dependencies=[action.target_task_id],
+            acceptance_criteria=["All tests pass", "Coverage > 80%"],
+            files_to_touch=[],
+            estimated_scope=Scope.SMALL,
+            specialist="test-engineer"
+        )
+
+        self.state.tasks.append(new_task)
+        logger.info(f"Added test task: {new_id}")
+
+    def _execute_add_docs(self, action: OptimizationAction) -> None:
+        """Execute add_docs action."""
+        from src.state import Task, Layer, TaskType, Scope
+
+        # Generate new task ID
+        existing_ids = [t.id for t in self.state.tasks]
+        task_counter = 1
+        while f"OPT-{task_counter:03d}" in existing_ids:
+            task_counter += 1
+        new_id = f"OPT-{task_counter:03d}"
+
+        # Get target task to inherit properties
+        target_task = next((t for t in self.state.tasks if t.id == action.target_task_id), None)
+
+        # Create new documentation task
+        new_task = Task(
+            id=new_id,
+            title=f"Documentation for {action.target_task_id}",
+            description=action.description,
+            layer=target_task.layer if target_task else Layer.CORE,
+            type=TaskType.NEW,
+            dependencies=[action.target_task_id],
+            acceptance_criteria=["Documentation complete", "Examples provided"],
+            files_to_touch=[],
+            estimated_scope=Scope.SMALL,
+            specialist="tech-writer"
+        )
+
+        self.state.tasks.append(new_task)
+        logger.info(f"Added documentation task: {new_id}")
+
+    def _execute_split_task(self, action: OptimizationAction) -> None:
+        """Execute split_task action."""
+        from src.state import Task
+
+        parent_id = action.target_task_id
+        parent_task = next((t for t in self.state.tasks if t.id == parent_id), None)
+
+        if not parent_task:
+            raise ValueError(f"Parent task {parent_id} not found")
+
+        # Create 2 subtasks (simplified - real implementation would parse from action)
+        subtasks_data = [
+            {"title": f"{parent_task.title} - Part 1", "description": "First part of decomposed task"},
+            {"title": f"{parent_task.title} - Part 2", "description": "Second part of decomposed task"}
+        ]
+
+        for i, subtask_data in enumerate(subtasks_data, 1):
+            subtask_id = f"{parent_id}-{i}"
+
+            subtask = Task(
+                id=subtask_id,
+                title=subtask_data["title"],
+                description=subtask_data["description"],
+                layer=parent_task.layer,
+                type=parent_task.type,
+                dependencies=parent_task.dependencies.copy(),
+                acceptance_criteria=parent_task.acceptance_criteria.copy(),
+                files_to_touch=[],
+                estimated_scope=parent_task.estimated_scope,
+                specialist=parent_task.specialist
+            )
+
+            self.state.tasks.append(subtask)
+
+        logger.info(f"Split {parent_id} into {len(subtasks_data)} subtasks")
+
+    def _execute_clarify_deliverable(self, action: OptimizationAction) -> None:
+        """Execute clarify_deliverable action."""
+        # Find target task and update its description
+        target_task = next((t for t in self.state.tasks if t.id == action.target_task_id), None)
+        if target_task:
+            # Append clarification to description
+            target_task.description += f"\n\nClarification: {action.description}"
+            logger.info(f"Clarified deliverable for {action.target_task_id}")
+
+    def _regenerate_artifacts(self) -> None:
+        """Regenerate dashboard and dependency graph."""
+        # TODO: Call dashboard and graph generation tools
+        logger.info("Artifact regeneration not yet implemented")
