@@ -212,6 +212,154 @@ component_name:
 3. If modifying `ProjectState`, update its `to_dict()` and `from_dict()` too
 4. Update tests in `tests/test_state.py`
 
+## Autonomous Project Optimization
+
+**NEW (2026-02):** pm-agent can autonomously analyze project health and execute approved optimizations.
+
+### Overview
+
+The optimization system uses an orchestrator-agent pattern with context isolation:
+- **ProjectOptimizer** orchestrator coordinates specialized agents
+- **DeliverableAnalyzer** identifies missing deliverables and test gaps
+- **TaskDecomposer** detects oversized tasks needing decomposition
+- Agents run in isolated contexts, return condensed findings (<2k tokens)
+- User reviews unified action plan and approves batch execution
+
+### Running Optimization
+
+```bash
+# Generate optimization plan
+python tools/optimize_project.py projects/f-electron-scf
+
+# Review plan
+cat projects/f-electron-scf/optimization/optimization_plan.md
+
+# Execute approved actions
+python tools/optimize_project.py projects/f-electron-scf \
+  --execute optimization/optimization_plan.json
+
+# Interactive approval mode
+python tools/optimize_project.py projects/f-electron-scf \
+  --execute optimization/optimization_plan.json --interactive
+
+# Dry run (generate plan without executing)
+python tools/optimize_project.py projects/f-electron-scf --dry-run
+
+# Specific optimizations only
+python tools/optimize_project.py projects/f-electron-scf \
+  --optimize deliverable-analyzer
+```
+
+### Architecture
+
+**Data Model** (`src/optimizer/models.py`):
+- `OptimizationFinding` - Issue identified by agent (category, severity, evidence, suggested action)
+- `OptimizationAction` - Executable action to fix issue (add_tests, add_docs, split_task, clarify_deliverable)
+- `OptimizationPlan` - Unified plan with findings, actions, conflicts
+- `OptimizationResult` - Execution outcome with success status and changes made
+
+**Orchestrator** (`src/optimizer/orchestrator.py`):
+- `ProjectOptimizer` - Main orchestrator class
+- `analyze_and_plan(request)` - Generate optimization plan
+- `execute_plan(plan, approved_action_ids)` - Execute approved actions
+
+**Agents** (`src/optimizer/agents/`):
+- `DeliverableAnalyzer` - Analyzes deliverables and test coverage
+- `TaskDecomposer` - Identifies tasks needing decomposition
+- `BaseOptimizationAgent` - Protocol for new agents
+
+**Registry** (`src/optimizer/agent_registry.py`):
+- `AgentRegistry` - Registry of available optimization agents
+
+### Adding New Optimization Agents
+
+1. Create agent class implementing `BaseOptimizationAgent` protocol
+2. Implement `generate_prompt(state, project_dir)` method
+3. Implement `parse_output(output)` method returning analysis with findings
+4. Register agent in `ProjectOptimizer.__init__()`
+5. Add tests in `tests/test_optimizer/test_agents/`
+
+Example:
+```python
+class MyOptimizationAgent:
+    def generate_prompt(self, state: ProjectState, project_dir: Path) -> str:
+        return "Prompt for agent analysis..."
+
+    def parse_output(self, output: str) -> MyAnalysisResult:
+        data = json.loads(output)
+        return MyAnalysisResult(findings=[...])
+
+# Register in ProjectOptimizer.__init__
+self.agent_registry.register("my-agent", MyOptimizationAgent())
+```
+
+### Storage Structure
+
+```
+projects/{project}/
+├── optimization/
+│   ├── optimization_plan.json       # Latest plan (JSON)
+│   ├── optimization_plan.md         # Latest plan (Markdown)
+│   └── backups/                     # State backups before execution
+│       └── {timestamp}_state_backup.json
+```
+
+### Action Types
+
+**add_tests**: Creates new test task for missing test coverage
+```python
+parameters = {
+    "title": "Add unit tests for FE-205",
+    "description": "Implement unit tests for constrained DFT",
+    "task_type": "test",
+    "dependencies": ["FE-205"],
+    "phase": "phase1a"
+}
+```
+
+**add_docs**: Creates new documentation task
+```python
+parameters = {
+    "title": "Documentation for FE-205",
+    "description": "Design doc for constrained DFT implementation",
+    "task_type": "new",
+    "dependencies": ["FE-205"],
+    "phase": "phase1a"
+}
+```
+
+**split_task**: Decomposes large task into subtasks
+```python
+parameters = {
+    "parent_task_id": "FE-205",
+    "subtasks": [
+        {"title": "...", "description": "...", "dependencies": [...]},
+        {"title": "...", "description": "...", "dependencies": [...]}
+    ],
+    "update_parent": "mark_as_epic"
+}
+```
+
+**clarify_deliverable**: Adds clarification to task description
+```python
+parameters = {
+    "task_id": "FE-205",
+    "clarification": "Additional requirements and acceptance criteria"
+}
+```
+
+### Context Isolation Pattern
+
+The orchestrator-agent pattern provides efficient context management:
+- **Orchestrator** runs in main session (~10-15k tokens)
+- **Agents** run in isolated contexts (~50k tokens each, released after completion)
+- **Results** are condensed to <2k tokens per agent
+- **Total context** in main session: ~15k tokens (vs 100k+ without isolation)
+
+### Current Limitations
+
+Agent invocation currently uses mock execution for testing. In production, agents would be invoked using the Task tool for context isolation. The infrastructure is ready - replace `_generate_mock_agent_output()` in `src/optimizer/orchestrator.py` with real Task tool invocation.
+
 ## Related Repositories
 
 - `/root/abacus-develop` — ABACUS C++ DFT package (see its CLAUDE.md for architecture)
