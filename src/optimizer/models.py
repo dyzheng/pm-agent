@@ -136,7 +136,8 @@ class OptimizationPlan:
     timestamp: str
     findings: list[OptimizationFinding]
     actions: list[OptimizationAction]
-    summary: str
+    conflicts: list[str] = field(default_factory=list)
+    summary: str = ""
 
     def to_dict(self) -> dict:
         """Serialize to dictionary."""
@@ -145,6 +146,7 @@ class OptimizationPlan:
             "timestamp": self.timestamp,
             "findings": [f.to_dict() for f in self.findings],
             "actions": [a.to_dict() for a in self.actions],
+            "conflicts": self.conflicts,
             "summary": self.summary
         }
 
@@ -156,6 +158,7 @@ class OptimizationPlan:
             timestamp=data["timestamp"],
             findings=[OptimizationFinding.from_dict(f) for f in data["findings"]],
             actions=[OptimizationAction.from_dict(a) for a in data["actions"]],
+            conflicts=data.get("conflicts", []),
             summary=data["summary"]
         )
 
@@ -265,6 +268,15 @@ class OptimizationPlan:
                     lines.append(f"- Addresses Findings: {', '.join(action.addresses_findings)}")
                     lines.append(f"- Estimated Effort: {action.estimated_effort}")
                     lines.append("")
+
+        if self.conflicts:
+            lines.extend([
+                f"## Conflicts ({len(self.conflicts)})",
+                ""
+            ])
+            for conflict in self.conflicts:
+                lines.append(f"- {conflict}")
+                lines.append("")
 
         return "\n".join(lines)
 

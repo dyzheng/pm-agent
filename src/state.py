@@ -158,12 +158,25 @@ class Task:
         }
 
     @classmethod
+    def _parse_task_type(cls, raw: str) -> TaskType:
+        """Parse task type with migration for legacy formats."""
+        # Handle uppercase legacy values (e.g. "ALGORITHM" -> "algorithm")
+        normalized = raw.lower()
+        # Map legacy/unknown values to valid TaskType
+        _LEGACY_TYPE_MAP = {
+            "workflow": "integration",
+            "port": "extend",
+        }
+        normalized = _LEGACY_TYPE_MAP.get(normalized, normalized)
+        return TaskType(normalized)
+
+    @classmethod
     def from_dict(cls, data: dict[str, Any]) -> Task:
         return cls(
             id=data["id"],
             title=data["title"],
             layer=Layer(data["layer"]),
-            type=TaskType(data["type"]),
+            type=cls._parse_task_type(data["type"]),
             description=data["description"],
             dependencies=data["dependencies"],
             acceptance_criteria=data["acceptance_criteria"],

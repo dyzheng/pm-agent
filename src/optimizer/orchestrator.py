@@ -1,9 +1,10 @@
 """ProjectOptimizer orchestrator for coordinating optimization agents."""
+import json
 import logging
 from pathlib import Path
 from datetime import datetime
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Protocol
 
 from src.state import ProjectState
 from src.optimizer.models import (
@@ -15,6 +16,19 @@ from src.optimizer.models import (
 from src.optimizer.agent_registry import AgentRegistry
 
 logger = logging.getLogger(__name__)
+
+
+class AgentInvoker(Protocol):
+    """Protocol for agent invocation strategies."""
+
+    def __call__(self, prompt: str, agent_name: str) -> str:
+        """Invoke an agent with the given prompt and return raw output."""
+        ...
+
+
+def mock_invoker(_prompt: str, _agent_name: str) -> str:
+    """Default mock invoker that returns empty findings."""
+    return json.dumps({"task_id": "mock", "findings": []})
 
 
 @dataclass
@@ -29,10 +43,11 @@ class OptimizationRequest:
 class ProjectOptimizer:
     """Orchestrator for autonomous project optimization."""
 
-    def __init__(self, project_dir: Path):
+    def __init__(self, project_dir: Path, invoker: AgentInvoker | None = None):
         self.project_dir = project_dir
         self.state = self._load_state()
         self.agent_registry = AgentRegistry()
+        self._invoker = invoker or mock_invoker
 
         # Register agents
         from src.optimizer.agents.deliverable_analyzer import DeliverableAnalyzer
@@ -82,6 +97,7 @@ class ProjectOptimizer:
             timestamp=datetime.now().isoformat(),
             findings=all_findings,
             actions=actions,
+            conflicts=conflicts,
             summary=self._generate_summary(all_findings, actions, conflicts)
         )
 
@@ -102,63 +118,34 @@ class ProjectOptimizer:
         )
 
     def _invoke_agents(self, agent_names: list[str]) -> dict[str, Any]:
-        """Invoke agents using Task tool for context isolation.
+        """Invoke agents via the injected invoker.
 
-        Each agent runs in an isolated context, analyzes the project state,
-        and returns condensed findings (<2k tokens).
-
-        Args:
-            agent_names: List of agent names to invoke
-
-        Returns:
-            Dictionary mapping agent name to analysis result
+        Each agent generates a prompt, the invoker executes it, and the
+        agent parses the raw output into structured findings.
         """
         results = {}
 
         for agent_name in agent_names:
             try:
                 agent = self.agent_registry.get(agent_name)
-
-                # Generate prompt for agent
                 prompt = agent.generate_prompt(self.state, self.project_dir)
 
-                # For now, use mock execution since Task tool requires special setup
-                # In production, this would use: Task(subagent_type="general-purpose", prompt=prompt)
-                logger.info(f"Agent {agent_name} would be invoked with prompt length: {len(prompt)}")
+                raw_output = self._invoker(prompt, agent_name)
 
-                # Mock response for testing - in production this comes from Task tool
-                mock_output = self._generate_mock_agent_output(agent_name)
-
-                # Parse agent output
-                result = agent.parse_output(mock_output)
+                result = agent.parse_output(raw_output)
                 results[agent_name] = result
 
                 logger.info(f"Agent {agent_name} returned {len(result.findings)} findings")
 
             except Exception as e:
                 logger.error(f"Agent {agent_name} failed: {e}")
-                # Continue with other agents
 
         return results
-
-    def _generate_mock_agent_output(self, agent_name: str) -> str:
-        """Generate mock agent output for testing.
-
-        In production, this method would be removed and output would come
-        from the Task tool invocation.
-        """
-        import json
-
-        # Return empty findings for now
-        return json.dumps({
-            "task_id": "mock",
-            "findings": []
-        })
 
     def _merge_findings(self, agent_results: dict[str, Any]) -> list[OptimizationFinding]:
         """Merge findings from all agents."""
         all_findings = []
-        for agent_name, result in agent_results.items():
+        for _agent_name, result in agent_results.items():
             if result and hasattr(result, 'findings'):
                 all_findings.extend(result.findings)
 
@@ -238,6 +225,12 @@ class ProjectOptimizer:
                 ))
                 action_counter += 1
 
+            else:
+                logger.warning(
+                    f"No action handler for finding category '{finding.category}' "
+                    f"(finding {finding.finding_id}, task {finding.task_id})"
+                )
+
         return actions
 
     def _generate_summary(self, findings: list[OptimizationFinding], actions: list[OptimizationAction], conflicts: list[str]) -> str:
@@ -265,8 +258,6 @@ class ProjectOptimizer:
 
     def execute_plan(self, plan: OptimizationPlan, approved_action_ids: list[str]) -> OptimizationResult:
         """Execute approved actions from plan."""
-        import time
-        start_time = time.time()
 
         # Backup state before execution
         self._backup_state()
