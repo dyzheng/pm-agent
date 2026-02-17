@@ -21,6 +21,7 @@ from src.brainstorm import (
     restore_deferred_task,
     run_brainstorm,
     split_task,
+    terminate_task,
 )
 from src.state import (
     BrainstormResult,
@@ -664,3 +665,135 @@ class TestTaskNewFieldsSerialization:
         assert t.defer_trigger == ""
         assert t.original_dependencies == []
         assert t.suspended_dependencies == []
+
+
+# -- Critical review check tests ---------------------------------------------
+
+
+class TestCheckNoveltyGap:
+    def test_flags_catchup_with_low_risk(self):
+        tasks = [_make_task("T1", title="DFT+U 代码移植", description="从zdy-tmp分支迁移")]
+        qs = flag_risky_tasks(_make_state(tasks), checks=["novelty_gap"])
+        assert len(qs) == 1
+        assert "novelty_gap" in qs[0].risk_reason
+
+    def test_ignores_genuine_innovation(self):
+        tasks = [_make_task("T1", title="Implement adaptive Kerker", description="Novel algorithm")]
+        qs = flag_risky_tasks(_make_state(tasks), checks=["novelty_gap"])
+        assert len(qs) == 0
+
+    def test_uses_custom_keywords(self):
+        tasks = [_make_task("T1", title="Copy the module")]
+        qs = flag_risky_tasks(
+            _make_state(tasks), checks=["novelty_gap"], keywords=["copy"],
+        )
+        assert len(qs) == 1
+
+
+class TestCheckRedundantWithPeers:
+    def test_flags_overlapping_files(self):
+        tasks = [
+            _make_task("T1", title="占据矩阵随机初始化与多起点探索"),
+            _make_task("T2", title="占据矩阵退火与多起点策略"),
+        ]
+        tasks[0].files_to_touch = ["module_dftu/dftu.cpp"]
+        tasks[1].files_to_touch = ["module_dftu/dftu.cpp"]
+        qs = flag_risky_tasks(_make_state(tasks), checks=["redundant_with_peers"])
+        assert any("redundant_with_peers" in q.risk_reason for q in qs)
+
+    def test_flags_high_title_overlap(self):
+        tasks = [
+            _make_task("T1", title="占据矩阵 随机初始化 多起点 探索 策略"),
+            _make_task("T2", title="占据矩阵 退火 多起点 探索 策略"),
+        ]
+        qs = flag_risky_tasks(_make_state(tasks), checks=["redundant_with_peers"])
+        assert any("redundant_with_peers" in q.risk_reason for q in qs)
+
+    def test_ignores_unrelated_tasks(self):
+        tasks = [
+            _make_task("T1", title="Implement mixing"),
+            _make_task("T2", title="Write documentation"),
+        ]
+        qs = flag_risky_tasks(_make_state(tasks), checks=["redundant_with_peers"])
+        assert len(qs) == 0
+
+
+class TestCheckLowRoi:
+    def test_flags_leaf_documentation_task(self):
+        tasks = [
+            _make_task("T1", title="Core algorithm"),
+            _make_task("T2", title="文档与示例", deps=["T1"]),
+        ]
+        qs = flag_risky_tasks(_make_state(tasks), checks=["low_roi"])
+        assert len(qs) == 1
+        assert qs[0].task_id == "T2"
+
+    def test_ignores_task_with_dependents(self):
+        tasks = [
+            _make_task("T1", title="文档与示例"),
+            _make_task("T2", deps=["T1"]),
+        ]
+        qs = flag_risky_tasks(_make_state(tasks), checks=["low_roi"])
+        assert len(qs) == 0
+
+    def test_ignores_non_matching_leaf(self):
+        tasks = [_make_task("T1", title="Implement algorithm")]
+        qs = flag_risky_tasks(_make_state(tasks), checks=["low_roi"])
+        assert len(qs) == 0
+
+
+# -- Terminate tests ---------------------------------------------------------
+
+
+class TestTerminateTask:
+    def test_sets_terminated_status(self):
+        state = _make_state([_make_task("T1"), _make_task("T2")])
+        terminate_task(state, "T1", reason="redundant")
+        assert state.tasks[0].status == TaskStatus.TERMINATED
+        assert "[TERMINATED]" in state.tasks[0].description
+        assert "redundant" in state.tasks[0].description
+
+    def test_cleans_downstream_deps(self):
+        tasks = [_make_task("T1"), _make_task("T2", deps=["T1"])]
+        state = _make_state(tasks)
+        terminate_task(state, "T1")
+        assert "T1" not in state.tasks[1].dependencies
+
+    def test_preserves_task_in_list(self):
+        state = _make_state([_make_task("T1"), _make_task("T2")])
+        terminate_task(state, "T1")
+        assert len(state.tasks) == 2  # Unlike drop, task stays
+
+    def test_nonexistent_is_noop(self):
+        state = _make_state([_make_task("T1")])
+        terminate_task(state, "NOPE")  # Should not raise
+        assert len(state.tasks) == 1
+
+    def test_idempotent_prefix(self):
+        state = _make_state([_make_task("T1")])
+        terminate_task(state, "T1", reason="first")
+        terminate_task(state, "T1", reason="second")
+        assert state.tasks[0].description.count("[TERMINATED]") == 1
+
+
+class TestTerminateDecision:
+    def test_terminate_via_apply_decisions(self):
+        tasks = [_make_task("T1"), _make_task("T2", deps=["T1"])]
+        state = _make_state(tasks)
+        decisions = [{"task_id": "T1", "action": "terminate", "notes": "low ROI"}]
+        results = apply_brainstorm_decisions(state, decisions)
+        assert len(results) == 1
+        assert results[0].answer == "terminate"
+        assert state.tasks[0].status == TaskStatus.TERMINATED
+        assert "T1" not in state.tasks[1].dependencies
+
+    def test_terminate_in_auto_critical_review(self):
+        """Integration: run_brainstorm with critical review checks."""
+        tasks = [
+            _make_task("T1", title="Core algorithm"),
+            _make_task("T2", title="文档与示例 documentation", deps=["T1"]),
+        ]
+        state = _make_state(tasks)
+        qs = flag_risky_tasks(state, checks=["low_roi"])
+        assert len(qs) == 1
+        assert qs[0].task_id == "T2"

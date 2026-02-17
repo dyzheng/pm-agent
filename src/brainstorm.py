@@ -68,6 +68,109 @@ def _check_long_critical_path(
     return ""
 
 
+# -- Critical review checks --------------------------------------------------
+
+
+_NOVELTY_GAP_KEYWORDS = [
+    "移植", "port", "迁移", "migrate", "追赶", "catch-up",
+    "与vasp一致", "与qe一致", "parity", "porting",
+]
+
+
+def _check_novelty_gap(
+    task: Task,
+    all_tasks: list[Task],
+    keywords: list[str] | None = None,
+) -> str:
+    """Flag tasks that look like engineering catch-up but are labeled high priority.
+
+    Detects mislabeled work: tasks whose description contains catch-up
+    indicators but carry frontier/high-priority labels.
+    """
+    kws = keywords or _NOVELTY_GAP_KEYWORDS
+    text = f"{task.title} {task.description}".lower()
+    matched = [kw for kw in kws if kw.lower() in text]
+    if not matched:
+        return ""
+    # Check if task is labeled as high-value despite being catch-up
+    is_high_label = task.risk_level in ("", "low") or "frontier" in text or "创新" in text
+    if matched and is_high_label:
+        return f"novelty_gap: catch-up indicators {matched} but labeled as low-risk/frontier"
+    return ""
+
+
+def _check_redundant_with_peers(
+    task: Task,
+    all_tasks: list[Task],
+    keywords: list[str] | None = None,
+) -> str:
+    """Flag tasks that overlap significantly with another task.
+
+    Detects redundancy by comparing titles, descriptions, and files_to_touch.
+    """
+    task_words = set(f"{task.title} {task.description}".lower().split())
+    task_files = set(task.files_to_touch)
+
+    for other in all_tasks:
+        if other.id == task.id or other.status not in (
+            TaskStatus.PENDING, TaskStatus.IN_PROGRESS,
+        ):
+            continue
+        # Check file overlap
+        if task_files and set(other.files_to_touch) & task_files:
+            other_words = set(
+                f"{other.title} {other.description}".lower().split(),
+            )
+            overlap = task_words & other_words
+            # Require significant word overlap (>40% of smaller set)
+            min_len = min(len(task_words), len(other_words))
+            if min_len > 0 and len(overlap) / min_len > 0.4:
+                return (
+                    f"redundant_with_peers: overlaps with {other.id} "
+                    f"({len(overlap)} shared words, shared files)"
+                )
+        # Check high title similarity (simple word overlap)
+        title_words_a = set(task.title.lower().split())
+        title_words_b = set(other.title.lower().split())
+        if len(title_words_a) >= 3 and len(title_words_b) >= 3:
+            title_overlap = title_words_a & title_words_b
+            min_title = min(len(title_words_a), len(title_words_b))
+            if min_title > 0 and len(title_overlap) / min_title > 0.6:
+                return (
+                    f"redundant_with_peers: title overlap with {other.id} "
+                    f"('{other.title}')"
+                )
+    return ""
+
+
+_LOW_ROI_KEYWORDS = [
+    "文档", "documentation", "docs", "自动化", "automation",
+    "示例", "example", "tutorial",
+]
+
+
+def _check_low_roi(
+    task: Task,
+    all_tasks: list[Task],
+    keywords: list[str] | None = None,
+) -> str:
+    """Flag tasks with low return on investment.
+
+    Targets late-phase tasks with no downstream dependents and
+    low-value keywords (documentation, automation, examples).
+    """
+    kws = keywords or _LOW_ROI_KEYWORDS
+    text = f"{task.title} {task.description}".lower()
+    matched = [kw for kw in kws if kw.lower() in text]
+    if not matched:
+        return ""
+    # Check if task has no downstream dependents (leaf node)
+    dependents = find_transitive_dependents(task.id, all_tasks)
+    if len(dependents) > 0:
+        return ""  # Has downstream impact, not low-ROI
+    return f"low_roi: matches keywords {matched}, no downstream dependents"
+
+
 # -- Dependency graph helpers -------------------------------------------------
 
 
@@ -204,6 +307,42 @@ def drop_task(state: ProjectState, task_id: str) -> None:
     """Remove a task and clean up dangling dependencies."""
     state.tasks = [t for t in state.tasks if t.id != task_id]
     for t in state.tasks:
+        if task_id in t.dependencies:
+            t.dependencies.remove(task_id)
+        if task_id in t.suspended_dependencies:
+            t.suspended_dependencies.remove(task_id)
+        if task_id in t.original_dependencies:
+            t.original_dependencies.remove(task_id)
+
+
+def terminate_task(
+    state: ProjectState,
+    task_id: str,
+    reason: str = "",
+) -> None:
+    """Mark a task as terminated with audit trail, clean downstream refs.
+
+    Unlike drop (which removes entirely), terminate preserves the task
+    in state with a [TERMINATED] marker for traceability.
+    """
+    task_map = {t.id: t for t in state.tasks}
+    target = task_map.get(task_id)
+    if target is None:
+        return
+
+    target.status = TaskStatus.TERMINATED
+    prefix = "[TERMINATED] "
+    if not target.description.startswith(prefix):
+        target.description = f"{prefix}{target.description}"
+    if reason:
+        target.description += f"\n\n终止原因: {reason}"
+
+    # Clear outgoing blocks (terminated tasks don't block anything)
+    # blocks is a JSON-level field, not on the Task dataclass, so we
+    # just clean downstream dependency references.
+    for t in state.tasks:
+        if t.id == task_id:
+            continue
         if task_id in t.dependencies:
             t.dependencies.remove(task_id)
         if task_id in t.suspended_dependencies:
@@ -349,6 +488,11 @@ def flag_risky_tasks(
         "long_critical_path": lambda t, ts: _check_long_critical_path(
             t, ts, threshold,
         ),
+        "novelty_gap": lambda t, ts: _check_novelty_gap(t, ts, keywords),
+        "redundant_with_peers": lambda t, ts: _check_redundant_with_peers(
+            t, ts, keywords,
+        ),
+        "low_roi": lambda t, ts: _check_low_roi(t, ts, keywords),
     }
     active_checks = checks or list(check_map.keys())
     questions: list[BrainstormQuestion] = []
@@ -377,6 +521,7 @@ def flag_risky_tasks(
                 {"key": "defer", "description": "Defer until a trigger condition is met"},
                 {"key": "keep", "description": "Keep in current position, execute as planned"},
                 {"key": "split", "description": "Split into safe part (keep) + risky part (defer)"},
+                {"key": "terminate", "description": "Terminate with audit trail (keeps record)"},
                 {"key": "drop", "description": "Remove from plan entirely"},
             ],
         ))
@@ -471,6 +616,9 @@ def apply_brainstorm_decisions(
         elif action == "drop":
             drop_task(state, task_id)
             action_desc = "dropped"
+        elif action == "terminate":
+            terminate_task(state, task_id, reason=notes)
+            action_desc = f"terminated: {notes}"
         else:
             action_desc = f"unknown action: {action}"
 
@@ -515,8 +663,8 @@ def run_brainstorm_interactive(
             print(f"    [{opt['key']:6s}] {opt['description']}")
         print()
 
-        action = prompt_fn(f"  Action for {q.task_id} (defer/keep/split/drop): ").strip().lower()
-        if action not in ("defer", "keep", "split", "drop"):
+        action = prompt_fn(f"  Action for {q.task_id} (defer/keep/split/terminate/drop): ").strip().lower()
+        if action not in ("defer", "keep", "split", "drop", "terminate"):
             action = "keep"
 
         dec: dict[str, Any] = {"task_id": q.task_id, "action": action}

@@ -238,11 +238,7 @@
       "scope": "abacus",
       "status": "terminated",
       "dependencies": [],
-      "blocks": [
-        "FE-200",
-        "FE-201",
-        "FE-202"
-      ],
+      "blocks": [],
       "description": "[TERMINATED] 详细审计ABACUS DFT+U实现：dftu.cpp（主逻辑、U-ramping、omc）、dftu_occup.cpp（占据矩阵mixing）、dftu_hamilt.cpp（哈密顿量）、dftu_yukawa.cpp（自动U）、dftu_pw.cpp（PW限制）。记录每个函数的输入输出、数据流、已知限制。特别关注f电子（l=3）的处理路径。\n\n终止原因：见 plans/2026-02-16-critical-review.md",
       "acceptance_criteria": [
         "完整的代码审计文档，包含数据流图",
@@ -859,9 +855,7 @@
       "dependencies": [
         "FE-202"
       ],
-      "blocks": [
-        "FE-204"
-      ],
+      "blocks": [],
       "description": "[TERMINATED] 实现占据退火：(1) 初始阶段使用高 smearing 温度（如 0.1 Ry），使占据矩阵平滑化，(2) 逐步降低 smearing 到目标值（如 0.01 Ry），(3) 与 U-ramping 协同：先 ramping U 到目标值，再退火 smearing。在 dftu_occup.cpp 中实现退火调度器。\n\n终止原因：见 plans/2026-02-16-critical-review.md",
       "acceptance_criteria": [
         "实现 smearing 温度退火",

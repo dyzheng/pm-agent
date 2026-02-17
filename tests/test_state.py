@@ -452,7 +452,8 @@ class TestTaskStatusEnum:
         assert TaskStatus.DONE.value == "done"
         assert TaskStatus.FAILED.value == "failed"
         assert TaskStatus.DEFERRED.value == "deferred"
-        assert len(TaskStatus) == 6
+        assert TaskStatus.TERMINATED.value == "terminated"
+        assert len(TaskStatus) == 7
 
 
 class TestTaskWithNewFields:

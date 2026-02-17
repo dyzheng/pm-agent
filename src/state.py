@@ -105,6 +105,7 @@ class TaskStatus(Enum):
     DONE = "done"
     FAILED = "failed"
     DEFERRED = "deferred"
+    TERMINATED = "terminated"
 
 
 # -- Dataclasses -----------------------------------------------------------

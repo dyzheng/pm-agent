@@ -35,6 +35,22 @@ hooks:
         - "优化"
       critical_path_threshold: 3
       mode: interactive
+    critical_review:
+      enabled: true
+      checks:
+        - novelty_gap
+        - redundant_with_peers
+        - low_roi
+      novelty_keywords:
+        - "移植"
+        - "port"
+        - "迁移"
+        - "追赶"
+      low_roi_keywords:
+        - "文档"
+        - "documentation"
+        - "自动化"
+      mode: interactive
     human_check:
       enabled: true
       mode: interactive
