@@ -1,5 +1,5 @@
 {
-  "request": "Solve f_in_valence rare-earth element norm-conserving pseudopotential SCF convergence problems in ABACUS: pseudopotential testing/generation, orbital optimization, DFT+U convergence, high ecutwfc performance, AI-guided initial charge guess, damped charge constraint, and cross-validation with VASP/all-electron codes across alloys, magnetic compounds, surface catalysis, and molecular catalysis scenarios.",
+  "request": "ABACUS 稀土 DFT+U 计算能力完善（工程项目）。完成代码迁移、收敛策略实现、验证与基础自动化。诚实定位为工程追赶，不标 frontier。",
   "project_id": "f-electron-scf",
   "phase": "execute",
   "parsed_intent": {
@@ -19,32 +19,31 @@
   },
   "metadata": {
     "created": "2026-02-11T12:00:00Z",
-    "last_updated": "2026-02-13T00:00:00Z",
+    "last_updated": "2026-02-16T23:34:34Z",
     "brainstorm_applied": "2026-02-11T15:30:00Z",
     "unified_task_system": "2026-02-13T00:00:00Z",
-    "strategy": "defer-by-default with trigger-based promotion",
-    "timeline": "5-6 months",
+    "strategy": "engineering catch-up with pseudopotential pre-validation",
+    "timeline": "14 weeks (3.5 months)",
     "id_scheme": "FE-{phase}{seq}, FE-D-{category}{seq} for deferred",
     "milestones": {
-      "M1": "End of Month 1 - Architecture ready + basic convergence",
-      "M2": "End of Month 2 - Occupation strategies working",
-      "M3": "End of Month 3 - Use cases validated",
-      "M4": "End of Month 5 - Production ready",
-      "M5": "End of Month 6 - Release"
+      "M0": "Week 2 - 基础验证完成（赝势前置验证 + 回归测试基线）",
+      "M1": "Week 6 - 代码迁移完成（DFT+U PW/LCAO + DeltaSpin）",
+      "M2": "Week 10 - 收敛策略可用（SCF 收敛率 >80%）",
+      "M3": "Week 14 - 验证与交付（ABACUS vs VASP <3% + 全电子参考 + 自动化）"
     },
     "statistics": {
-      "total_tasks": 42,
-      "active_tasks": 34,
-      "deferred_tasks": 8,
+      "total_tasks": 43,
+      "active_tasks": 35,
+      "terminated_tasks": 8,
       "in_review": 1,
       "in_progress": 0,
       "done": 0,
-      "pending": 33
+      "pending": 34
     },
     "phases": {
-      "Phase 0 (基础设施)": [
+      "Phase 0 (基础验证)": [
         "FE-000",
-        "FE-001",
+        "FE-005",
         "FE-002"
       ],
       "Phase 1 (代码移植)": [
@@ -67,7 +66,6 @@
         "FE-200",
         "FE-201",
         "FE-202",
-        "FE-203",
         "FE-204",
         "FE-205"
       ],
@@ -77,31 +75,15 @@
         "FE-302",
         "FE-303",
         "FE-304",
-        "FE-305"
+        "FE-305",
+        "FE-306"
       ],
-      "Phase 4 (自动化)": [
+      "Phase 4 (自动化-精简)": [
         "FE-400",
-        "FE-401",
-        "FE-402",
-        "FE-403",
-        "FE-404"
-      ],
-      "Deferred A (赝势)": [
-        "FE-D-A1",
-        "FE-D-A2",
-        "FE-D-A3"
-      ],
-      "Deferred B (轨道)": [
-        "FE-D-B1",
-        "FE-D-B2"
-      ],
-      "Deferred C (ML)": [
-        "FE-D-C1",
-        "FE-D-C2",
-        "FE-D-C3"
+        "FE-402"
       ]
     },
-    "critical_path": "FE-100 → FE-101 → FE-105 → FE-200/201/202 → FE-204 → FE-205 → FE-302 → FE-304 → FE-400",
+    "critical_path": "FE-000 → FE-005 → FE-100 → FE-101 → FE-105 → FE-200 → FE-204 → FE-205 → FE-302 → FE-306 → FE-304 → FE-400",
     "parallel_opportunities": [
       "FE-000 || FE-001 || FE-002 (Phase 0 全部可并行)",
       "FE-100 || FE-107 (onsite_projector 与 deltaspin 可并行)",
@@ -119,177 +101,21 @@
       "Week 8-10": "Phase 2 (FE-200~205)",
       "Week 11-14": "Phase 3 (FE-300~305)",
       "Week 15-20": "Phase 4 (FE-400~404)"
-    }
+    },
+    "restructured": "2026-02-16T23:34:34Z",
+    "restructure_reason": "批判性评审发现70%工作为工程追赶，拆分为工程+研究两个项目"
   },
   "tasks": [
-    {
-      "id": "FE-D-A1",
-      "title": "ONCVPSP 赝势生成环境搭建",
-      "layer": "infra",
-      "type": "external_dependency",
-      "scope": "external",
-      "status": "deferred",
-      "dependencies": [],
-      "blocks": [
-        "FE-D-A2"
-      ],
-      "description": "搭建 ONCVPSP 赝势生成环境，准备自定义稀土 NC 赝势生成工具链。安装配置 ONCVPSP 4.0+，准备稀土元素全电子参考数据（NIST 原子数据库），建立赝势生成→UPF 转换→ABACUS 读取的完整工具链。",
-      "acceptance_criteria": [
-        "ONCVPSP 编译安装成功",
-        "测试生成一个简单元素赝势",
-        "准备稀土元素参考构型数据",
-        "建立赝势质量检测流程（对数导数、ghost state）"
-      ],
-      "files_to_touch": [
-        "tools/pseudopotential_generation/",
-        "tools/pseudopotential_generation/README.md"
-      ],
-      "estimated_effort": "3-5 days",
-      "specialist": "workflow",
-      "risk_level": "high",
-      "defer_trigger": "FE-304:accuracy_below_threshold",
-      "old_ids": [
-        "D-A1",
-        "FE-001"
-      ]
-    },
-    {
-      "id": "FE-D-A2",
-      "title": "自定义稀土 NC 赝势生成",
-      "layer": "workflow",
-      "type": "external_dependency",
-      "scope": "external",
-      "status": "deferred",
-      "dependencies": [
-        "FE-D-A1"
-      ],
-      "blocks": [
-        "FE-D-A3"
-      ],
-      "description": "使用 ONCVPSP 为 7 种稀土元素生成 f_in_valence 模守恒赝势。关键参数优化：参考构型（中性/离子化）、各通道截断半径、局域势选择。对每个赝势进行 ghost state 检测和基本可迁移性检查。",
-      "acceptance_criteria": [
-        "生成 Ce, Gd, La, Nd, Sm, Eu, Tb 的 f_in_valence 赝势",
-        "优化 4f/5s/5p/5d/6s 各通道截断半径",
-        "通过 ghost state 检测",
-        "可迁移性测试（多构型能量差 vs 全电子）"
-      ],
-      "files_to_touch": [
-        "pseudopotentials/rare_earth_custom/",
-        "pseudopotentials/rare_earth_custom/generation_log.md"
-      ],
-      "estimated_effort": "1-2 weeks",
-      "specialist": "workflow",
-      "risk_level": "high",
-      "defer_trigger": "FE-D-A1:completed",
-      "old_ids": [
-        "D-A2",
-        "FE-100(旧)"
-      ]
-    },
-    {
-      "id": "FE-D-A3",
-      "title": "新赝势全面验证",
-      "layer": "validation",
-      "type": "validation",
-      "scope": "cross_code",
-      "status": "deferred",
-      "dependencies": [
-        "FE-D-A2"
-      ],
-      "blocks": [],
-      "description": "使用新生成的赝势重新运行全部验证测试，确保质量改善。与 VASP PAW 对比，Delta-test 框架验证。",
-      "acceptance_criteria": [
-        "重新运行 FE-304 验证",
-        "误差降低到<2%",
-        "Delta-test 框架验证",
-        "与 VASP PAW 对比"
-      ],
-      "files_to_touch": [
-        "projects/f-electron-scf/validation/custom_pp_validation.md"
-      ],
-      "estimated_effort": "1-2 weeks",
-      "specialist": "workflow",
-      "risk_level": "high",
-      "defer_trigger": "FE-D-A2:completed",
-      "old_ids": [
-        "D-A3",
-        "FE-101(旧)"
-      ]
-    },
-    {
-      "id": "FE-D-B1",
-      "title": "NAO 多 zeta 轨道生成与测试",
-      "layer": "workflow",
-      "type": "extend",
-      "scope": "abacus",
-      "status": "deferred",
-      "dependencies": [],
-      "blocks": [
-        "FE-D-B2"
-      ],
-      "description": "用 ABACUS-orbitals 为验证通过的赝势生成 NAO 轨道文件。系统测试组合：SZ/DZP/TZDP，截断半径 6/7/8/9/10 au。评估每种组合对 CeO2 晶格常数、带结构的影响。确定推荐的默认轨道组合。",
-      "acceptance_criteria": [
-        "生成 DZP 和 TZP 轨道文件",
-        "系统测试不同 zeta 数对精度的影响",
-        "LCAO vs PW 对比（能量、力、带结构）",
-        "确定最优轨道组合"
-      ],
-      "files_to_touch": [
-        "orbitals/rare_earth/",
-        "orbitals/rare_earth/optimization_report.md"
-      ],
-      "estimated_effort": "1-2 weeks",
-      "specialist": "abacus-develop",
-      "risk_level": "medium",
-      "defer_trigger": "FE-304:lcao_divergence_above_3pct",
-      "old_ids": [
-        "D-B1",
-        "FE-102(旧)"
-      ]
-    },
-    {
-      "id": "FE-D-B2",
-      "title": "Spillage 算法 f 轨道调优",
-      "layer": "algorithm",
-      "type": "extend",
-      "scope": "abacus",
-      "status": "deferred",
-      "dependencies": [
-        "FE-D-B1"
-      ],
-      "blocks": [],
-      "description": "如果标准 spillage 优化对 f 轨道效果不佳，修改 spillage 算法以更好处理高度局域的 f 轨道。",
-      "acceptance_criteria": [
-        "分析 f 轨道 spillage 优化瓶颈",
-        "调整 spillage 权重或优化策略",
-        "改善 f 轨道质量指标",
-        "与 PW 基组一致性提升"
-      ],
-      "files_to_touch": [
-        "source/source_basis/module_nao/",
-        "tools/ABACUS-orbitals/"
-      ],
-      "estimated_effort": "1-2 weeks",
-      "specialist": "abacus-develop",
-      "risk_level": "medium",
-      "defer_trigger": "FE-D-B1:spillage_issue_detected",
-      "old_ids": [
-        "D-B2",
-        "FE-103(旧)"
-      ]
-    },
     {
       "id": "FE-D-C1",
       "title": "AI 训练数据收集",
       "layer": "workflow",
       "type": "data",
       "scope": "cross_code",
-      "status": "deferred",
+      "status": "terminated",
       "dependencies": [],
-      "blocks": [
-        "FE-D-C2"
-      ],
-      "description": "从验证计算中收集训练数据：(1) 结构信息（元素、坐标、晶格），(2) 收敛后的占据矩阵，(3) f 电子数、自旋态、轨道序，(4) SCF 收敛路径信息。目标：至少 500 个不同结构的数据点。",
+      "blocks": [],
+      "description": "[TERMINATED] 从验证计算中收集训练数据：(1) 结构信息（元素、坐标、晶格），(2) 收敛后的占据矩阵，(3) f 电子数、自旋态、轨道序，(4) SCF 收敛路径信息。目标：至少 500 个不同结构的数据点。\n\n终止原因：见 plans/2026-02-16-critical-review.md",
       "acceptance_criteria": [
         "收集 100+ 个收敛的稀土体系计算",
         "记录：结构、元素、占据矩阵、能量",
@@ -315,14 +141,12 @@
       "layer": "algorithm",
       "type": "new",
       "scope": "local",
-      "status": "deferred",
+      "status": "terminated",
       "dependencies": [
         "FE-D-C1"
       ],
-      "blocks": [
-        "FE-D-C3"
-      ],
-      "description": "训练轻量级模型预测初始占据矩阵：(1) 输入特征：原子类型、近邻环境、氧化态估计，(2) 输出：每个稀土原子的 f 电子占据数和轨道序，(3) 先尝试 MLP/随机森林，再考虑 GNN。",
+      "blocks": [],
+      "description": "[TERMINATED] 训练轻量级模型预测初始占据矩阵：(1) 输入特征：原子类型、近邻环境、氧化态估计，(2) 输出：每个稀土原子的 f 电子占据数和轨道序，(3) 先尝试 MLP/随机森林，再考虑 GNN。\n\n终止原因：见 plans/2026-02-16-critical-review.md",
       "acceptance_criteria": [
         "设计 GNN 架构（结构→占据矩阵）",
         "训练/验证/测试集划分",
@@ -349,12 +173,12 @@
       "layer": "infra",
       "type": "new",
       "scope": "abacus",
-      "status": "deferred",
+      "status": "terminated",
       "dependencies": [
         "FE-D-C2"
       ],
       "blocks": [],
-      "description": "将训练好的模型集成到 ABACUS 工作流：(1) Python 脚本：读取 STRU 文件→模型预测→生成 initial_onsite.dm，(2) 或通过 PyABACUS 接口直接注入，(3) 新增 init_chg='ai' 选项（长期目标）。",
+      "description": "[TERMINATED] 将训练好的模型集成到 ABACUS 工作流：(1) Python 脚本：读取 STRU 文件→模型预测→生成 initial_onsite.dm，(2) 或通过 PyABACUS 接口直接注入，(3) 新增 init_chg='ai' 选项（长期目标）。\n\n终止原因：见 plans/2026-02-16-critical-review.md",
       "acceptance_criteria": [
         "模型推理接口集成到 ABACUS",
         "添加 init_chg=ml 选项",
@@ -384,7 +208,8 @@
       "status": "pending",
       "dependencies": [],
       "blocks": [
-        "FE-302"
+        "FE-302",
+        "FE-005"
       ],
       "description": "系统调研现有稀土f_in_valence模守恒赝势库：PseudoDojo (ONCVPSP), PSlibrary (QE), SG15, GBRV, JTH。收集可用赝势，记录每个赝势的参考构型、截断半径、lmax、验证状态。建立赝势库索引。",
       "acceptance_criteria": [
@@ -411,14 +236,14 @@
       "layer": "core",
       "type": "research",
       "scope": "abacus",
-      "status": "pending",
+      "status": "terminated",
       "dependencies": [],
       "blocks": [
         "FE-200",
         "FE-201",
         "FE-202"
       ],
-      "description": "详细审计ABACUS DFT+U实现：dftu.cpp（主逻辑、U-ramping、omc）、dftu_occup.cpp（占据矩阵mixing）、dftu_hamilt.cpp（哈密顿量）、dftu_yukawa.cpp（自动U）、dftu_pw.cpp（PW限制）。记录每个函数的输入输出、数据流、已知限制。特别关注f电子（l=3）的处理路径。",
+      "description": "[TERMINATED] 详细审计ABACUS DFT+U实现：dftu.cpp（主逻辑、U-ramping、omc）、dftu_occup.cpp（占据矩阵mixing）、dftu_hamilt.cpp（哈密顿量）、dftu_yukawa.cpp（自动U）、dftu_pw.cpp（PW限制）。记录每个函数的输入输出、数据流、已知限制。特别关注f电子（l=3）的处理路径。\n\n终止原因：见 plans/2026-02-16-critical-review.md",
       "acceptance_criteria": [
         "完整的代码审计文档，包含数据流图",
         "f电子处理路径分析",
@@ -461,6 +286,32 @@
       "old_ids": [
         "T0-3"
       ]
+    },
+    {
+      "id": "FE-005",
+      "title": "赝势质量前置验证",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": [
+        "FE-000"
+      ],
+      "blocks": [
+        "FE-302"
+      ],
+      "description": "用现有赝势（SG15/PseudoDojo）对 CeO2、Gd2O3 分别跑 ABACUS 和 VASP 对比。量化偏差：晶格常数、体模量、带隙、磁矩。Go/No-Go 门控：偏差 >5% 则标记赝势不可用，通知项目 f-electron-multiscale 启动赝势生成任务。此任务在 Phase 0 执行，目的是提前暴露赝势质量风险，避免在 Phase 3 才发现问题。",
+      "acceptance_criteria": [
+        "CeO2 和 Gd2O3 的 ABACUS vs VASP 对比完成",
+        "晶格常数、体模量、带隙偏差量化记录",
+        "Go/No-Go 判定文档产出"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/pseudopotential_precheck/"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "workflow",
+      "risk_level": "medium"
     },
     {
       "id": "FE-100",
@@ -910,7 +761,6 @@
       "scope": "abacus",
       "status": "pending",
       "dependencies": [
-        "FE-001",
         "FE-105"
       ],
       "blocks": [
@@ -944,9 +794,7 @@
       "type": "algorithm",
       "scope": "abacus",
       "status": "pending",
-      "dependencies": [
-        "FE-001"
-      ],
+      "dependencies": [],
       "blocks": [
         "FE-204"
       ],
@@ -977,12 +825,8 @@
       "type": "algorithm",
       "scope": "abacus",
       "status": "pending",
-      "dependencies": [
-        "FE-001"
-      ],
-      "blocks": [
-        "FE-203"
-      ],
+      "dependencies": [],
+      "blocks": [],
       "description": "在 dftu.cpp 中实现：(1) 随机占据矩阵初始化（在合理物理约束内随机），(2) 基于氧化态的化学直觉初始化（如 Ce4+ → f^0, Ce3+ → f^1），(3) 多起点并行探索接口（运行 N 个不同初始化的 SCF，选最低能量）。新增输入参数：omc_random, omc_nstart, omc_seed。",
       "acceptance_criteria": [
         "添加 omc_mode=random 选项",
@@ -1011,14 +855,14 @@
       "layer": "algorithm",
       "type": "algorithm",
       "scope": "abacus",
-      "status": "pending",
+      "status": "terminated",
       "dependencies": [
         "FE-202"
       ],
       "blocks": [
         "FE-204"
       ],
-      "description": "实现占据退火：(1) 初始阶段使用高 smearing 温度（如 0.1 Ry），使占据矩阵平滑化，(2) 逐步降低 smearing 到目标值（如 0.01 Ry），(3) 与 U-ramping 协同：先 ramping U 到目标值，再退火 smearing。在 dftu_occup.cpp 中实现退火调度器。",
+      "description": "[TERMINATED] 实现占据退火：(1) 初始阶段使用高 smearing 温度（如 0.1 Ry），使占据矩阵平滑化，(2) 逐步降低 smearing 到目标值（如 0.01 Ry），(3) 与 U-ramping 协同：先 ramping U 到目标值，再退火 smearing。在 dftu_occup.cpp 中实现退火调度器。\n\n终止原因：见 plans/2026-02-16-critical-review.md",
       "acceptance_criteria": [
         "实现 smearing 温度退火",
         "与 U-ramping 协同",
@@ -1046,8 +890,7 @@
       "status": "pending",
       "dependencies": [
         "FE-200",
-        "FE-201",
-        "FE-203"
+        "FE-201"
       ],
       "blocks": [
         "FE-205",
@@ -1083,10 +926,8 @@
       "dependencies": [
         "FE-204"
       ],
-      "blocks": [
-        "FE-302"
-      ],
-      "description": "实现 constrained DFT：(1) 新模块 charge_constraint.cpp，添加惩罚势 V = λ·(n_f - n_target)^2 到哈密顿量，(2) 约束强度 λ 从大到小逐步释放（类似 U-ramping），(3) 支持按原子指定目标 f 电子数，(4) 与 DFT+U 的 omc 协同工作。这是确保 f 电子体系收敛到正确基态的关键手段。",
+      "blocks": [],
+      "description": "[EPIC][工程追赶] 实现 constrained DFT：(1) 新模块 charge_constraint.cpp，添加惩罚势 V = λ·(n_f - n_target)^2 到哈密顿量，(2) 约束强度 λ 从大到小逐步释放（类似 U-ramping），(3) 支持按原子指定目标 f 电子数，(4) 与 DFT+U 的 omc 协同工作。这是确保 f 电子体系收敛到正确基态的关键手段。\n\n已分解为子任务：FE-205-1（模块骨架与参数）→ FE-205-2（惩罚势与投影）→ FE-205-3（Lambda 调度与 SCF 集成）→ FE-205-4（omc 协同与端到端验证）",
       "acceptance_criteria": [
         "Ce2O3 中 Ce 的 f 电子数可被约束到目标值±0.1",
         "释放约束后保持",
@@ -1105,6 +946,131 @@
       "risk_level": "medium",
       "old_ids": [
         "T2-3",
+        "FE-205"
+      ]
+    },
+    {
+      "id": "FE-205-1",
+      "title": "ChargeConstraint 模块骨架与输入参数",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [
+        "FE-204"
+      ],
+      "blocks": [
+        "FE-205-2"
+      ],
+      "description": "[工程追赶] 创建 charge_constraint.h/cpp 模块骨架：\n(1) ChargeConstraint 类定义，包含 per-atom 约束参数结构体 (atom_index, n_target, lambda, orbital_l)\n(2) INPUT 参数扩展：chg_constraint (bool), chg_constraint_atoms (string), chg_constraint_targets (double[]), chg_constraint_lambda0 (double)\n(3) 从 INPUT 解析约束配置并初始化 ChargeConstraint 实例\n(4) 单元测试验证参数解析正确性",
+      "acceptance_criteria": [
+        "charge_constraint.h/cpp 编译通过",
+        "INPUT 参数可正确解析约束配置",
+        "单元测试覆盖参数解析"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_constraint.h (NEW)",
+        "source/source_estate/module_charge/charge_constraint.cpp (NEW)",
+        "source/source_io/module_parameter/input_parameter.h"
+      ],
+      "estimated_effort": "2 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "old_ids": [
+        "FE-205"
+      ]
+    },
+    {
+      "id": "FE-205-2",
+      "title": "惩罚势计算与占据数投影",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [
+        "FE-205-1"
+      ],
+      "blocks": [
+        "FE-205-3"
+      ],
+      "description": "[工程追赶] 实现惩罚势核心算法：\n(1) 从 DFT+U 的 onsite projector 获取 f 轨道占据矩阵，计算 n_f = Tr(occupation_matrix) 得到 f 电子数\n(2) 实现二次惩罚势 V_penalty = λ·(n_f - n_target)²，计算对应的势能贡献和力贡献 dV/dn = 2λ·(n_f - n_target)\n(3) 将惩罚势叠加到 Hamiltonian（复用 DFT+U 的 V_eff 接口）\n(4) 单元测试：给定已知占据矩阵，验证惩罚势数值正确",
+      "acceptance_criteria": [
+        "惩罚势 V = λ·(n_f - n_target)² 计算正确",
+        "势能贡献正确叠加到 Hamiltonian",
+        "与 DFT+U projector 接口对接",
+        "数值单元测试通过"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_constraint.cpp",
+        "source/source_lcao/module_dftu/dftu.cpp"
+      ],
+      "estimated_effort": "3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": [
+        "FE-205"
+      ]
+    },
+    {
+      "id": "FE-205-3",
+      "title": "Lambda 调度策略与 SCF 集成",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [
+        "FE-205-2"
+      ],
+      "blocks": [
+        "FE-205-4"
+      ],
+      "description": "[工程追赶] 实现约束强度的逐步释放机制并集成到 SCF 主循环：\n(1) Lambda 调度器：支持指数衰减 λ(t) = λ₀·exp(-t/τ) 和线性衰减两种模式，可配置 λ₀（默认 10.0 eV）、τ（默认 50 步）、λ_final（默认 0.0）\n(2) 在 SCF 主循环的每步调用 ChargeConstraint::update(scf_step)，更新 λ 值并重新计算惩罚势\n(3) 与 FE-204 的能量监控协同：当能量回退触发时暂停 λ 衰减\n(4) 收敛判据扩展：同时满足能量收敛 ΔE < 10⁻⁶ eV 和占据收敛 |n_f - n_target| < 0.05",
+      "acceptance_criteria": [
+        "Lambda 从 λ₀ 逐步衰减到 0",
+        "SCF 循环中正确调用约束更新",
+        "与能量监控（FE-204）协同工作",
+        "收敛判据包含占据数条件"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_constraint.cpp",
+        "source/source_estate/module_charge/charge_mixing.cpp"
+      ],
+      "estimated_effort": "3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": [
+        "FE-205"
+      ]
+    },
+    {
+      "id": "FE-205-4",
+      "title": "与 DFT+U omc 协同及端到端验证",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [
+        "FE-205-3"
+      ],
+      "blocks": [
+        "FE-302"
+      ],
+      "description": "[工程追赶] 实现与 DFT+U occupation matrix control 的协同，并完成端到端验证：\n(1) 当 DFT+U 的 omc 开启时，约束目标自动从 omc 的目标占据矩阵推导 n_target\n(2) 支持 Hund 规则自动构造初始占据矩阵（Ce³⁺ f¹, Gd³⁺ f⁷ 等）\n(3) 端到端测试：Ce2O3 体系，约束 Ce 的 f 电子数到 1.0±0.1，释放约束后验证占据数保持\n(4) 测试 CeO2（f⁰）和 GdN（f⁷）作为额外验证\n(5) 输出诊断信息：每步的 n_f、λ、V_penalty、总能量",
+      "acceptance_criteria": [
+        "Ce2O3 中 Ce 的 f 电子数可被约束到目标值±0.1",
+        "释放约束后占据数保持",
+        "与 DFT+U 占据矩阵控制协同工作",
+        "CeO2 和 GdN 验证通过",
+        "诊断输出完整"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_charge/charge_constraint.cpp",
+        "source/source_lcao/module_dftu/dftu.cpp"
+      ],
+      "estimated_effort": "3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "old_ids": [
         "FE-205"
       ]
     },
@@ -1175,11 +1141,13 @@
       "status": "pending",
       "dependencies": [
         "FE-000",
-        "FE-204"
+        "FE-204",
+        "FE-205-4"
       ],
       "blocks": [
         "FE-303",
-        "FE-304"
+        "FE-304",
+        "FE-306"
       ],
       "description": "基准验证：ABACUS vs VASP PAW 对比 CeO2/Gd2O3/La2O3 的晶格常数、体模量、带隙、磁矩（如适用）。PBE 和 PBE+U 两种泛函。记录 SCF 收敛步数和计算时间。",
       "acceptance_criteria": [
@@ -1236,7 +1204,8 @@
       "status": "pending",
       "dependencies": [
         "FE-302",
-        "FE-301"
+        "FE-301",
+        "FE-306"
       ],
       "blocks": [
         "FE-305",
@@ -1292,6 +1261,32 @@
       ]
     },
     {
+      "id": "FE-306",
+      "title": "CeO2 全电子参考计算 (FHI-aims/Elk)",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": [
+        "FE-302"
+      ],
+      "blocks": [
+        "FE-304"
+      ],
+      "description": "用 FHI-aims 或 Elk 对 CeO2 做全电子 DFT+U 参考计算。提供赝势近似误差的绝对参考。消除'ABACUS ≠ VASP 时无法区分算法问题还是赝势问题'的歧义。对比项：晶格常数、体模量、带隙、Ce 4f 占据数、磁矩。",
+      "acceptance_criteria": [
+        "CeO2 全电子 DFT+U 计算完成",
+        "与 ABACUS 和 VASP 结果三方对比",
+        "赝势近似误差量化"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-scf/validation/all_electron_reference/"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "workflow",
+      "risk_level": "medium"
+    },
+    {
       "id": "FE-400",
       "title": "自动参数选择",
       "layer": "workflow",
@@ -1303,9 +1298,7 @@
         "FE-305"
       ],
       "blocks": [
-        "FE-401",
-        "FE-402",
-        "FE-403"
+        "FE-402"
       ],
       "description": "实现自动参数选择工具：输入结构文件+元素列表，输出推荐的 mixing_beta、Kerker 参数、U 值、占据策略。检测 f 元素并应用最佳实践参数。",
       "acceptance_criteria": [
@@ -1331,14 +1324,12 @@
       "layer": "workflow",
       "type": "new",
       "scope": "abacus",
-      "status": "pending",
+      "status": "terminated",
       "dependencies": [
         "FE-400"
       ],
-      "blocks": [
-        "FE-404"
-      ],
-      "description": "实现 SCF 失败自动诊断和重试机制：监控收敛模式（震荡/发散/慢收敛），自动调整参数重试。最多3次重试策略。",
+      "blocks": [],
+      "description": "[TERMINATED] 实现 SCF 失败自动诊断和重试机制：监控收敛模式（震荡/发散/慢收敛），自动调整参数重试。最多3次重试策略。\n\n终止原因：见 plans/2026-02-16-critical-review.md",
       "acceptance_criteria": [
         "识别失败模式（震荡/发散/慢收敛）",
         "自动调整策略：减小 beta/切换退火/尝试随机初始化",
@@ -1392,14 +1383,12 @@
       "layer": "workflow",
       "type": "new",
       "scope": "abacus",
-      "status": "pending",
+      "status": "terminated",
       "dependencies": [
         "FE-400"
       ],
-      "blocks": [
-        "FE-404"
-      ],
-      "description": "编写完整的用户文档和示例：教程、示例库、故障排除指南。",
+      "blocks": [],
+      "description": "[TERMINATED] 编写完整的用户文档和示例：教程、示例库、故障排除指南。\n\n终止原因：见 plans/2026-02-16-critical-review.md",
       "acceptance_criteria": [
         "教程：《ABACUS 稀土 DFT+U 计算指南》",
         "示例库：5-10 个收敛体系的 INPUT 文件和分析",
@@ -1424,13 +1413,13 @@
       "layer": "workflow",
       "type": "new",
       "scope": "abacus",
-      "status": "pending",
+      "status": "terminated",
       "dependencies": [
         "FE-401",
         "FE-403"
       ],
       "blocks": [],
-      "description": "整合所有技术为自动化工作流：(1) 根据输入结构自动选择赝势/轨道/DFT+U 参数，(2) 自动选择 SCF 策略（mixing 参数、是否启用约束、是否多起点），(3) 失败自动诊断和重试，(4) 通过 abacustest 或 PyABACUS 接口暴露。",
+      "description": "[TERMINATED] 整合所有技术为自动化工作流：(1) 根据输入结构自动选择赝势/轨道/DFT+U 参数，(2) 自动选择 SCF 策略（mixing 参数、是否启用约束、是否多起点），(3) 失败自动诊断和重试，(4) 通过 abacustest 或 PyABACUS 接口暴露。\n\n终止原因：见 plans/2026-02-16-critical-review.md",
       "acceptance_criteria": [
         "端到端自动化：用户只需提供结构文件，系统自动完成计算",
         "集成参数推荐、失败诊断、自动重试"

@@ -1,10 +1,12 @@
 {
   "project_id": "f-electron-scf",
-  "name": "Rare-Earth f-electron Norm-Conserving Pseudopotential SCF Convergence",
-  "request": "Solve f_in_valence rare-earth element norm-conserving pseudopotential SCF convergence problems in ABACUS: pseudopotential testing/generation, orbital optimization, DFT+U convergence, high ecutwfc performance, AI-guided initial charge guess, damped charge constraint, and cross-validation with VASP/all-electron codes across alloys, magnetic compounds, surface catalysis, and molecular catalysis scenarios.",
+  "name": "ABACUS 稀土 DFT+U 计算能力完善（工程项目）",
+  "request": "ABACUS 稀土 DFT+U 计算能力完善。完成代码迁移、收敛策略实现、验证与基础自动化。",
   "created": "2026-02-11T12:00:00Z",
-  "last_updated": "2026-02-13T00:00:00Z",
+  "last_updated": "2026-02-16T00:00:00Z",
   "phase": "execute",
   "id_scheme": "FE unified (2026-02-13)",
-  "task_summary": "42 tasks (34 active + 8 deferred), FE-100 in_review"
+  "task_summary": "35 active tasks + 8 terminated, 14 weeks timeline",
+  "restructured": "2026-02-16, split from original 42-task project. Research tasks moved to f-electron-multiscale.",
+  "sibling_project": "f-electron-multiscale"
 }

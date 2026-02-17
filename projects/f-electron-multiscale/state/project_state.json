@@ -1,0 +1,375 @@
+{
+  "request": "基于 ABACUS LCAO + deepmodeling 生态的稀土材料多尺度模拟框架。利用 ABACUS 独有的 LCAO 基组优势，实现 VASP/QE 生态无法提供的大规模稀土计算、DFT+U+V 方法学、以及 DFT→MLP→MD 全链路工作流。",
+  "project_id": "f-electron-multiscale",
+  "phase": "execute",
+  "parsed_intent": {
+    "domain": "rare-earth multiscale simulation with LCAO differentiation",
+    "method": "LCAO optimization + DFT+U+V + DeePMD-kit integration",
+    "validation": "LCAO vs PW benchmarks + MLP accuracy validation",
+    "keywords": [
+      "LCAO",
+      "f-electron",
+      "DFT+U+V",
+      "DeePMD-kit",
+      "DeePTB",
+      "multiscale",
+      "rare-earth",
+      "large-scale simulation",
+      "machine learning potential"
+    ]
+  },
+  "metadata": {
+    "created": "2026-02-16T00:00:00Z",
+    "last_updated": "2026-02-16T00:00:00Z",
+    "origin": "拆分自 f-electron-scf 项目（见 f-electron-scf/plans/2026-02-16-critical-review.md）",
+    "strategy": "LCAO differentiation + deepmodeling ecosystem integration",
+    "timeline": "26 weeks (6 months), starts at week 8 after f-electron-engineering M1",
+    "depends_on_project": "f-electron-scf (M1 completion required)",
+    "id_scheme": "FM-{seq}",
+    "milestones": {
+      "R0": "Week 10 - LCAO f 电子基线建立（基组质量报告）",
+      "R1": "Week 18 - 差异化能力原型（DFT+U+V + 大规模 LCAO 基准）",
+      "R2": "Week 24 - 生态集成（DFT→MLP→MD 全链路）",
+      "R3": "Week 26 - 发表与交付（论文初稿 + 开源工具链）"
+    },
+    "statistics": {
+      "total_tasks": 15,
+      "active_tasks": 13,
+      "deferred_tasks": 4,
+      "in_review": 0,
+      "in_progress": 0,
+      "done": 0,
+      "pending": 13
+    },
+    "phases": {
+      "Phase R0 (LCAO基线)": ["FM-001", "FM-002"],
+      "Phase R1 (差异化原型)": ["FM-003", "FM-004", "FM-005", "FM-006", "FM-007", "FM-008", "FM-009"],
+      "Phase R2 (生态集成)": ["FM-010", "FM-011", "FM-012", "FM-013"],
+      "Phase R3 (发表交付)": ["FM-014", "FM-015"]
+    },
+    "critical_path": "FM-001 → FM-002 → FM-005 → FM-006 → FM-014 (DFT+U+V 路线) | FM-002 → FM-007 → FM-010 → FM-011 → FM-013 → FM-014 (MLP 路线)",
+    "gate_controls": {
+      "R0_lcao_baseline": "LCAO vs PW 偏差 >3% → 触发 FM-003/FM-004",
+      "M0_pseudopotential": "f-electron-scf M0 赝势偏差 >5% → 触发 FM-008/FM-009",
+      "R1_dftuv_feasibility": "DFT+U+V 实现工作量 >4 周 → 降级为可行性报告",
+      "R2_mlp_accuracy": "MLP 力精度 >100 meV/Å → 调整训练策略或降级为概念验证"
+    }
+  },
+  "tasks": [
+    {
+      "id": "FM-001",
+      "title": "LCAO 基组 f 电子收敛性系统测试",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": ["FM-002"],
+      "description": "对 CeO2、Gd2O3、La2O3 分别用 SZ/DZP/TZDP 基组测试 DFT+U SCF 收敛性。记录：(1) 各基组的 SCF 收敛率，(2) 收敛步数，(3) 总能量精度。目的是建立 LCAO f 电子计算的基线数据，明确哪些基组级别可用、哪些不可用。前置条件：f-electron-scf 项目 M1（代码迁移）完成。",
+      "acceptance_criteria": [
+        "三个体系 × 三种基组 = 9 组测试完成",
+        "收敛率、步数、能量精度记录完整",
+        "明确可用基组级别"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-multiscale/validation/lcao_baseline/"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "workflow",
+      "risk_level": "low",
+      "external_dependency": "f-electron-scf M1"
+    },
+    {
+      "id": "FM-002",
+      "title": "LCAO vs PW 精度偏差量化",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FM-001"],
+      "blocks": ["FM-003", "FM-005", "FM-007", "FM-012"],
+      "description": "同一体系（CeO2、Gd2O3）分别用 LCAO 和 PW 基组计算，量化偏差：晶格常数、体模量、带隙、Ce/Gd 4f 占据数。Go/No-Go 门控：LCAO vs PW 偏差 >3% 则触发 FM-003/FM-004（NAO 优化）。",
+      "acceptance_criteria": [
+        "LCAO vs PW 偏差量化完成",
+        "Go/No-Go 判定文档产出",
+        "偏差 ≤3% 则确认 LCAO 可用"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-multiscale/validation/lcao_vs_pw/"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "workflow",
+      "risk_level": "medium"
+    },
+    {
+      "id": "FM-003",
+      "title": "NAO 多 zeta f 轨道生成与测试",
+      "layer": "workflow",
+      "type": "extend",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FM-002"],
+      "blocks": ["FM-004"],
+      "description": "条件触发：FM-002 门控判定 LCAO vs PW 偏差 >3%。使用 ABACUS 的 NAO 生成工具，针对稀土元素（Ce、Gd、La、Nd、Sm、Eu）生成优化的多 zeta 基组。重点优化 4f 轨道的径向函数。迁移自原 FE-D-B1。",
+      "acceptance_criteria": [
+        "稀土元素 NAO 基组生成完成",
+        "4f 轨道径向函数优化",
+        "新基组 vs 旧基组精度对比"
+      ],
+      "files_to_touch": [],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "defer_trigger": "FM-002:lcao_pw_deviation_above_3pct"
+    },
+    {
+      "id": "FM-004",
+      "title": "Spillage 算法 f 轨道调优",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FM-003"],
+      "blocks": [],
+      "description": "条件触发：FM-003 完成后如果 spillage 值仍然偏高。调优 spillage 算法中 f 轨道的权重和截断参数。迁移自原 FE-D-B2。",
+      "acceptance_criteria": [
+        "f 轨道 spillage 值降低到可接受范围",
+        "优化后基组通过精度验证"
+      ],
+      "files_to_touch": [],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "defer_trigger": "FM-003:spillage_issue_detected"
+    },
+    {
+      "id": "FM-005",
+      "title": "DFT+U+V 可行性评估",
+      "layer": "core",
+      "type": "research",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FM-002"],
+      "blocks": ["FM-006"],
+      "description": "调研 QE hp.x 的站间 Hubbard (DFT+U+V) 实现方案，评估在 ABACUS 中实现的：(1) 技术可行性（LCAO 基组下的站间 Hubbard 矩阵元计算），(2) 工作量估计，(3) 对 f 电子体系的预期改进（文献调研）。DFT+U+V 是 DFT+U 方法学的真正前沿，VASP 也没有实现。Go/No-Go：如果评估工作量 >4 周，降级为可行性报告不做原型。",
+      "acceptance_criteria": [
+        "QE hp.x 实现方案调研完成",
+        "ABACUS 实现可行性评估报告",
+        "工作量估计和 Go/No-Go 判定"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-multiscale/research/dftuv_feasibility/"
+      ],
+      "estimated_effort": "1 week",
+      "specialist": "abacus-develop",
+      "risk_level": "medium"
+    },
+    {
+      "id": "FM-006",
+      "title": "DFT+U+V 原型实现",
+      "layer": "algorithm",
+      "type": "algorithm",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FM-005"],
+      "blocks": ["FM-014"],
+      "description": "条件：FM-005 评估可行且工作量 ≤4 周。在 ABACUS LCAO 框架下实现 DFT+U+V 原型：(1) 站间 Hubbard 矩阵元计算，(2) 站间交换相互作用 V 参数支持，(3) 至少对 CeO2 验证 DFT+U+V vs DFT+U 的改进。这是 ABACUS 相对于 VASP 的方法学领先点。",
+      "acceptance_criteria": [
+        "DFT+U+V LCAO 原型可运行",
+        "CeO2 DFT+U+V 计算完成",
+        "与 DFT+U 结果对比，量化改进"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_dftu/"
+      ],
+      "estimated_effort": "2-3 weeks",
+      "specialist": "abacus-develop",
+      "risk_level": "high"
+    },
+    {
+      "id": "FM-007",
+      "title": "大规模稀土 LCAO 性能基准",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": ["FM-002"],
+      "blocks": ["FM-010"],
+      "description": "展示 ABACUS LCAO 在大规模稀土体系上的计算能力优势——这是 VASP（纯 PW）做不到的。测试体系：(1) CeO2 (111) 表面 slab，100-500 原子，(2) 记录计算时间、内存占用、SCF 收敛性，(3) 与 PW 计算成本对比，量化 LCAO 的成本优势。目标：证明 LCAO 可以处理 VASP 无法处理的规模。",
+      "acceptance_criteria": [
+        "100 原子 CeO2 slab LCAO DFT+U 计算成功收敛",
+        "计算成本 LCAO vs PW 对比数据",
+        "性能基准报告"
+      ],
+      "files_to_touch": [
+        "projects/f-electron-multiscale/validation/large_scale_benchmark/"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "workflow",
+      "risk_level": "medium"
+    },
+    {
+      "id": "FM-008",
+      "title": "自定义稀土 NC 赝势生成",
+      "layer": "workflow",
+      "type": "extend",
+      "scope": "external",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": ["FM-009"],
+      "description": "条件触发：f-electron-scf 项目 M0 赝势验证偏差 >5%。搭建 ONCVPSP 环境并生成自定义稀土 NC 赝势（Ce、Gd、La、Nd、Sm、Eu）。包含 f_in_valence 配置优化。迁移自原 FE-D-A1 + FE-D-A2（合并环境搭建和赝势生成）。",
+      "acceptance_criteria": [
+        "ONCVPSP 环境可用",
+        "至少 Ce、Gd、La 三种元素赝势生成",
+        "赝势 transferability 测试通过"
+      ],
+      "files_to_touch": [],
+      "estimated_effort": "2-3 weeks",
+      "specialist": "workflow",
+      "risk_level": "high",
+      "defer_trigger": "f-electron-scf:M0_pseudopotential_deviation_above_5pct"
+    },
+    {
+      "id": "FM-009",
+      "title": "新赝势全面验证",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FM-008"],
+      "blocks": [],
+      "description": "对 FM-008 生成的自定义赝势做全面验证：(1) 与 PseudoDojo/SG15 对比，(2) 与全电子参考对比，(3) 多体系 transferability 测试。迁移自原 FE-D-A3。",
+      "acceptance_criteria": [
+        "新赝势 vs 旧赝势精度对比",
+        "与全电子参考偏差 <2%",
+        "至少 3 个体系 transferability 验证"
+      ],
+      "files_to_touch": [],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "workflow",
+      "risk_level": "high"
+    },
+    {
+      "id": "FM-010",
+      "title": "ABACUS DFT+U → DeePMD-kit 训练数据工作流",
+      "layer": "workflow",
+      "type": "new",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FM-007"],
+      "blocks": ["FM-011"],
+      "description": "设计并实现从 ABACUS DFT+U LCAO 计算到 DeePMD-kit 训练集的自动化工作流：(1) ABACUS 输出格式转换为 DeePMD-kit 训练数据格式（能量、力、应力、virial），(2) 自动化批量计算脚本（AIMD 或 结构扰动），(3) 数据质量检查（异常值检测、覆盖度评估）。这是 deepmodeling 生态首次实现稀土材料的 DFT→MLP 数据管线。",
+      "acceptance_criteria": [
+        "ABACUS → DeePMD-kit 数据转换工具可用",
+        "批量计算脚本可运行",
+        "至少生成 CeO2 的训练数据集"
+      ],
+      "files_to_touch": [],
+      "estimated_effort": "2 weeks",
+      "specialist": "workflow",
+      "risk_level": "medium"
+    },
+    {
+      "id": "FM-011",
+      "title": "稀土体系 MLP 质量验证",
+      "layer": "validation",
+      "type": "validation",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FM-010"],
+      "blocks": ["FM-013"],
+      "description": "用 FM-010 生成的训练数据训练 DeePMD-kit MLP 模型，验证对稀土体系的精度：(1) 能量 RMSE，(2) 力 RMSE（目标 <50 meV/Å），(3) 应力精度，(4) 与 DFT 参考的结构优化对比。Go/No-Go：力精度 >100 meV/Å 则调整训练策略或降级为概念验证。",
+      "acceptance_criteria": [
+        "MLP 模型训练完成",
+        "力 RMSE <50 meV/Å",
+        "结构优化与 DFT 参考一致"
+      ],
+      "files_to_touch": [],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "workflow",
+      "risk_level": "high"
+    },
+    {
+      "id": "FM-012",
+      "title": "DeePTB f 电子紧束缚模型探索",
+      "layer": "core",
+      "type": "research",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FM-002"],
+      "blocks": [],
+      "description": "探索性研究：DeePTB 能否学习 f 电子的紧束缚哈密顿量。(1) 调研 DeePTB 对 d 电子体系的已有结果，(2) 评估 f 轨道（7 个 m_l 分量）对 DeePTB 模型复杂度的影响，(3) 如果可行，对 CeO2 做概念验证。这是探索性任务，允许结论为'当前不可行'。",
+      "acceptance_criteria": [
+        "DeePTB f 电子可行性评估报告",
+        "如可行：CeO2 概念验证",
+        "如不可行：明确技术瓶颈和未来方向"
+      ],
+      "files_to_touch": [],
+      "estimated_effort": "2-3 weeks",
+      "specialist": "workflow",
+      "risk_level": "high"
+    },
+    {
+      "id": "FM-013",
+      "title": "大规模稀土 MD 演示",
+      "layer": "workflow",
+      "type": "new",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FM-011"],
+      "blocks": ["FM-014"],
+      "description": "使用 FM-011 验证通过的 MLP 模型，运行 1000+ 原子稀土体系的 MD 模拟演示。体系选择：CeO2 纳米颗粒或 CeO2 表面吸附。展示 deepmodeling 生态的端到端能力：ABACUS DFT+U → DeePMD-kit MLP → LAMMPS MD。",
+      "acceptance_criteria": [
+        "1000+ 原子 MD 模拟成功运行",
+        "MD 轨迹物理合理（RDF、MSD 等）",
+        "端到端工作流文档"
+      ],
+      "files_to_touch": [],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "workflow",
+      "risk_level": "medium"
+    },
+    {
+      "id": "FM-014",
+      "title": "方法学论文撰写",
+      "layer": "core",
+      "type": "new",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FM-006", "FM-013"],
+      "blocks": ["FM-015"],
+      "description": "撰写方法学论文，内容覆盖：(1) ABACUS LCAO DFT+U 稀土计算能力与大规模基准，(2) DFT+U+V 原型实现与验证（如完成），(3) DFT→MLP→MD 多尺度工作流，(4) 与 VASP/QE 的差异化对比。目标期刊：JCTC 或 CPC。",
+      "acceptance_criteria": [
+        "论文初稿完成",
+        "所有计算数据和图表就绪",
+        "合作者审阅通过"
+      ],
+      "files_to_touch": [],
+      "estimated_effort": "2 weeks",
+      "specialist": "tech-writer",
+      "risk_level": "low"
+    },
+    {
+      "id": "FM-015",
+      "title": "文档与开源工具链",
+      "layer": "workflow",
+      "type": "new",
+      "scope": "cross_code",
+      "status": "pending",
+      "dependencies": ["FM-014"],
+      "blocks": [],
+      "description": "整理项目产出为可复现的开源工具链：(1) LCAO f 电子计算最佳实践文档，(2) DFT→MLP 数据管线使用指南，(3) 示例输入文件和脚本，(4) 基准数据集发布。",
+      "acceptance_criteria": [
+        "文档完整可读",
+        "示例可复现",
+        "工具链发布"
+      ],
+      "files_to_touch": [],
+      "estimated_effort": "1 week",
+      "specialist": "tech-writer",
+      "risk_level": "low"
+    }
+  ],
+  "audit_items": [],
+  "decisions": []
+}

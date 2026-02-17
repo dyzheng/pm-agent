@@ -1,0 +1,36 @@
+digraph Dependencies {
+  rankdir=LR;
+  node [shape=box, style=rounded, fontsize=11];
+  label="Rare-Earth f-electron Multiscale Simulation Framework (LCAO + deepmodeling) Dependency Graph";
+
+  "FM-001" [label="FM-001\nLCAO 基组 f 电子收敛性系统测试", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "FM-002" [label="FM-002\nLCAO vs PW 精度偏差量化", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "FM-003" [label="FM-003\nNAO 多 zeta f 轨道生成与测试", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "FM-004" [label="FM-004\nSpillage 算法 f 轨道调优", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "FM-005" [label="FM-005\nDFT+U+V 可行性评估", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "FM-006" [label="FM-006\nDFT+U+V 原型实现", fillcolor="#3498db", style="filled,rounded", penwidth=3];
+  "FM-007" [label="FM-007\n大规模稀土 LCAO 性能基准", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "FM-008" [label="FM-008\n自定义稀土 NC 赝势生成", fillcolor="#3498db", style="filled,rounded", penwidth=3];
+  "FM-009" [label="FM-009\n新赝势全面验证", fillcolor="#3498db", style="filled,rounded", penwidth=3];
+  "FM-010" [label="FM-010\nABACUS DFT+U → DeePMD-kit 训练数据...", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "FM-011" [label="FM-011\n稀土体系 MLP 质量验证", fillcolor="#3498db", style="filled,rounded", penwidth=3];
+  "FM-012" [label="FM-012\nDeePTB f 电子紧束缚模型探索", fillcolor="#3498db", style="filled,rounded", penwidth=3];
+  "FM-013" [label="FM-013\n大规模稀土 MD 演示", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "FM-014" [label="FM-014\n方法学论文撰写", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "FM-015" [label="FM-015\n文档与开源工具链", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+
+  "FM-001" -> "FM-002";
+  "FM-002" -> "FM-003";
+  "FM-003" -> "FM-004";
+  "FM-002" -> "FM-005";
+  "FM-005" -> "FM-006";
+  "FM-002" -> "FM-007";
+  "FM-008" -> "FM-009";
+  "FM-007" -> "FM-010";
+  "FM-010" -> "FM-011";
+  "FM-002" -> "FM-012";
+  "FM-011" -> "FM-013";
+  "FM-006" -> "FM-014";
+  "FM-013" -> "FM-014";
+  "FM-014" -> "FM-015";
+}

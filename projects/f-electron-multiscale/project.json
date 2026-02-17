@@ -1,0 +1,11 @@
+{
+  "project_id": "f-electron-multiscale",
+  "name": "Rare-Earth f-electron Multiscale Simulation Framework (LCAO + deepmodeling)",
+  "request": "基于 ABACUS LCAO + deepmodeling 生态的稀土材料多尺度模拟框架。利用 ABACUS 独有的 LCAO 基组优势，实现 VASP/QE 生态无法提供的大规模稀土计算、DFT+U+V 方法学、以及 DFT→MLP→MD 全链路工作流。",
+  "created": "2026-02-16T00:00:00Z",
+  "last_updated": "2026-02-16T00:00:00Z",
+  "phase": "execute",
+  "id_scheme": "FM-{seq}",
+  "task_summary": "15 tasks (13 active + 2 conditionally deferred), depends on f-electron-scf M1",
+  "origin": "拆分自 f-electron-scf（见 f-electron-scf/plans/2026-02-16-critical-review.md）"
+}

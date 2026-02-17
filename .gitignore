@@ -10,6 +10,7 @@ projects/*
 
 # But track example/demo projects
 !projects/f-electron-scf/
+!projects/f-electron-multiscale/
 
 # Ignore temp files in tracked projects
 projects/**/.DS_Store
