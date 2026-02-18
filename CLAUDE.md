@@ -37,7 +37,7 @@ python -m pytest tests/test_pipeline.py -v
 
 All data flows through `ProjectState`, a dataclass designed for 1:1 migration to LangGraph `TypedDict`. Key types:
 
-- **Enums:** `Phase`, `Layer`, `TaskType`, `Scope`, `AuditStatus`, `GateType`, `GateStatus`, `DecisionType`, `TaskStatus`
+- **Enums:** `Phase`, `Layer`, `TaskType`, `Scope`, `AuditStatus`, `GateType`, `GateStatus`, `DecisionType`, `TaskStatus` (PENDING / IN_PROGRESS / IN_REVIEW / DONE / FAILED / DEFERRED / TERMINATED)
 - **Core dataclasses:** `Task`, `AuditItem`, `Draft`, `GateResult`, `IntegrationResult`, `Decision`, `ProjectState`
 - **Execution dataclasses:** `TaskBrief` (context package for specialist agents), `IntegrationTest` (test definition with command + reference)
 - **Hook dataclasses:** `ReviewResult` (AI review output), `HumanApproval` (human gate decision)
@@ -81,7 +81,7 @@ AST-based live code analysis for when the static registry can't answer a questio
 
 - **`capabilities.yaml`** — Static capability registry for the deepmodeling ecosystem
 - **`branches.yaml`** — In-development branch tracking (component → branch entries with status)
-- **`hooks.yaml`** — AI review checks, human approval gates, and regenerate hooks per phase (`after_audit`, `after_decompose`, `after_task_complete`)
+- **`hooks.yaml`** — AI review checks, human approval gates, brainstorm risk checks, critical review checks, and regenerate hooks per phase (`after_audit`, `after_decompose`, `after_task_complete`)
 
 ### Research Review & Literature Analysis (`src/phases/research_review.py`, `src/phases/literature_review.py`)
 
@@ -359,6 +359,62 @@ The orchestrator-agent pattern provides efficient context management:
 ### Current Limitations
 
 Agent invocation currently uses mock execution for testing. In production, agents would be invoked using the Task tool for context isolation. The infrastructure is ready - replace `_generate_mock_agent_output()` in `src/optimizer/orchestrator.py` with real Task tool invocation.
+
+## Brainstorm & Critical Review (`src/brainstorm.py`)
+
+**NEW (2026-02):** Feedback-driven task risk detection, mutation, and critical project review.
+
+### Overview
+
+The brainstorm system scans tasks for risk indicators, generates structured prompts for human review, and applies task mutations (defer/keep/split/terminate/drop) based on decisions. It also provides autonomous critical project review to detect mislabeled catch-up work, redundant tasks, and low-ROI busywork.
+
+### Risk Detection Checks
+
+**Standard brainstorm checks** (run after decompose):
+- `external_dependency` — flags tasks depending on external tools/data
+- `high_uncertainty` — flags research/exploration tasks with unpredictable outcomes
+- `long_critical_path` — flags tasks blocking many downstream tasks
+
+**Critical review checks** (run after decompose):
+- `novelty_gap` — flags tasks with catch-up indicators ("移植", "port", "迁移") mislabeled as frontier/high-priority
+- `redundant_with_peers` — flags tasks with overlapping titles/descriptions/files_to_touch
+- `low_roi` — flags leaf-node documentation/automation tasks with no downstream dependents
+
+### Task Actions
+
+| Action | Effect | Audit Trail |
+|--------|--------|-------------|
+| `defer` | Set DEFERRED status, suspend downstream deps, set trigger condition | Preserved, reversible via `restore` |
+| `keep` | No change | Recorded |
+| `split` | Replace with safe part (PENDING) + risky part (DEFERRED) | Both parts tracked |
+| `terminate` | Set TERMINATED status, prepend `[TERMINATED]`, clean downstream deps | Task preserved in state |
+| `drop` | Remove task entirely, clean dangling deps | Task removed |
+
+### Running Critical Review
+
+```python
+from src.state import ProjectState
+from src.brainstorm import flag_risky_tasks, run_brainstorm
+
+# Flag tasks with critical review checks
+questions = flag_risky_tasks(state, checks=["novelty_gap", "redundant_with_peers", "low_roi"])
+
+# Or run full brainstorm flow (interactive/file/auto modes)
+run_brainstorm(state, "after_decompose",
+    checks=["novelty_gap", "redundant_with_peers", "low_roi"],
+    mode="interactive")
+```
+
+### Adding a New Brainstorm Check
+
+1. Add a check function to `src/brainstorm.py`: `def _check_name(task: Task, all_tasks: list[Task], keywords: list[str] | None = None) -> str:` (returns reason string or empty)
+2. Register it in the `check_map` dict in `flag_risky_tasks()`
+3. Add the check name to the appropriate hook in `hooks.yaml`
+4. Add tests in `tests/test_brainstorm.py`
+
+### Deferred Task Triggers
+
+After task completion, `check_deferred_triggers(state, completed_task_id)` automatically promotes deferred tasks whose trigger conditions are met. Trigger format: `"TASK-ID:condition"` (e.g., `"FE-304:accuracy_below_threshold"`).
 
 ## Related Repositories
 

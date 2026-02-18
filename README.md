@@ -9,6 +9,10 @@ Takes high-level feature requests like *"Develop an NEB calculation workflow wit
 - **Intake** — Parses natural language requests into structured intent (domain, methods, validation criteria)
 - **Audit** — Checks capabilities against a hybrid registry (static YAML + live AST-based code analysis)
 - **Decompose** — Generates bottom-up ordered tasks (Core C++ -> Infra -> Algorithm -> Workflow) with dependencies and acceptance criteria
+- **Brainstorm** — Risk detection and task mutation (defer/keep/split/terminate/drop) with human-in-the-loop review
+- **Critical Review** — Autonomous project health checks: novelty gap detection, redundancy analysis, low-ROI task flagging
+- **Execute & Verify** — Specialist dispatch, human review gates, quality gates, integration validation
+- **Optimization** — Orchestrator-agent pattern for deliverable analysis and task decomposition
 - **State persistence** — Save/resume project state as JSON at any phase
 - **LangGraph-ready** — All phase functions are `(state) -> state`, designed for direct migration to LangGraph nodes
 
@@ -35,23 +39,48 @@ for task in state.tasks:
     print(f"[{task.id}] {task.title} ({task.layer.value})")
 ```
 
+### Running Critical Review
+
+```python
+from src.brainstorm import flag_risky_tasks
+
+# Detect mislabeled catch-up, redundancy, and low-ROI tasks
+questions = flag_risky_tasks(state,
+    checks=["novelty_gap", "redundant_with_peers", "low_roi"])
+
+for q in questions:
+    print(f"[{q.task_id}] {q.title}")
+    print(f"  {q.risk_reason}")
+```
+
 ## Architecture
 
 ```
-INTAKE -> AUDIT -> DECOMPOSE -> EXECUTE -> VERIFY -> INTEGRATE
-                                  (not yet implemented)
+INTAKE -> AUDIT -> DECOMPOSE -> BRAINSTORM -> EXECUTE -> VERIFY -> INTEGRATE
+                                    |
+                              critical_review
 ```
 
 Each phase is a pure function taking and returning `ProjectState`. The state model uses Python dataclasses, portable to LangGraph `TypedDict`.
 
 | Component | File | Purpose |
 |-----------|------|---------|
-| State model | `src/state.py` | 8 enums, 7 dataclasses, JSON serialization |
+| State model | `src/state.py` | 9 enums, 7+ dataclasses, JSON serialization |
 | Registry | `src/registry.py` | YAML-based capability lookup and search |
 | Code analyzer | `src/code_analyzer.py` | Live AST inspection of source repos |
 | Intake | `src/phases/intake.py` | Request parsing |
 | Audit | `src/phases/audit.py` | Capability gap analysis |
 | Decompose | `src/phases/decompose.py` | Task generation with layer ordering |
+| Brainstorm | `src/brainstorm.py` | Risk detection, critical review, task mutation |
+| Optimizer | `src/optimizer/` | Autonomous project health analysis |
+| Pipeline | `src/pipeline.py` | Top-level orchestrator with hook integration |
+
+## Active Projects
+
+| Project | Type | Tasks | Timeline | Description |
+|---------|------|-------|----------|-------------|
+| [f-electron-scf](projects/f-electron-scf/) | Engineering | 35 active | 14 weeks | ABACUS rare-earth DFT+U capability completion |
+| [f-electron-multiscale](projects/f-electron-multiscale/) | Research | 15 | 26 weeks | LCAO differentiation + deepmodeling ecosystem integration |
 
 ## deepmodeling Ecosystem
 
@@ -72,7 +101,7 @@ Capabilities are registered in `capabilities.yaml` and queried during the audit 
 ## Tests
 
 ```bash
-# 48 tests, 95% coverage, ~0.1s
+# 379 tests, ~0.7s
 python -m pytest tests/ -v
 python -m pytest tests/ --cov=src --cov-report=term-missing
 ```
