@@ -693,8 +693,14 @@ class TestCheckNoveltyGap:
 class TestCheckRedundantWithPeers:
     def test_flags_overlapping_files(self):
         tasks = [
-            _make_task("T1", title="占据矩阵随机初始化与多起点探索"),
-            _make_task("T2", title="占据矩阵退火与多起点策略"),
+            _make_task(
+                "T1", title="occupation matrix random init multi-start",
+                description="implement random initialization and multi-start exploration",
+            ),
+            _make_task(
+                "T2", title="occupation matrix annealing multi-start",
+                description="implement annealing initialization and multi-start exploration",
+            ),
         ]
         tasks[0].files_to_touch = ["module_dftu/dftu.cpp"]
         tasks[1].files_to_touch = ["module_dftu/dftu.cpp"]
@@ -704,7 +710,7 @@ class TestCheckRedundantWithPeers:
     def test_flags_high_title_overlap(self):
         tasks = [
             _make_task("T1", title="占据矩阵 随机初始化 多起点 探索 策略"),
-            _make_task("T2", title="占据矩阵 退火 多起点 探索 策略"),
+            _make_task("T2", title="占据矩阵 随机初始化 多起点 探索 退火"),
         ]
         qs = flag_risky_tasks(_make_state(tasks), checks=["redundant_with_peers"])
         assert any("redundant_with_peers" in q.risk_reason for q in qs)

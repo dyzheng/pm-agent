@@ -84,11 +84,15 @@ def _check_novelty_gap(
 ) -> str:
     """Flag tasks that look like engineering catch-up but are labeled high priority.
 
-    Detects mislabeled work: tasks whose description contains catch-up
-    indicators but carry frontier/high-priority labels.
+    Detects mislabeled work: tasks whose title or core description contains
+    catch-up indicators but carry frontier/high-priority labels.
+    Excludes dependency/prerequisite context to avoid false positives.
     """
     kws = keywords or _NOVELTY_GAP_KEYWORDS
-    text = f"{task.title} {task.description}".lower()
+    # Only scan title + first sentence of description (core intent),
+    # not prerequisite/dependency context which may mention "迁移" etc.
+    desc_core = task.description.split("。")[0] if task.description else ""
+    text = f"{task.title} {desc_core}".lower()
     matched = [kw for kw in kws if kw.lower() in text]
     if not matched:
         return ""
@@ -122,20 +126,24 @@ def _check_redundant_with_peers(
                 f"{other.title} {other.description}".lower().split(),
             )
             overlap = task_words & other_words
-            # Require significant word overlap (>40% of smaller set)
+            # Require significant word overlap (>60% of smaller set)
+            # to distinguish true redundancy from tasks that share files
+            # but have different responsibilities (e.g. force vs stress).
             min_len = min(len(task_words), len(other_words))
-            if min_len > 0 and len(overlap) / min_len > 0.4:
+            if min_len > 0 and len(overlap) / min_len > 0.6:
                 return (
                     f"redundant_with_peers: overlaps with {other.id} "
                     f"({len(overlap)} shared words, shared files)"
                 )
         # Check high title similarity (simple word overlap)
+        # Use 80% threshold to avoid false positives on tasks sharing
+        # a common module prefix (e.g. "DFT+U PW" family).
         title_words_a = set(task.title.lower().split())
         title_words_b = set(other.title.lower().split())
         if len(title_words_a) >= 3 and len(title_words_b) >= 3:
             title_overlap = title_words_a & title_words_b
             min_title = min(len(title_words_a), len(title_words_b))
-            if min_title > 0 and len(title_overlap) / min_title > 0.6:
+            if min_title > 0 and len(title_overlap) / min_title >= 0.8:
                 return (
                     f"redundant_with_peers: title overlap with {other.id} "
                     f"('{other.title}')"
