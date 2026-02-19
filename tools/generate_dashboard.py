@@ -31,25 +31,34 @@ def _load_project_extra(project_dir: Path) -> dict:
         "phases": {},
     }
 
-    # project_state_meta.json
-    meta_path = project_dir / "state" / "project_state_meta.json"
-    if meta_path.exists():
-        try:
-            meta = json.loads(meta_path.read_text())
-            extra["meta"] = meta
-            md = meta.get("metadata", meta)
-            extra["description"] = meta.get("request", "")
+    # Try project_state_meta.json first, then fall back to project_state.json
+    def _extract_meta(data: dict) -> None:
+        md = data.get("metadata", data)
+        if not extra["description"]:
+            extra["description"] = data.get("request", "")
+        if not extra["timeline"]:
             extra["timeline"] = md.get("timeline", "")
+        if not extra["critical_path"]:
             extra["critical_path"] = md.get("critical_path", "")
+        if not extra["phases"]:
             extra["phases"] = md.get("phases", {})
-
-            # Build milestones list
+        if not extra["milestones"]:
             raw_ms = md.get("milestones", {})
             if isinstance(raw_ms, dict):
                 for k, v in raw_ms.items():
                     extra["milestones"].append({"id": k, "description": v})
-        except (json.JSONDecodeError, OSError):
-            pass
+
+    for candidate in [
+        project_dir / "state" / "project_state_meta.json",
+        project_dir / "state" / "project_state.json",
+    ]:
+        if candidate.exists():
+            try:
+                data = json.loads(candidate.read_text())
+                extra["meta"] = extra["meta"] or data
+                _extract_meta(data)
+            except (json.JSONDecodeError, OSError):
+                pass
 
     # project.json fallback for description
     pj_path = project_dir / "project.json"
