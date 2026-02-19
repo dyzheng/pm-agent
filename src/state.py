@@ -134,6 +134,8 @@ class Task:
     defer_trigger: str = ""
     original_dependencies: list[str] = field(default_factory=list)
     suspended_dependencies: list[str] = field(default_factory=list)
+    started_at: str = ""
+    completed_at: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -156,6 +158,8 @@ class Task:
             "defer_trigger": self.defer_trigger,
             "original_dependencies": self.original_dependencies,
             "suspended_dependencies": self.suspended_dependencies,
+            "started_at": self.started_at,
+            "completed_at": self.completed_at,
         }
 
     @classmethod
@@ -193,6 +197,8 @@ class Task:
             defer_trigger=data.get("defer_trigger", ""),
             original_dependencies=data.get("original_dependencies", []),
             suspended_dependencies=data.get("suspended_dependencies", []),
+            started_at=data.get("started_at", ""),
+            completed_at=data.get("completed_at", ""),
         )
 
 
@@ -490,6 +496,8 @@ class ProjectState:
     optimization_history: list[str] = field(default_factory=list)
     last_optimization: str | None = None
     optimization_metadata: dict[str, Any] = field(default_factory=dict)
+    charter: dict[str, Any] = field(default_factory=dict)
+    closure: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         """Serialize the full state to a JSON-compatible dict."""
@@ -512,6 +520,8 @@ class ProjectState:
             "optimization_history": self.optimization_history,
             "last_optimization": self.last_optimization,
             "optimization_metadata": self.optimization_metadata,
+            "charter": self.charter,
+            "closure": self.closure,
         }
 
     @classmethod
@@ -555,6 +565,8 @@ class ProjectState:
             optimization_history=data.get("optimization_history", []),
             last_optimization=data.get("last_optimization"),
             optimization_metadata=data.get("optimization_metadata", {}),
+            charter=data.get("charter", {}),
+            closure=data.get("closure", {}),
         )
 
     def save(self, path: str | Path) -> None:

@@ -29,6 +29,7 @@ def _load_project_extra(project_dir: Path) -> dict:
         "timeline": "",
         "critical_path": "",
         "phases": {},
+        "burndown": {},
     }
 
     # Try project_state_meta.json first, then fall back to project_state.json
@@ -128,6 +129,14 @@ def _load_project_extra(project_dir: Path) -> dict:
                             refs.append(line.strip())
                     if refs:
                         entry["detailed_refs"] = refs
+
+    # Burndown data
+    bd_path = project_dir / "burndown.json"
+    if bd_path.exists():
+        try:
+            extra["burndown"] = json.loads(bd_path.read_text())
+        except (json.JSONDecodeError, OSError):
+            pass
 
     return extra
 
@@ -371,6 +380,7 @@ body{
   <button class="tab" data-view="references">References</button>
   <button class="tab" data-view="graph">Dependencies</button>
   <button class="tab" data-view="deferred">Deferred</button>
+  <button class="tab" data-view="burndown">Burndown</button>
 </div>
 
 <div class="content">
@@ -381,6 +391,7 @@ body{
   <div id="references-view" class="view"></div>
   <div id="graph-view" class="view"></div>
   <div id="deferred-view" class="view"></div>
+  <div id="burndown-view" class="view"></div>
 </div>
 
 <div class="modal-overlay" id="modal-overlay">
@@ -856,6 +867,67 @@ function bindCardClicks(container) {
 }
 
 init();
+</script>
+<script>
+/* ── BURNDOWN (separate block to keep main JS clean) ── */
+function renderBurndown() {
+  const view = document.getElementById('burndown-view');
+  const bd = extra.burndown || {};
+  const points = bd.burndown || [];
+  const vel = bd.velocity || {};
+  const fc = bd.forecast || {};
+
+  let html = '<h2 class="section-h">Velocity & Burndown</h2>';
+
+  // Velocity stats row
+  html += '<div class="overview-grid">';
+  html += `<div class="overview-card"><h3>Velocity</h3><div class="mono">
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">Tasks/week (${vel.window_weeks||4}w window):</span> <span style="color:var(--amber);font-size:18px">${vel.tasks_per_week||0}</span></div>
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">Completed in window:</span> <span style="color:var(--text)">${vel.completed_in_window||0}</span></div>
+    <div><span style="color:var(--text3)">Total completed:</span> <span style="color:var(--green)">${vel.total_completed||0}</span> / ${vel.total_tasks||0}</div>
+  </div></div>`;
+
+  // Forecast card
+  const onTrack = fc.on_track;
+  const fcColor = onTrack ? 'var(--green)' : 'var(--red)';
+  const fcLabel = onTrack ? 'ON TRACK' : 'BEHIND SCHEDULE';
+  html += `<div class="overview-card"><h3>Forecast</h3><div class="mono">
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">Status:</span> <span style="color:${fcColor};font-size:14px;font-weight:500">${fcLabel}</span></div>
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">Forecast date:</span> <span style="color:var(--text)">${fc.forecast_date ? fc.forecast_date.split('T')[0] : 'N/A'}</span></div>
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">Deadline:</span> <span style="color:var(--text)">${fc.deadline||'N/A'}</span></div>
+    <div><span style="color:var(--text3)">Tasks remaining:</span> <span style="color:var(--orange)">${fc.tasks_remaining||0}</span></div>
+  </div></div>`;
+  html += '</div>';
+
+  // Burndown chart (CSS-only bar chart)
+  if (points.length > 0) {
+    const maxVal = Math.max(...points.map(p => Math.max(p.remaining, p.ideal)));
+    html += '<div style="margin-top:24px"><h3 class="section-h">Burndown Chart</h3>';
+    html += '<div style="display:flex;align-items:flex-end;gap:2px;height:200px;padding:16px 0;border-bottom:1px solid var(--border)">';
+    points.forEach(p => {
+      const rH = maxVal > 0 ? (p.remaining / maxVal * 160) : 0;
+      const iH = maxVal > 0 ? (p.ideal / maxVal * 160) : 0;
+      const w = Math.max(8, Math.floor(600 / points.length));
+      html += `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;max-width:${w+20}px" title="Week ${p.week}: ${p.remaining} remaining (ideal: ${p.ideal})">
+        <div style="display:flex;align-items:flex-end;gap:1px;height:164px">
+          <div style="width:${w/2}px;height:${rH}px;background:var(--amber);opacity:.7;transition:height .3s"></div>
+          <div style="width:${w/2}px;height:${iH}px;background:var(--border2);transition:height .3s"></div>
+        </div>
+        <div style="font-size:8px;color:var(--text3)">W${p.week}</div>
+      </div>`;
+    });
+    html += '</div>';
+    html += '<div style="display:flex;gap:16px;margin-top:8px;font-size:10px;color:var(--text3)">';
+    html += '<span><span style="display:inline-block;width:10px;height:10px;background:var(--amber);opacity:.7;vertical-align:middle;margin-right:4px"></span>Actual remaining</span>';
+    html += '<span><span style="display:inline-block;width:10px;height:10px;background:var(--border2);vertical-align:middle;margin-right:4px"></span>Ideal burndown</span>';
+    html += '</div></div>';
+  } else {
+    html += '<div class="empty" style="margin-top:24px">No burndown data. Run <code>python -m tools.generate_burndown</code> to generate.</div>';
+  }
+
+  view.innerHTML = html;
+}
+if (typeof renderBurndown === 'function') renderBurndown();
 </script>
 <script type="text/plain" id="embedded-svg">{{EMBEDDED_SVG}}</script>
 </body>

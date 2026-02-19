@@ -81,3 +81,21 @@ hooks:
       checks:
         - dashboard
         - dependency_graph
+        - burndown
+
+  after_milestone:
+    velocity_check:
+      enabled: true
+      checks:
+        - on_track
+        - velocity_trend
+    scope_review:
+      enabled: true
+      checks:
+        - rescope_if_behind
+      mode: interactive
+    regenerate:
+      enabled: true
+      checks:
+        - dashboard
+        - burndown
