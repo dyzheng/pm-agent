@@ -16,7 +16,7 @@ import json
 import sys
 from pathlib import Path
 
-from tools.state_loader import find_project_dirs, load_state
+from tools.state_loader import _find_state_file, find_project_dirs, load_state
 
 
 def _load_project_extra(project_dir: Path) -> dict:
@@ -48,10 +48,16 @@ def _load_project_extra(project_dir: Path) -> dict:
                 for k, v in raw_ms.items():
                     extra["milestones"].append({"id": k, "description": v})
 
-    for candidate in [
+    # Build candidate list: meta first, then project_state, then auto-detected
+    candidates = [
         project_dir / "state" / "project_state_meta.json",
         project_dir / "state" / "project_state.json",
-    ]:
+    ]
+    auto = _find_state_file(project_dir / "state")
+    if auto and auto not in candidates:
+        candidates.append(auto)
+
+    for candidate in candidates:
         if candidate.exists():
             try:
                 data = json.loads(candidate.read_text())
