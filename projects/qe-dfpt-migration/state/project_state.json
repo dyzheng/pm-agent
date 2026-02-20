@@ -1,0 +1,1064 @@
+{
+  "request": "\u5c06 Quantum ESPRESSO PHonon \u5305\u4e2d\u7684 DFPT \u529f\u80fd\u8fc1\u79fb\u5230 ABACUS C++ \u4ee3\u7801\u5e93\u3002\n\n**\u80cc\u666f\uff1a**\n- \u6e90\u4ee3\u7801\uff1a/root/q-e/PHonon/ (183\u4e2aFortran\u6587\u4ef6\uff0c\u4e3b\u8981\u662fPH/\u76ee\u5f55)\n- \u76ee\u6807\u4ee3\u7801\u5e93\uff1a/root/abacus-dfpt/abacus-develop/\n- \u4e4b\u524d\u7684\u5c1d\u8bd5\uff1a/root/q-e/PHonon/dvqpsi_cpp/ (\u72ec\u7acb\u7684C++\u5b9e\u73b0\uff0c\u5df2\u5b8c\u6210\u6838\u5fc3DFPT kernel)\n- \u4ee3\u7801\u5ba1\u6838\u53c2\u8003\uff1a/root/code-review-agent/ (6-agent\u5e76\u53d1\u5ba1\u6838\u7cfb\u7edf + 3-agent\u4e32\u884c\u8fc1\u79fb\u5de5\u4f5c\u6d41)\n\n**\u6838\u5fc3\u9700\u6c42\uff1a**\n1. \u5c06QE PHonon\u7684DFPT\u529f\u80fd\u7528C++\u91cd\u65b0\u5b9e\u73b0\u5e76\u96c6\u6210\u5230ABACUS\n2. \u4fdd\u6301\u7269\u7406\u6b63\u786e\u6027\u548c\u6570\u503c\u7cbe\u5ea6\n3. \u5229\u7528ABACUS\u73b0\u6709\u7684\u6a21\u5757\u67b6\u6784\uff08module_pw, module_hamilt_pw\u7b49\uff09\n4. \u53c2\u8003dvqpsi_cpp\u7684\u6210\u529f\u7ecf\u9a8c\uff08\u5df2\u5b9e\u73b0\u6838\u5fc3kernel\u3001\u7535\u58f0\u8026\u5408\u3001\u6d4b\u8bd5\u6846\u67b6\uff09\n5. \u5efa\u7acb\u4ee3\u7801\u5ba1\u6838\u6d41\u7a0b\uff08\u7269\u7406\u6b63\u786e\u6027\u3001\u7b97\u6cd5\u5339\u914d\u3001\u6570\u503c\u7a33\u5b9a\u6027\uff09\n\n**\u6280\u672f\u6808\uff1a**\n- \u6e90\u8bed\u8a00\uff1aFortran 90/95 (QE PHonon)\n- \u76ee\u6807\u8bed\u8a00\uff1aC++11/14 (ABACUS)\n- \u6784\u5efa\u7cfb\u7edf\uff1aCMake\n- \u6d4b\u8bd5\u6846\u67b6\uff1aGoogleTest (\u5355\u5143\u6d4b\u8bd5) + abacustest (\u96c6\u6210\u6d4b\u8bd5)\n- \u5e76\u884c\uff1aMPI + OpenMP\n- \u6570\u5b66\u5e93\uff1aBLAS/LAPACK, FFTW3, ScaLAPACK\n\n**\u5173\u952e\u7ec4\u4ef6\uff08\u6309\u4f18\u5148\u7ea7\uff09\uff1a**\n1. \u6838\u5fc3DFPT kernel (dV/d\u03c4\u00b7\u03c8) - \u5df2\u5728dvqpsi_cpp\u4e2d\u5b9e\u73b0\n2. Sternheimer\u6c42\u89e3\u5668 (H-\u03b5)\u00b7\u0394\u03c8 = -\u0394V\u00b7\u03c8\n3. \u81ea\u6d3d\u573a\u8fed\u4ee3 (SCF loop for DFPT)\n4. \u58f0\u5b50\u52a8\u529b\u5b66\u77e9\u9635\u8ba1\u7b97\n5. \u7535\u58f0\u8026\u5408\u77e9\u9635\u5143\n6. \u5bf9\u79f0\u6027\u64cd\u4f5c\u548c\u7ea6\u5316\n7. \u5e76\u884c\u5316\uff08k\u70b9\u3001q\u70b9\u3001\u4e0d\u53ef\u7ea6\u8868\u793a\uff09\n\n**\u8d28\u91cf\u4fdd\u8bc1\uff1a**\n- \u4f7f\u7528code-review-agent\u76846\u4e2a\u5ba1\u6838\u7ef4\u5ea6\uff1a\u5355\u4f4d\u4e00\u81f4\u6027\u3001\u7269\u7406\u5b88\u6052\u5f8b\u3001\u7b97\u6cd5\u5339\u914d\u3001\u4ee3\u7801\u98ce\u683c\u3001\u8c03\u7528\u94fe\u3001\u9632\u5fa1\u6027\u7f16\u7a0b\n- \u4f7f\u75283-agent\u8fc1\u79fb\u5de5\u4f5c\u6d41\uff1a\u6e90\u4ee3\u7801\u5206\u6790 \u2192 \u76ee\u6807\u4ee3\u7801\u6a21\u5f0f\u63d0\u53d6 \u2192 \u5dee\u5f02\u5bf9\u6bd4\u548c\u9002\u914d\u8ba1\u5212\n- \u4e0eQE\u53c2\u8003\u7ed3\u679c\u5bf9\u6bd4\u9a8c\u8bc1\uff08\u58f0\u5b50\u9891\u7387\u3001\u7535\u58f0\u8026\u5408\u5e38\u6570\uff09\n- \u6027\u80fd\u57fa\u51c6\u6d4b\u8bd5\uff08\u4e0eQE\u5bf9\u6bd4\uff09\n\n**\u4ea4\u4ed8\u7269\uff1a**\n- \u96c6\u6210\u5230ABACUS\u7684DFPT\u6a21\u5757\u4ee3\u7801\n- \u5355\u5143\u6d4b\u8bd5\u548c\u96c6\u6210\u6d4b\u8bd5\n- \u7528\u6237\u6587\u6863\u548c\u5f00\u53d1\u8005\u6587\u6863\n- \u6027\u80fd\u57fa\u51c6\u62a5\u544a\n- \u4ee3\u7801\u5ba1\u6838\u62a5\u544a\uff08\u6bcf\u4e2a\u5173\u952e\u7ec4\u4ef6\uff09\n",
+  "project_id": "qe-dfpt-migration",
+  "parsed_intent": {
+    "domain": [
+      "phonon",
+      "pw",
+      "scf"
+    ],
+    "method": [
+      "mpi",
+      "openmp"
+    ],
+    "validation": [],
+    "keywords": [
+      "quantum",
+      "espresso",
+      "phonon",
+      "dfpt",
+      "abacus",
+      "c++",
+      "root",
+      "fortran",
+      "dvqpsi_cpp",
+      "kernel",
+      "code",
+      "review",
+      "agent",
+      "module_pw",
+      "module_hamilt_pw",
+      "c++11",
+      "cmake",
+      "googletest",
+      "abacustest",
+      "mpi",
+      "openmp",
+      "blas",
+      "lapack",
+      "fftw3",
+      "scalapack",
+      "sternheimer",
+      "scf",
+      "loop"
+    ],
+    "raw_request": "\u5c06 Quantum ESPRESSO PHonon \u5305\u4e2d\u7684 DFPT \u529f\u80fd\u8fc1\u79fb\u5230 ABACUS C++ \u4ee3\u7801\u5e93\u3002\n\n**\u80cc\u666f\uff1a**\n- \u6e90\u4ee3\u7801\uff1a/root/q-e/PHonon/ (183\u4e2aFortran\u6587\u4ef6\uff0c\u4e3b\u8981\u662fPH/\u76ee\u5f55)\n- \u76ee\u6807\u4ee3\u7801\u5e93\uff1a/root/abacus-dfpt/abacus-develop/\n- \u4e4b\u524d\u7684\u5c1d\u8bd5\uff1a/root/q-e/PHonon/dvqpsi_cpp/ (\u72ec\u7acb\u7684C++\u5b9e\u73b0\uff0c\u5df2\u5b8c\u6210\u6838\u5fc3DFPT kernel)\n- \u4ee3\u7801\u5ba1\u6838\u53c2\u8003\uff1a/root/code-review-agent/ (6-agent\u5e76\u53d1\u5ba1\u6838\u7cfb\u7edf + 3-agent\u4e32\u884c\u8fc1\u79fb\u5de5\u4f5c\u6d41)\n\n**\u6838\u5fc3\u9700\u6c42\uff1a**\n1. \u5c06QE PHonon\u7684DFPT\u529f\u80fd\u7528C++\u91cd\u65b0\u5b9e\u73b0\u5e76\u96c6\u6210\u5230ABACUS\n2. \u4fdd\u6301\u7269\u7406\u6b63\u786e\u6027\u548c\u6570\u503c\u7cbe\u5ea6\n3. \u5229\u7528ABACUS\u73b0\u6709\u7684\u6a21\u5757\u67b6\u6784\uff08module_pw, module_hamilt_pw\u7b49\uff09\n4. \u53c2\u8003dvqpsi_cpp\u7684\u6210\u529f\u7ecf\u9a8c\uff08\u5df2\u5b9e\u73b0\u6838\u5fc3kernel\u3001\u7535\u58f0\u8026\u5408\u3001\u6d4b\u8bd5\u6846\u67b6\uff09\n5. \u5efa\u7acb\u4ee3\u7801\u5ba1\u6838\u6d41\u7a0b\uff08\u7269\u7406\u6b63\u786e\u6027\u3001\u7b97\u6cd5\u5339\u914d\u3001\u6570\u503c\u7a33\u5b9a\u6027\uff09\n\n**\u6280\u672f\u6808\uff1a**\n- \u6e90\u8bed\u8a00\uff1aFortran 90/95 (QE PHonon)\n- \u76ee\u6807\u8bed\u8a00\uff1aC++11/14 (ABACUS)\n- \u6784\u5efa\u7cfb\u7edf\uff1aCMake\n- \u6d4b\u8bd5\u6846\u67b6\uff1aGoogleTest (\u5355\u5143\u6d4b\u8bd5) + abacustest (\u96c6\u6210\u6d4b\u8bd5)\n- \u5e76\u884c\uff1aMPI + OpenMP\n- \u6570\u5b66\u5e93\uff1aBLAS/LAPACK, FFTW3, ScaLAPACK\n\n**\u5173\u952e\u7ec4\u4ef6\uff08\u6309\u4f18\u5148\u7ea7\uff09\uff1a**\n1. \u6838\u5fc3DFPT kernel (dV/d\u03c4\u00b7\u03c8) - \u5df2\u5728dvqpsi_cpp\u4e2d\u5b9e\u73b0\n2. Sternheimer\u6c42\u89e3\u5668 (H-\u03b5)\u00b7\u0394\u03c8 = -\u0394V\u00b7\u03c8\n3. \u81ea\u6d3d\u573a\u8fed\u4ee3 (SCF loop for DFPT)\n4. \u58f0\u5b50\u52a8\u529b\u5b66\u77e9\u9635\u8ba1\u7b97\n5. \u7535\u58f0\u8026\u5408\u77e9\u9635\u5143\n6. \u5bf9\u79f0\u6027\u64cd\u4f5c\u548c\u7ea6\u5316\n7. \u5e76\u884c\u5316\uff08k\u70b9\u3001q\u70b9\u3001\u4e0d\u53ef\u7ea6\u8868\u793a\uff09\n\n**\u8d28\u91cf\u4fdd\u8bc1\uff1a**\n- \u4f7f\u7528code-review-agent\u76846\u4e2a\u5ba1\u6838\u7ef4\u5ea6\uff1a\u5355\u4f4d\u4e00\u81f4\u6027\u3001\u7269\u7406\u5b88\u6052\u5f8b\u3001\u7b97\u6cd5\u5339\u914d\u3001\u4ee3\u7801\u98ce\u683c\u3001\u8c03\u7528\u94fe\u3001\u9632\u5fa1\u6027\u7f16\u7a0b\n- \u4f7f\u75283-agent\u8fc1\u79fb\u5de5\u4f5c\u6d41\uff1a\u6e90\u4ee3\u7801\u5206\u6790 \u2192 \u76ee\u6807\u4ee3\u7801\u6a21\u5f0f\u63d0\u53d6 \u2192 \u5dee\u5f02\u5bf9\u6bd4\u548c\u9002\u914d\u8ba1\u5212\n- \u4e0eQE\u53c2\u8003\u7ed3\u679c\u5bf9\u6bd4\u9a8c\u8bc1\uff08\u58f0\u5b50\u9891\u7387\u3001\u7535\u58f0\u8026\u5408\u5e38\u6570\uff09\n- \u6027\u80fd\u57fa\u51c6\u6d4b\u8bd5\uff08\u4e0eQE\u5bf9\u6bd4\uff09\n\n**\u4ea4\u4ed8\u7269\uff1a**\n- \u96c6\u6210\u5230ABACUS\u7684DFPT\u6a21\u5757\u4ee3\u7801\n- \u5355\u5143\u6d4b\u8bd5\u548c\u96c6\u6210\u6d4b\u8bd5\n- \u7528\u6237\u6587\u6863\u548c\u5f00\u53d1\u8005\u6587\u6863\n- \u6027\u80fd\u57fa\u51c6\u62a5\u544a\n- \u4ee3\u7801\u5ba1\u6838\u62a5\u544a\uff08\u6bcf\u4e2a\u5173\u952e\u7ec4\u4ef6\uff09\n"
+  },
+  "audit_results": [
+    {
+      "component": "abacus_core",
+      "status": "available",
+      "description": "'abacus' found in abacus_core.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-develop",
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "pyabacus",
+      "status": "available",
+      "description": "'abacus' found in pyabacus.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-develop/python/pyabacus",
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "abacustest",
+      "status": "available",
+      "description": "'abacus' found in abacustest.result_extraction",
+      "details": {
+        "category": "result_extraction",
+        "value": [
+          "abacus",
+          "vasp",
+          "qe",
+          "cp2k"
+        ],
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "deepmd_kit",
+      "status": "available",
+      "description": "'abacus' found in deepmd_kit.inference",
+      "details": {
+        "category": "inference",
+        "value": [
+          "lammps",
+          "ase",
+          "i_pi",
+          "gromacs",
+          "amber",
+          "cp2k",
+          "abacus"
+        ],
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "deeptb",
+      "status": "available",
+      "description": "'abacus' found in deeptb.training_data",
+      "details": {
+        "category": "training_data",
+        "value": [
+          "abacus",
+          "vasp",
+          "siesta",
+          "openmx"
+        ],
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "pyatb",
+      "status": "available",
+      "description": "'abacus' found in pyatb.input_from",
+      "details": {
+        "category": "input_from",
+        "value": [
+          "abacus"
+        ],
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "abacus_agent_tools",
+      "status": "available",
+      "description": "'abacus' found in abacus_agent_tools.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-agent-tools",
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'abacustest': no matching capability found in registry",
+      "details": {
+        "matched_term": "abacustest"
+      }
+    },
+    {
+      "component": "abacus_agent_tools",
+      "status": "available",
+      "description": "'agent' found in abacus_agent_tools.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-agent-tools",
+        "matched_term": "agent"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'blas': no matching capability found in registry",
+      "details": {
+        "matched_term": "blas"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'c++': no matching capability found in registry",
+      "details": {
+        "matched_term": "c++"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'c++11': no matching capability found in registry",
+      "details": {
+        "matched_term": "c++11"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'cmake': no matching capability found in registry",
+      "details": {
+        "matched_term": "cmake"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'code': no matching capability found in registry",
+      "details": {
+        "matched_term": "code"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'dfpt': no matching capability found in registry",
+      "details": {
+        "matched_term": "dfpt"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'dvqpsi_cpp': no matching capability found in registry",
+      "details": {
+        "matched_term": "dvqpsi_cpp"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'espresso': no matching capability found in registry",
+      "details": {
+        "matched_term": "espresso"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'fftw3': no matching capability found in registry",
+      "details": {
+        "matched_term": "fftw3"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'fortran': no matching capability found in registry",
+      "details": {
+        "matched_term": "fortran"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'googletest': no matching capability found in registry",
+      "details": {
+        "matched_term": "googletest"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'kernel': no matching capability found in registry",
+      "details": {
+        "matched_term": "kernel"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'lapack': no matching capability found in registry",
+      "details": {
+        "matched_term": "lapack"
+      }
+    },
+    {
+      "component": "pyatb",
+      "status": "available",
+      "description": "'loop' found in pyatb.calculations",
+      "details": {
+        "category": "calculations",
+        "value": [
+          "band_structure",
+          "pdos",
+          "fat_band",
+          "fermi_surface",
+          "berry_phase",
+          "berry_curvature",
+          "electric_polarization",
+          "wilson_loop",
+          "chern_number",
+          "anomalous_hall_conductivity",
+          "weyl_point_detection"
+        ],
+        "matched_term": "loop"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'module_hamilt_pw': no matching capability found in registry",
+      "details": {
+        "matched_term": "module_hamilt_pw"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'module_pw': no matching capability found in registry",
+      "details": {
+        "matched_term": "module_pw"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'mpi': no matching capability found in registry",
+      "details": {
+        "matched_term": "mpi"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'openmp': no matching capability found in registry",
+      "details": {
+        "matched_term": "openmp"
+      }
+    },
+    {
+      "component": "abacustest",
+      "status": "available",
+      "description": "'phonon' found in abacustest.models",
+      "details": {
+        "category": "models",
+        "value": [
+          "eos",
+          "phonon",
+          "band",
+          "elastic",
+          "vacancy",
+          "bec"
+        ],
+        "matched_term": "phonon"
+      }
+    },
+    {
+      "component": "abacus_core",
+      "status": "available",
+      "description": "'pw' found in abacus_core.basis_types",
+      "details": {
+        "category": "basis_types",
+        "value": [
+          "pw",
+          "lcao",
+          "lcao_in_pw"
+        ],
+        "matched_term": "pw"
+      }
+    },
+    {
+      "component": "pyabacus",
+      "status": "available",
+      "description": "'pw' found in pyabacus.workflows",
+      "details": {
+        "category": "workflows",
+        "value": [
+          "LCAOWorkflow",
+          "PWWorkflow"
+        ],
+        "matched_term": "pw"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'quantum': no matching capability found in registry",
+      "details": {
+        "matched_term": "quantum"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'review': no matching capability found in registry",
+      "details": {
+        "matched_term": "review"
+      }
+    },
+    {
+      "component": "abacus_core",
+      "status": "available",
+      "description": "'root' found in abacus_core.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-develop",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "pyabacus",
+      "status": "available",
+      "description": "'root' found in pyabacus.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-develop/python/pyabacus",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "abacustest",
+      "status": "available",
+      "description": "'root' found in abacustest.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-test",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "deepmd_kit",
+      "status": "available",
+      "description": "'root' found in deepmd_kit.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/deepmd-kit",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "deeptb",
+      "status": "available",
+      "description": "'root' found in deeptb.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/DeePTB",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "pyatb",
+      "status": "available",
+      "description": "'root' found in pyatb.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/pyatb",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "abacus_agent_tools",
+      "status": "available",
+      "description": "'root' found in abacus_agent_tools.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-agent-tools",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'scalapack': no matching capability found in registry",
+      "details": {
+        "matched_term": "scalapack"
+      }
+    },
+    {
+      "component": "abacus_core",
+      "status": "available",
+      "description": "'scf' found in abacus_core.calculations",
+      "details": {
+        "category": "calculations",
+        "value": [
+          "scf",
+          "relax",
+          "cell_relax",
+          "md",
+          "tddft"
+        ],
+        "matched_term": "scf"
+      }
+    },
+    {
+      "component": "pyabacus",
+      "status": "available",
+      "description": "'scf' found in pyabacus.callbacks",
+      "details": {
+        "category": "callbacks",
+        "value": [
+          "before_scf",
+          "after_iter",
+          "before_after_scf",
+          "after_scf"
+        ],
+        "matched_term": "scf"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'sternheimer': no matching capability found in registry",
+      "details": {
+        "matched_term": "sternheimer"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "DFPT-001",
+      "title": "\u8bbe\u8ba1 ABACUS DFPT \u6a21\u5757\u67b6\u6784",
+      "layer": "infra",
+      "type": "new",
+      "description": "\u8bbe\u8ba1 DFPT \u6a21\u5757\u5728 ABACUS \u4e2d\u7684\u6574\u4f53\u67b6\u6784\uff0c\u5305\u62ec\uff1a\n- \u6a21\u5757\u76ee\u5f55\u7ed3\u6784\uff08module_dfpt/\uff09\n- \u4e0e\u73b0\u6709\u6a21\u5757\u7684\u63a5\u53e3\uff08module_pw, module_hamilt_pw, module_elecstate\uff09\n- \u6570\u636e\u6d41\u8bbe\u8ba1\uff08FFTGrid, WaveFunction, KPointData \u7b49\uff09\n- ESolver \u6269\u5c55\uff08ksdft_pw_dfpt\uff09\n- \u53c2\u8003 dvqpsi_cpp \u7684\u6210\u529f\u7ecf\u9a8c",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "\u5b8c\u6210\u67b6\u6784\u8bbe\u8ba1\u6587\u6863\uff08DFPT_ARCHITECTURE.md\uff09",
+        "\u5b9a\u4e49\u6838\u5fc3\u6570\u636e\u7ed3\u6784\u548c\u63a5\u53e3",
+        "\u660e\u786e\u4e0e ABACUS \u73b0\u6709\u6a21\u5757\u7684\u96c6\u6210\u70b9",
+        "\u8bbe\u8ba1\u6587\u6863\u901a\u8fc7\u6280\u672f\u8bc4\u5ba1"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/README.md",
+        "docs/DFPT_ARCHITECTURE.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "architect",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-002",
+      "title": "\u5efa\u7acb\u4ee3\u7801\u5ba1\u6838\u5de5\u4f5c\u6d41",
+      "layer": "infra",
+      "type": "new",
+      "description": "\u57fa\u4e8e /root/code-review-agent/ \u5efa\u7acb DFPT \u8fc1\u79fb\u7684\u4ee3\u7801\u5ba1\u6838\u6d41\u7a0b\uff1a\n- \u914d\u7f6e 6-agent \u5e76\u53d1\u5ba1\u6838\uff08\u5355\u4f4d\u3001\u7269\u7406\u3001\u7b97\u6cd5\u3001\u98ce\u683c\u3001\u8c03\u7528\u94fe\u3001\u9632\u5fa1\uff09\n- \u914d\u7f6e 3-agent \u4e32\u884c\u8fc1\u79fb\u5de5\u4f5c\u6d41\uff08\u6e90\u7801\u5206\u6790\u3001\u76ee\u6807\u6a21\u5f0f\u3001\u5dee\u5f02\u9002\u914d\uff09\n- \u51c6\u5907 ABACUS \u9886\u57df\u77e5\u8bc6\u6587\u6863\uff08domain-knowledge/abacus-dfpt.md\uff09\n- \u8bbe\u7f6e\u5ba1\u6838 schema \u548c prompt \u6a21\u677f",
+      "dependencies": [
+        "DFPT-001"
+      ],
+      "acceptance_criteria": [
+        "code-review-agent \u914d\u7f6e\u5b8c\u6210",
+        "ABACUS DFPT \u9886\u57df\u77e5\u8bc6\u6587\u6863\u5c31\u7eea",
+        "\u5ba1\u6838\u5de5\u4f5c\u6d41\u6d4b\u8bd5\u901a\u8fc7\uff08\u7528 dvqpsi_cpp \u4ee3\u7801\u9a8c\u8bc1\uff09",
+        "\u751f\u6210\u793a\u4f8b\u5ba1\u6838\u62a5\u544a"
+      ],
+      "files_to_touch": [
+        "tools/code-review/config.yaml",
+        "tools/code-review/domain-knowledge/abacus-dfpt.md",
+        "tools/code-review/prompts/review-dfpt-*.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "devops",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-003",
+      "title": "\u521b\u5efa DFPT \u6a21\u5757\u9aa8\u67b6\u548c\u6784\u5efa\u7cfb\u7edf",
+      "layer": "infra",
+      "type": "new",
+      "description": "\u5728 ABACUS \u4e2d\u521b\u5efa module_dfpt \u76ee\u5f55\u7ed3\u6784\u548c CMake \u6784\u5efa\u914d\u7f6e\uff1a\n- source/module_dfpt/ \u76ee\u5f55\u7ed3\u6784\n- CMakeLists.txt \u914d\u7f6e\n- \u6d4b\u8bd5\u6846\u67b6\u96c6\u6210\uff08GoogleTest\uff09\n- \u4e0e\u4e3b\u6784\u5efa\u7cfb\u7edf\u96c6\u6210",
+      "dependencies": [
+        "DFPT-001"
+      ],
+      "acceptance_criteria": [
+        "module_dfpt \u76ee\u5f55\u7ed3\u6784\u521b\u5efa\u5b8c\u6210",
+        "CMake \u6784\u5efa\u914d\u7f6e\u6b63\u786e",
+        "\u7a7a\u6a21\u5757\u53ef\u4ee5\u6210\u529f\u7f16\u8bd1",
+        "\u6d4b\u8bd5\u6846\u67b6\u96c6\u6210\u5b8c\u6210"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/CMakeLists.txt",
+        "source/module_dfpt/test/CMakeLists.txt",
+        "source/CMakeLists.txt"
+      ],
+      "estimated_scope": "small",
+      "specialist": "build-engineer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-101",
+      "title": "\u8fc1\u79fb\u6570\u636e\u7ed3\u6784\u9002\u914d\u5c42",
+      "layer": "core",
+      "type": "extend",
+      "description": "\u521b\u5efa dvqpsi_cpp \u548c ABACUS \u4e4b\u95f4\u7684\u6570\u636e\u7ed3\u6784\u9002\u914d\u5c42\uff1a\n- FFTGrid \u2194 PW_Basis\n- WaveFunction \u2194 Psi<complex<double>>\n- KPointData \u2194 K_Vectors\n- GVectorData \u2194 PW_Basis\n- NonlocalData \u2194 pseudopot_cell_vnl",
+      "dependencies": [
+        "DFPT-003"
+      ],
+      "acceptance_criteria": [
+        "\u9002\u914d\u5668\u7c7b\u5b9e\u73b0\u5b8c\u6210",
+        "\u5355\u5143\u6d4b\u8bd5\u8986\u76d6\u6240\u6709\u8f6c\u6362",
+        "\u6027\u80fd\u5f00\u9500 < 5%",
+        "\u4ee3\u7801\u5ba1\u6838\u901a\u8fc7\uff086-agent review\uff09"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/dfpt_adapters.h",
+        "source/module_dfpt/dfpt_adapters.cpp",
+        "source/module_dfpt/test/test_adapters.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "cpp-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-102",
+      "title": "\u8fc1\u79fb DVQPsiUS \u6838\u5fc3 kernel",
+      "layer": "core",
+      "type": "extend",
+      "description": "\u5c06 dvqpsi_cpp \u7684\u6838\u5fc3 DFPT kernel \u8fc1\u79fb\u5230 ABACUS\uff1a\n- \u5c40\u90e8\u52bf\u8d21\u732e\uff08local potential\uff09\n- \u975e\u5c40\u90e8\u8d5d\u52bf\u8d21\u732e\uff08nonlocal pseudopotential\uff09\n- \u8d85\u8f6f\u8d5d\u52bf\u589e\u5f3a\uff08ultrasoft augmentation\uff09\n- FFT \u64cd\u4f5c\u96c6\u6210\uff08\u4f7f\u7528 ABACUS \u7684 UFFT\uff09\n- OpenMP \u5e76\u884c\u5316",
+      "dependencies": [
+        "DFPT-101"
+      ],
+      "acceptance_criteria": [
+        "DVQPsiUS \u7c7b\u5b9e\u73b0\u5b8c\u6210",
+        "\u4e0e dvqpsi_cpp \u6570\u503c\u7ed3\u679c\u4e00\u81f4\uff08\u8bef\u5dee < 1e-10\uff09",
+        "\u5355\u5143\u6d4b\u8bd5\u901a\u8fc7",
+        "\u6027\u80fd\u4e0e dvqpsi_cpp \u76f8\u5f53",
+        "\u4ee3\u7801\u5ba1\u6838\u901a\u8fc7\uff08\u7269\u7406\u6b63\u786e\u6027\u3001\u7b97\u6cd5\u5339\u914d\uff09"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/dvqpsi_us.h",
+        "source/module_dfpt/dvqpsi_us.cpp",
+        "source/module_dfpt/test/test_dvqpsi.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "physics-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-103",
+      "title": "\u8fc1\u79fb Sternheimer \u6c42\u89e3\u5668",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "\u5b9e\u73b0 Sternheimer \u65b9\u7a0b\u6c42\u89e3\u5668 (H-\u03b5)\u00b7\u0394\u03c8 = -\u0394V\u00b7\u03c8\uff1a\n- \u5171\u8f6d\u68af\u5ea6\uff08CG\uff09\u6c42\u89e3\u5668\n- \u9884\u6761\u4ef6\u5668\uff08diagonal preconditioning\uff09\n- Hamiltonian \u7b97\u7b26\u5e94\u7528\n- \u6536\u655b\u5224\u636e\u548c\u8fed\u4ee3\u63a7\u5236",
+      "dependencies": [
+        "DFPT-102"
+      ],
+      "acceptance_criteria": [
+        "Sternheimer \u6c42\u89e3\u5668\u5b9e\u73b0\u5b8c\u6210",
+        "\u4e0e QE \u53c2\u8003\u7ed3\u679c\u4e00\u81f4",
+        "\u6536\u655b\u6027\u6d4b\u8bd5\u901a\u8fc7",
+        "\u6027\u80fd\u57fa\u51c6\u8fbe\u6807",
+        "\u4ee3\u7801\u5ba1\u6838\u901a\u8fc7"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/sternheimer_solver.h",
+        "source/module_dfpt/sternheimer_solver.cpp",
+        "source/module_dfpt/cg_solver.h",
+        "source/module_dfpt/cg_solver.cpp",
+        "source/module_dfpt/test/test_sternheimer.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "algorithm-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-201",
+      "title": "\u5b9e\u73b0 DFPT \u81ea\u6d3d\u573a\u8fed\u4ee3",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "\u5b9e\u73b0 DFPT \u7684 SCF \u5faa\u73af\uff1a\n- \u7535\u8377\u5bc6\u5ea6\u54cd\u5e94\u8ba1\u7b97\uff08\u0394\u03c1\uff09\n- \u52bf\u80fd\u54cd\u5e94\u8ba1\u7b97\uff08\u0394V_SCF = \u0394V_H + \u0394V_xc\uff09\n- \u52bf\u80fd\u6df7\u5408\uff08charge mixing\uff09\n- \u5bf9\u79f0\u5316\u64cd\u4f5c\n- \u6536\u655b\u5224\u636e",
+      "dependencies": [
+        "DFPT-103"
+      ],
+      "acceptance_criteria": [
+        "DFPT SCF \u5faa\u73af\u5b9e\u73b0\u5b8c\u6210",
+        "\u4e0e QE \u6536\u655b\u884c\u4e3a\u4e00\u81f4",
+        "\u652f\u6301\u591a\u79cd\u6df7\u5408\u65b9\u6848\uff08linear, Broyden\uff09",
+        "\u5355\u5143\u6d4b\u8bd5\u548c\u96c6\u6210\u6d4b\u8bd5\u901a\u8fc7",
+        "\u4ee3\u7801\u5ba1\u6838\u901a\u8fc7"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/dfpt_scf.h",
+        "source/module_dfpt/dfpt_scf.cpp",
+        "source/module_dfpt/potential_mixer.h",
+        "source/module_dfpt/potential_mixer.cpp",
+        "source/module_dfpt/test/test_dfpt_scf.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "physics-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-202",
+      "title": "\u5b9e\u73b0\u52a8\u529b\u5b66\u77e9\u9635\u8ba1\u7b97",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "\u8ba1\u7b97\u58f0\u5b50\u52a8\u529b\u5b66\u77e9\u9635\uff1a\n- \u529b\u5e38\u6570\u77e9\u9635\u8ba1\u7b97\n- \u5bf9\u79f0\u5316\u548c\u7ea6\u5316\n- \u672c\u5f81\u503c\u6c42\u89e3\uff08\u58f0\u5b50\u9891\u7387\uff09\n- \u672c\u5f81\u5411\u91cf\u8ba1\u7b97\uff08\u58f0\u5b50\u6a21\u5f0f\uff09\n- LO-TO \u5288\u88c2\u5904\u7406\uff08\u6781\u6027\u6750\u6599\uff09",
+      "dependencies": [
+        "DFPT-201"
+      ],
+      "acceptance_criteria": [
+        "\u52a8\u529b\u5b66\u77e9\u9635\u8ba1\u7b97\u6b63\u786e",
+        "\u58f0\u5b50\u9891\u7387\u4e0e QE \u4e00\u81f4\uff08\u8bef\u5dee < 0.1 cm\u207b\u00b9\uff09",
+        "\u652f\u6301\u58f0\u5b66\u548c\u89c4\u8303\u548c",
+        "\u5355\u5143\u6d4b\u8bd5\u901a\u8fc7",
+        "\u4ee3\u7801\u5ba1\u6838\u901a\u8fc7"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/dynmat.h",
+        "source/module_dfpt/dynmat.cpp",
+        "source/module_dfpt/symmetry_dfpt.h",
+        "source/module_dfpt/symmetry_dfpt.cpp",
+        "source/module_dfpt/test/test_dynmat.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "physics-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-203",
+      "title": "\u5b9e\u73b0\u7535\u58f0\u8026\u5408\u8ba1\u7b97",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "\u8ba1\u7b97\u7535\u58f0\u8026\u5408\u77e9\u9635\u5143\u548c\u76f8\u5173\u7269\u7406\u91cf\uff1a\n- EPC \u77e9\u9635\u5143 g(k,q,\u03bd)\n- \u58f0\u5b50\u7ebf\u5bbd \u03b3(q,\u03bd)\n- Eliashberg \u51fd\u6570 \u03b1\u00b2F(\u03c9)\n- \u8026\u5408\u5e38\u6570 \u03bb\n- Tc \u4f30\u7b97\uff08McMillan \u516c\u5f0f\uff09",
+      "dependencies": [
+        "DFPT-202"
+      ],
+      "acceptance_criteria": [
+        "EPC \u8ba1\u7b97\u5b9e\u73b0\u5b8c\u6210",
+        "\u4e0e QE \u7ed3\u679c\u4e00\u81f4",
+        "\u652f\u6301 Brillouin zone \u79ef\u5206",
+        "\u5355\u5143\u6d4b\u8bd5\u901a\u8fc7",
+        "\u4ee3\u7801\u5ba1\u6838\u901a\u8fc7"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/elphon.h",
+        "source/module_dfpt/elphon.cpp",
+        "source/module_dfpt/bz_integration.h",
+        "source/module_dfpt/bz_integration.cpp",
+        "source/module_dfpt/test/test_elphon.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "physics-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-301",
+      "title": "\u5b9e\u73b0 MPI \u5e76\u884c\u5316",
+      "layer": "infra",
+      "type": "new",
+      "description": "\u6dfb\u52a0 MPI \u5e76\u884c\u652f\u6301\uff1a\n- k \u70b9\u5e76\u884c\uff08pool parallelization\uff09\n- q \u70b9\u5e76\u884c\uff08image parallelization\uff09\n- \u4e0d\u53ef\u7ea6\u8868\u793a\u5e76\u884c\n- \u6570\u636e\u901a\u4fe1\u4f18\u5316",
+      "dependencies": [
+        "DFPT-203"
+      ],
+      "acceptance_criteria": [
+        "MPI \u5e76\u884c\u5b9e\u73b0\u5b8c\u6210",
+        "\u5e76\u884c\u6548\u7387 > 80%\uff0816 \u8fdb\u7a0b\uff09",
+        "\u8d1f\u8f7d\u5747\u8861\u826f\u597d",
+        "\u5e76\u884c\u6d4b\u8bd5\u901a\u8fc7",
+        "\u4ee3\u7801\u5ba1\u6838\u901a\u8fc7"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/dfpt_parallel.h",
+        "source/module_dfpt/dfpt_parallel.cpp",
+        "source/module_dfpt/test/test_parallel.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "hpc-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-302",
+      "title": "\u6027\u80fd\u4f18\u5316\u548c\u57fa\u51c6\u6d4b\u8bd5",
+      "layer": "infra",
+      "type": "new",
+      "description": "\u6027\u80fd\u4f18\u5316\u548c\u57fa\u51c6\u6d4b\u8bd5\uff1a\n- \u70ed\u70b9\u5206\u6790\u548c\u4f18\u5316\n- \u5185\u5b58\u4f7f\u7528\u4f18\u5316\n- \u4e0e QE \u6027\u80fd\u5bf9\u6bd4\n- \u751f\u6210\u6027\u80fd\u57fa\u51c6\u62a5\u544a",
+      "dependencies": [
+        "DFPT-301"
+      ],
+      "acceptance_criteria": [
+        "\u6027\u80fd\u4e0e QE \u76f8\u5f53\u6216\u66f4\u4f18",
+        "\u5185\u5b58\u4f7f\u7528\u5408\u7406",
+        "\u6027\u80fd\u57fa\u51c6\u62a5\u544a\u5b8c\u6210",
+        "\u4f18\u5316\u6587\u6863\u5b8c\u6210"
+      ],
+      "files_to_touch": [
+        "docs/DFPT_PERFORMANCE.md",
+        "benchmarks/dfpt_benchmark.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "performance-engineer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-401",
+      "title": "\u521b\u5efa ESolver_DFPT \u7c7b",
+      "layer": "workflow",
+      "type": "new",
+      "description": "\u521b\u5efa DFPT ESolver \u5e76\u96c6\u6210\u5230 ABACUS \u4e3b\u6d41\u7a0b\uff1a\n- \u5b9e\u73b0 ESolver_DFPT \u7c7b\n- \u96c6\u6210\u5230 Driver \u6d41\u7a0b\n- \u8f93\u5165\u53c2\u6570\u5904\u7406\n- \u8f93\u51fa\u6587\u4ef6\u751f\u6210",
+      "dependencies": [
+        "DFPT-302"
+      ],
+      "acceptance_criteria": [
+        "ESolver_DFPT \u5b9e\u73b0\u5b8c\u6210",
+        "\u53ef\u901a\u8fc7 INPUT \u6587\u4ef6\u8c03\u7528",
+        "\u8f93\u51fa\u683c\u5f0f\u4e0e ABACUS \u4e00\u81f4",
+        "\u96c6\u6210\u6d4b\u8bd5\u901a\u8fc7"
+      ],
+      "files_to_touch": [
+        "source/module_esolver/esolver_dfpt.h",
+        "source/module_esolver/esolver_dfpt.cpp",
+        "source/module_esolver/esolver.cpp",
+        "source/driver.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "integration-engineer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-402",
+      "title": "\u5b9e\u73b0 q \u70b9\u7f51\u683c\u548c\u5de5\u4f5c\u6d41",
+      "layer": "workflow",
+      "type": "new",
+      "description": "\u5b9e\u73b0\u5b8c\u6574\u7684\u58f0\u5b50\u8ba1\u7b97\u5de5\u4f5c\u6d41\uff1a\n- q \u70b9\u7f51\u683c\u751f\u6210\n- q \u70b9\u5faa\u73af\u9a71\u52a8\n- \u5bf9\u79f0\u6027\u7ea6\u5316\n- \u6062\u590d/\u68c0\u67e5\u70b9\u673a\u5236\n- \u540e\u5904\u7406\u5de5\u5177\uff08q2r, matdyn \u7b49\u6548\u529f\u80fd\uff09",
+      "dependencies": [
+        "DFPT-401"
+      ],
+      "acceptance_criteria": [
+        "q \u70b9\u7f51\u683c\u5de5\u4f5c\u6d41\u5b9e\u73b0\u5b8c\u6210",
+        "\u652f\u6301\u6062\u590d\u4e2d\u65ad\u7684\u8ba1\u7b97",
+        "\u540e\u5904\u7406\u5de5\u5177\u53ef\u7528",
+        "\u7aef\u5230\u7aef\u6d4b\u8bd5\u901a\u8fc7"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/qpoint_grid.h",
+        "source/module_dfpt/qpoint_grid.cpp",
+        "source/module_dfpt/phonon_driver.h",
+        "source/module_dfpt/phonon_driver.cpp",
+        "tools/dfpt_postprocess.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-501",
+      "title": "\u521b\u5efa\u96c6\u6210\u6d4b\u8bd5\u5957\u4ef6",
+      "layer": "validation",
+      "type": "test",
+      "description": "\u521b\u5efa\u5b8c\u6574\u7684\u96c6\u6210\u6d4b\u8bd5\u5957\u4ef6\uff1a\n- \u7b80\u5355\u7cfb\u7edf\u6d4b\u8bd5\uff08Si, Al \u7b49\uff09\n- \u4e0e QE \u7ed3\u679c\u5bf9\u6bd4\u9a8c\u8bc1\n- \u6781\u6027\u6750\u6599\u6d4b\u8bd5\uff08LO-TO \u5288\u88c2\uff09\n- \u91d1\u5c5e\u7cfb\u7edf\u6d4b\u8bd5\n- \u7535\u58f0\u8026\u5408\u6d4b\u8bd5\n- \u96c6\u6210\u5230 abacustest \u6846\u67b6",
+      "dependencies": [
+        "DFPT-402"
+      ],
+      "acceptance_criteria": [
+        "\u96c6\u6210\u6d4b\u8bd5\u5957\u4ef6\u5b8c\u6210\uff08\u226510 \u4e2a\u6d4b\u8bd5\u7528\u4f8b\uff09",
+        "\u6240\u6709\u6d4b\u8bd5\u901a\u8fc7",
+        "\u4e0e QE \u7ed3\u679c\u4e00\u81f4\u6027\u9a8c\u8bc1\u5b8c\u6210",
+        "\u6d4b\u8bd5\u6587\u6863\u5b8c\u6210"
+      ],
+      "files_to_touch": [
+        "tests/integrate/dfpt_*/",
+        "tests/integrate/CASES_DFPT.txt",
+        "docs/DFPT_TESTING.md"
+      ],
+      "estimated_scope": "large",
+      "specialist": "test-engineer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-502",
+      "title": "\u7f16\u5199\u7528\u6237\u6587\u6863",
+      "layer": "validation",
+      "type": "new",
+      "description": "\u7f16\u5199\u5b8c\u6574\u7684\u7528\u6237\u6587\u6863\uff1a\n- \u7528\u6237\u624b\u518c\uff08\u5982\u4f55\u4f7f\u7528 DFPT \u529f\u80fd\uff09\n- \u8f93\u5165\u53c2\u6570\u8bf4\u660e\n- \u793a\u4f8b\u8ba1\u7b97\n- \u5e38\u89c1\u95ee\u9898\u89e3\u7b54\n- \u4e0e QE \u7684\u5dee\u5f02\u8bf4\u660e",
+      "dependencies": [
+        "DFPT-501"
+      ],
+      "acceptance_criteria": [
+        "\u7528\u6237\u6587\u6863\u5b8c\u6210",
+        "\u793a\u4f8b\u8ba1\u7b97\u53ef\u590d\u73b0",
+        "\u6587\u6863\u8bc4\u5ba1\u901a\u8fc7"
+      ],
+      "files_to_touch": [
+        "docs/DFPT_USER_GUIDE.md",
+        "docs/DFPT_INPUT_PARAMETERS.md",
+        "examples/dfpt_*/README.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "technical-writer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-503",
+      "title": "\u7f16\u5199\u5f00\u53d1\u8005\u6587\u6863",
+      "layer": "validation",
+      "type": "new",
+      "description": "\u7f16\u5199\u5f00\u53d1\u8005\u6587\u6863\uff1a\n- \u67b6\u6784\u8bbe\u8ba1\u6587\u6863\n- \u7b97\u6cd5\u5b9e\u73b0\u7ec6\u8282\n- \u4ee3\u7801\u5ba1\u6838\u62a5\u544a\u6c47\u603b\n- \u6027\u80fd\u5206\u6790\u62a5\u544a\n- \u672a\u6765\u6269\u5c55\u5efa\u8bae",
+      "dependencies": [
+        "DFPT-501"
+      ],
+      "acceptance_criteria": [
+        "\u5f00\u53d1\u8005\u6587\u6863\u5b8c\u6210",
+        "\u4ee3\u7801\u5ba1\u6838\u62a5\u544a\u6c47\u603b\u5b8c\u6210",
+        "\u6587\u6863\u8bc4\u5ba1\u901a\u8fc7"
+      ],
+      "files_to_touch": [
+        "docs/DFPT_DEVELOPER_GUIDE.md",
+        "docs/DFPT_ALGORITHM_DETAILS.md",
+        "docs/DFPT_CODE_REVIEW_SUMMARY.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "technical-writer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    }
+  ],
+  "current_task_id": null,
+  "drafts": {},
+  "gate_results": {},
+  "integration_results": [],
+  "phase": "execute",
+  "human_decisions": [],
+  "review_results": [],
+  "human_approvals": [],
+  "brainstorm_results": [],
+  "blocked_reason": null,
+  "optimization_history": [],
+  "last_optimization": null,
+  "optimization_metadata": {},
+  "charter": {},
+  "closure": {}
+}

@@ -1,0 +1,38 @@
+digraph Dependencies {
+  rankdir=LR;
+  node [shape=box, style=rounded, fontsize=11];
+  label="qe-dfpt-migration Dependency Graph";
+
+  "DFPT-001" [label="DFPT-001\n设计 ABACUS DFPT 模块架构", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-002" [label="DFPT-002\n建立代码审核工作流", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-003" [label="DFPT-003\n创建 DFPT 模块骨架和构建系统", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-101" [label="DFPT-101\n迁移数据结构适配层", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-102" [label="DFPT-102\n迁移 DVQPsiUS 核心 kernel", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-103" [label="DFPT-103\n迁移 Sternheimer 求解器", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-201" [label="DFPT-201\n实现 DFPT 自洽场迭代", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-202" [label="DFPT-202\n实现动力学矩阵计算", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-203" [label="DFPT-203\n实现电声耦合计算", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-301" [label="DFPT-301\n实现 MPI 并行化", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-302" [label="DFPT-302\n性能优化和基准测试", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-401" [label="DFPT-401\n创建 ESolver_DFPT 类", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-402" [label="DFPT-402\n实现 q 点网格和工作流", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-501" [label="DFPT-501\n创建集成测试套件", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-502" [label="DFPT-502\n编写用户文档", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DFPT-503" [label="DFPT-503\n编写开发者文档", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+
+  "DFPT-001" -> "DFPT-002";
+  "DFPT-001" -> "DFPT-003";
+  "DFPT-003" -> "DFPT-101";
+  "DFPT-101" -> "DFPT-102";
+  "DFPT-102" -> "DFPT-103";
+  "DFPT-103" -> "DFPT-201";
+  "DFPT-201" -> "DFPT-202";
+  "DFPT-202" -> "DFPT-203";
+  "DFPT-203" -> "DFPT-301";
+  "DFPT-301" -> "DFPT-302";
+  "DFPT-302" -> "DFPT-401";
+  "DFPT-401" -> "DFPT-402";
+  "DFPT-402" -> "DFPT-501";
+  "DFPT-501" -> "DFPT-502";
+  "DFPT-501" -> "DFPT-503";
+}

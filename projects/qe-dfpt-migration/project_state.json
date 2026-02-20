@@ -1,0 +1,1594 @@
+{
+  "request": "将 Quantum ESPRESSO PHonon 包中的 DFPT 功能迁移到 ABACUS C++ 代码库。\n\n**背景：**\n- 源代码：/root/q-e/PHonon/ (183个Fortran文件，主要是PH/目录)\n- 目标代码库：/root/abacus-dfpt/abacus-develop/\n- 之前的尝试：/root/q-e/PHonon/dvqpsi_cpp/ (独立的C++实现，已完成核心DFPT kernel)\n- 代码审核参考：/root/code-review-agent/ (6-agent并发审核系统 + 3-agent串行迁移工作流)\n\n**核心需求：**\n1. 将QE PHonon的DFPT功能用C++重新实现并集成到ABACUS\n2. 保持物理正确性和数值精度\n3. 利用ABACUS现有的模块架构（module_pw, module_hamilt_pw等）\n4. 参考dvqpsi_cpp的成功经验（已实现核心kernel、电声耦合、测试框架）\n5. 建立代码审核流程（物理正确性、算法匹配、数值稳定性）\n\n**技术栈：**\n- 源语言：Fortran 90/95 (QE PHonon)\n- 目标语言：C++11/14 (ABACUS)\n- 构建系统：CMake\n- 测试框架：GoogleTest (单元测试) + abacustest (集成测试)\n- 并行：MPI + OpenMP\n- 数学库：BLAS/LAPACK, FFTW3, ScaLAPACK\n\n**关键组件（按优先级）：**\n1. 核心DFPT kernel (dV/dτ·ψ) - 已在dvqpsi_cpp中实现\n2. Sternheimer求解器 (H-ε)·Δψ = -ΔV·ψ\n3. 自洽场迭代 (SCF loop for DFPT)\n4. 声子动力学矩阵计算\n5. 电声耦合矩阵元\n6. 对称性操作和约化\n7. 并行化（k点、q点、不可约表示）\n\n**质量保证：**\n- 使用code-review-agent的6个审核维度：单位一致性、物理守恒律、算法匹配、代码风格、调用链、防御性编程\n- 使用3-agent迁移工作流：源代码分析 → 目标代码模式提取 → 差异对比和适配计划\n- 与QE参考结果对比验证（声子频率、电声耦合常数）\n- 性能基准测试（与QE对比）\n\n**交付物：**\n- 集成到ABACUS的DFPT模块代码\n- 单元测试和集成测试\n- 用户文档和开发者文档\n- 性能基准报告\n- 代码审核报告（每个关键组件）\n",
+  "project_id": "qe-dfpt-migration",
+  "parsed_intent": {
+    "domain": [
+      "phonon",
+      "pw",
+      "scf"
+    ],
+    "method": [
+      "mpi",
+      "openmp"
+    ],
+    "validation": [],
+    "keywords": [
+      "quantum",
+      "espresso",
+      "phonon",
+      "dfpt",
+      "abacus",
+      "c++",
+      "root",
+      "fortran",
+      "dvqpsi_cpp",
+      "kernel",
+      "code",
+      "review",
+      "agent",
+      "module_pw",
+      "module_hamilt_pw",
+      "c++11",
+      "cmake",
+      "googletest",
+      "abacustest",
+      "mpi",
+      "openmp",
+      "blas",
+      "lapack",
+      "fftw3",
+      "scalapack",
+      "sternheimer",
+      "scf",
+      "loop"
+    ],
+    "raw_request": "将 Quantum ESPRESSO PHonon 包中的 DFPT 功能迁移到 ABACUS C++ 代码库。\n\n**背景：**\n- 源代码：/root/q-e/PHonon/ (183个Fortran文件，主要是PH/目录)\n- 目标代码库：/root/abacus-dfpt/abacus-develop/\n- 之前的尝试：/root/q-e/PHonon/dvqpsi_cpp/ (独立的C++实现，已完成核心DFPT kernel)\n- 代码审核参考：/root/code-review-agent/ (6-agent并发审核系统 + 3-agent串行迁移工作流)\n\n**核心需求：**\n1. 将QE PHonon的DFPT功能用C++重新实现并集成到ABACUS\n2. 保持物理正确性和数值精度\n3. 利用ABACUS现有的模块架构（module_pw, module_hamilt_pw等）\n4. 参考dvqpsi_cpp的成功经验（已实现核心kernel、电声耦合、测试框架）\n5. 建立代码审核流程（物理正确性、算法匹配、数值稳定性）\n\n**技术栈：**\n- 源语言：Fortran 90/95 (QE PHonon)\n- 目标语言：C++11/14 (ABACUS)\n- 构建系统：CMake\n- 测试框架：GoogleTest (单元测试) + abacustest (集成测试)\n- 并行：MPI + OpenMP\n- 数学库：BLAS/LAPACK, FFTW3, ScaLAPACK\n\n**关键组件（按优先级）：**\n1. 核心DFPT kernel (dV/dτ·ψ) - 已在dvqpsi_cpp中实现\n2. Sternheimer求解器 (H-ε)·Δψ = -ΔV·ψ\n3. 自洽场迭代 (SCF loop for DFPT)\n4. 声子动力学矩阵计算\n5. 电声耦合矩阵元\n6. 对称性操作和约化\n7. 并行化（k点、q点、不可约表示）\n\n**质量保证：**\n- 使用code-review-agent的6个审核维度：单位一致性、物理守恒律、算法匹配、代码风格、调用链、防御性编程\n- 使用3-agent迁移工作流：源代码分析 → 目标代码模式提取 → 差异对比和适配计划\n- 与QE参考结果对比验证（声子频率、电声耦合常数）\n- 性能基准测试（与QE对比）\n\n**交付物：**\n- 集成到ABACUS的DFPT模块代码\n- 单元测试和集成测试\n- 用户文档和开发者文档\n- 性能基准报告\n- 代码审核报告（每个关键组件）\n"
+  },
+  "audit_results": [
+    {
+      "component": "abacus_core",
+      "status": "available",
+      "description": "'abacus' found in abacus_core.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-develop",
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "pyabacus",
+      "status": "available",
+      "description": "'abacus' found in pyabacus.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-develop/python/pyabacus",
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "abacustest",
+      "status": "available",
+      "description": "'abacus' found in abacustest.result_extraction",
+      "details": {
+        "category": "result_extraction",
+        "value": [
+          "abacus",
+          "vasp",
+          "qe",
+          "cp2k"
+        ],
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "deepmd_kit",
+      "status": "available",
+      "description": "'abacus' found in deepmd_kit.inference",
+      "details": {
+        "category": "inference",
+        "value": [
+          "lammps",
+          "ase",
+          "i_pi",
+          "gromacs",
+          "amber",
+          "cp2k",
+          "abacus"
+        ],
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "deeptb",
+      "status": "available",
+      "description": "'abacus' found in deeptb.training_data",
+      "details": {
+        "category": "training_data",
+        "value": [
+          "abacus",
+          "vasp",
+          "siesta",
+          "openmx"
+        ],
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "pyatb",
+      "status": "available",
+      "description": "'abacus' found in pyatb.input_from",
+      "details": {
+        "category": "input_from",
+        "value": [
+          "abacus"
+        ],
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "abacus_agent_tools",
+      "status": "available",
+      "description": "'abacus' found in abacus_agent_tools.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-agent-tools",
+        "matched_term": "abacus"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'abacustest': no matching capability found in registry",
+      "details": {
+        "matched_term": "abacustest"
+      }
+    },
+    {
+      "component": "abacus_agent_tools",
+      "status": "available",
+      "description": "'agent' found in abacus_agent_tools.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-agent-tools",
+        "matched_term": "agent"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'blas': no matching capability found in registry",
+      "details": {
+        "matched_term": "blas"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'c++': no matching capability found in registry",
+      "details": {
+        "matched_term": "c++"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'c++11': no matching capability found in registry",
+      "details": {
+        "matched_term": "c++11"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'cmake': no matching capability found in registry",
+      "details": {
+        "matched_term": "cmake"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'code': no matching capability found in registry",
+      "details": {
+        "matched_term": "code"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'dfpt': no matching capability found in registry",
+      "details": {
+        "matched_term": "dfpt"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'dvqpsi_cpp': no matching capability found in registry",
+      "details": {
+        "matched_term": "dvqpsi_cpp"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'espresso': no matching capability found in registry",
+      "details": {
+        "matched_term": "espresso"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'fftw3': no matching capability found in registry",
+      "details": {
+        "matched_term": "fftw3"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'fortran': no matching capability found in registry",
+      "details": {
+        "matched_term": "fortran"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'googletest': no matching capability found in registry",
+      "details": {
+        "matched_term": "googletest"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'kernel': no matching capability found in registry",
+      "details": {
+        "matched_term": "kernel"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'lapack': no matching capability found in registry",
+      "details": {
+        "matched_term": "lapack"
+      }
+    },
+    {
+      "component": "pyatb",
+      "status": "available",
+      "description": "'loop' found in pyatb.calculations",
+      "details": {
+        "category": "calculations",
+        "value": [
+          "band_structure",
+          "pdos",
+          "fat_band",
+          "fermi_surface",
+          "berry_phase",
+          "berry_curvature",
+          "electric_polarization",
+          "wilson_loop",
+          "chern_number",
+          "anomalous_hall_conductivity",
+          "weyl_point_detection"
+        ],
+        "matched_term": "loop"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'module_hamilt_pw': no matching capability found in registry",
+      "details": {
+        "matched_term": "module_hamilt_pw"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'module_pw': no matching capability found in registry",
+      "details": {
+        "matched_term": "module_pw"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'mpi': no matching capability found in registry",
+      "details": {
+        "matched_term": "mpi"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'openmp': no matching capability found in registry",
+      "details": {
+        "matched_term": "openmp"
+      }
+    },
+    {
+      "component": "abacustest",
+      "status": "available",
+      "description": "'phonon' found in abacustest.models",
+      "details": {
+        "category": "models",
+        "value": [
+          "eos",
+          "phonon",
+          "band",
+          "elastic",
+          "vacancy",
+          "bec"
+        ],
+        "matched_term": "phonon"
+      }
+    },
+    {
+      "component": "abacus_core",
+      "status": "available",
+      "description": "'pw' found in abacus_core.basis_types",
+      "details": {
+        "category": "basis_types",
+        "value": [
+          "pw",
+          "lcao",
+          "lcao_in_pw"
+        ],
+        "matched_term": "pw"
+      }
+    },
+    {
+      "component": "pyabacus",
+      "status": "available",
+      "description": "'pw' found in pyabacus.workflows",
+      "details": {
+        "category": "workflows",
+        "value": [
+          "LCAOWorkflow",
+          "PWWorkflow"
+        ],
+        "matched_term": "pw"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'quantum': no matching capability found in registry",
+      "details": {
+        "matched_term": "quantum"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'review': no matching capability found in registry",
+      "details": {
+        "matched_term": "review"
+      }
+    },
+    {
+      "component": "abacus_core",
+      "status": "available",
+      "description": "'root' found in abacus_core.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-develop",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "pyabacus",
+      "status": "available",
+      "description": "'root' found in pyabacus.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-develop/python/pyabacus",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "abacustest",
+      "status": "available",
+      "description": "'root' found in abacustest.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-test",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "deepmd_kit",
+      "status": "available",
+      "description": "'root' found in deepmd_kit.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/deepmd-kit",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "deeptb",
+      "status": "available",
+      "description": "'root' found in deeptb.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/DeePTB",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "pyatb",
+      "status": "available",
+      "description": "'root' found in pyatb.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/pyatb",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "abacus_agent_tools",
+      "status": "available",
+      "description": "'root' found in abacus_agent_tools.source_path",
+      "details": {
+        "category": "source_path",
+        "value": "/root/abacus-agent-tools",
+        "matched_term": "root"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'scalapack': no matching capability found in registry",
+      "details": {
+        "matched_term": "scalapack"
+      }
+    },
+    {
+      "component": "abacus_core",
+      "status": "available",
+      "description": "'scf' found in abacus_core.calculations",
+      "details": {
+        "category": "calculations",
+        "value": [
+          "scf",
+          "relax",
+          "cell_relax",
+          "md",
+          "tddft"
+        ],
+        "matched_term": "scf"
+      }
+    },
+    {
+      "component": "pyabacus",
+      "status": "available",
+      "description": "'scf' found in pyabacus.callbacks",
+      "details": {
+        "category": "callbacks",
+        "value": [
+          "before_scf",
+          "after_iter",
+          "before_after_scf",
+          "after_scf"
+        ],
+        "matched_term": "scf"
+      }
+    },
+    {
+      "component": "unknown",
+      "status": "missing",
+      "description": "'sternheimer': no matching capability found in registry",
+      "details": {
+        "matched_term": "sternheimer"
+      }
+    }
+  ],
+  "tasks": [
+    {
+      "id": "DFPT-001",
+      "title": "设计 ABACUS DFPT 模块架构",
+      "layer": "infra",
+      "type": "new",
+      "description": "设计 DFPT 模块在 ABACUS 中的整体架构，包括：\n- 模块目录结构（module_dfpt/）\n- 与现有模块的接口（module_pw, module_hamilt_pw, module_elecstate）\n- 数据流设计（FFTGrid, WaveFunction, KPointData 等）\n- ESolver 扩展（ksdft_pw_dfpt）\n- 参考 dvqpsi_cpp 的成功经验",
+      "dependencies": [],
+      "acceptance_criteria": [
+        "完成架构设计文档（DFPT_ARCHITECTURE.md）",
+        "定义核心数据结构和接口",
+        "明确与 ABACUS 现有模块的集成点",
+        "设计文档通过技术评审"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/README.md",
+        "docs/DFPT_ARCHITECTURE.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "architect",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-002a",
+      "title": "编写 DFPT 领域知识文档",
+      "layer": "infra",
+      "type": "new",
+      "description": "在 domain-knowledge/ 下创建 DFPT 专用领域知识文档，供所有 agent 自动注入。\n\n交付物：\n1. domain-knowledge/abacus-dfpt.md — DFPT 领域知识主文档（单位制、物理量表、物理约束 checklist、算法适配 checklist、QE PHonon 模块映射、ABACUS DFPT 模块映射、严重程度分级）\n2. domain-knowledge/references/ref-dfpt-physics.md — DFPT 物理代码证据\n3. domain-knowledge/references/ref-dfpt-algorithm.md — DFPT 算法代码证据\n\n内容规范：\n- 物理量表 ≥15 个 DFPT 核心物理量\n- QE PHonon 模块映射 ≥20 个 Fortran 文件\n- 每条 checklist 有 [REF-DFxx] 代码证据引用\n- 覆盖全部 6 个审查维度（单位、物理、算法、风格、调用链、防御）",
+      "dependencies": [
+        "DFPT-001"
+      ],
+      "acceptance_criteria": [
+        "abacus-dfpt.md 覆盖 DFPT 全部 6 个审查维度",
+        "每条 checklist 有 [REF-DFxx] 代码证据引用",
+        "物理量表 ≥15 个条目",
+        "QE PHonon 模块映射 ≥20 个文件",
+        "load_domain_knowledge() 加载测试通过"
+      ],
+      "files_to_touch": [
+        "domain-knowledge/abacus-dfpt.md",
+        "domain-knowledge/references/ref-dfpt-physics.md",
+        "domain-knowledge/references/ref-dfpt-algorithm.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "physics-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-002b",
+      "title": "编写 DFPT 审查 Prompt 和 Schema",
+      "layer": "infra",
+      "type": "new",
+      "description": "为 6 个 review agent 创建 DFPT 专用 prompt（机读版 .agent.md + 人读版 .md）。\n\n交付物：\n1. 6 个 prompts/review-dfpt-{units,physics,algorithm,style,callchain,debug}.agent.md\n2. 6 个 .claude/commands/review-dfpt-{units,...,debug}.md\n3. 对应 schema（可复用 finding.schema.json）\n\n每个 prompt 检查项 ≥5 条，finding ID 格式 dfpt-{agent}-{三位数字}。",
+      "dependencies": [
+        "DFPT-002a"
+      ],
+      "acceptance_criteria": [
+        "6 个 .agent.md 遵循现有格式（纯 JSON 输出，含 findings 数组）",
+        "6 个 .md 可作为 Claude Code slash command",
+        "每个 prompt 检查项 ≥5 条",
+        "schema 与现有 finding.schema.json 兼容",
+        "用 dvqpsi_cpp 文件手动测试输出格式正确"
+      ],
+      "files_to_touch": [
+        "prompts/review-dfpt-units.agent.md",
+        "prompts/review-dfpt-physics.agent.md",
+        "prompts/review-dfpt-algorithm.agent.md",
+        "prompts/review-dfpt-style.agent.md",
+        "prompts/review-dfpt-callchain.agent.md",
+        "prompts/review-dfpt-debug.agent.md",
+        ".claude/commands/review-dfpt-units.md",
+        ".claude/commands/review-dfpt-physics.md",
+        ".claude/commands/review-dfpt-algorithm.md",
+        ".claude/commands/review-dfpt-style.md",
+        ".claude/commands/review-dfpt-callchain.md",
+        ".claude/commands/review-dfpt-debug.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "devops",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-002c",
+      "title": "配置 DFPT 迁移工作流",
+      "layer": "infra",
+      "type": "new",
+      "description": "配置 3-agent 串行迁移工作流，支持 QE Fortran → ABACUS C++ 迁移分析。\n\n交付物：\n1. 3 个 prompts/review-migrate-{source,target,diff}-dfpt.agent.md（增加 Fortran→C++ 适配维度：数组布局、复数类型、全局状态、并行接口、内存管理、I/O）\n2. docs/DFPT_MIGRATION_WORKFLOW.md（源文件-参考文件配对表 ≥10 对、推荐迁移顺序、预期适配复杂度）",
+      "dependencies": [
+        "DFPT-002a"
+      ],
+      "acceptance_criteria": [
+        "3 个迁移 prompt 遵循现有格式（source→checklist, target→checklist, diff→adaptations）",
+        "Fortran→C++ 适配维度 ≥6 个方面",
+        "源文件-参考文件配对表 ≥10 对",
+        "用 dvqpsi_cpp 文件运行完整迁移工作流生成有效适配方案"
+      ],
+      "files_to_touch": [
+        "prompts/review-migrate-source-dfpt.agent.md",
+        "prompts/review-migrate-target-dfpt.agent.md",
+        "prompts/review-migrate-diff-dfpt.agent.md",
+        "docs/DFPT_MIGRATION_WORKFLOW.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "devops",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-002d",
+      "title": "集成验证和示例报告",
+      "layer": "infra",
+      "type": "test",
+      "description": "端到端验证整个审查和迁移工作流，生成示例报告。\n\n交付物：\n1. 6-agent DFPT review 运行输出（用 dvqpsi_cpp/dvqpsi_us.cpp）\n2. 3-agent migrate 运行输出（用 QE solve_linter.f90 → ABACUS diago_cg.cpp）\n3. examples/dfpt_dvqpsi_review.md — 审查报告\n4. examples/dfpt_solve_linter_migration.md — 迁移适配方案\n5. orchestrator.py DFPT 扩展（如需要）",
+      "dependencies": [
+        "DFPT-002b",
+        "DFPT-002c"
+      ],
+      "acceptance_criteria": [
+        "6-agent review 端到端成功，所有 agent status=ok",
+        "3-agent migrate 端到端成功，生成有效适配方案",
+        "审查报告 ≥10 条 findings（覆盖 ERROR/WARNING/INFO）",
+        "迁移报告 ≥8 条 adaptations（覆盖 high/medium/low）",
+        "所有 JSON 输出通过 envelope schema 验证"
+      ],
+      "files_to_touch": [
+        "examples/dfpt_dvqpsi_review.md",
+        "examples/dfpt_solve_linter_migration.md",
+        "orchestrator.py"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "devops",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-003",
+      "title": "创建 DFPT 模块骨架和构建系统",
+      "layer": "infra",
+      "type": "new",
+      "description": "在 ABACUS 中创建 module_dfpt 目录结构和 CMake 构建配置：\n- source/module_dfpt/ 目录结构\n- CMakeLists.txt 配置\n- 测试框架集成（GoogleTest）\n- 与主构建系统集成",
+      "dependencies": [
+        "DFPT-001"
+      ],
+      "acceptance_criteria": [
+        "module_dfpt 目录结构创建完成",
+        "CMake 构建配置正确",
+        "空模块可以成功编译",
+        "测试框架集成完成"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/CMakeLists.txt",
+        "source/module_dfpt/test/CMakeLists.txt",
+        "source/CMakeLists.txt"
+      ],
+      "estimated_scope": "small",
+      "specialist": "build-engineer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-101",
+      "title": "迁移数据结构适配层",
+      "layer": "core",
+      "type": "extend",
+      "description": "创建 dvqpsi_cpp 和 ABACUS 之间的数据结构适配层：\n- FFTGrid ↔ PW_Basis\n- WaveFunction ↔ Psi<complex<double>>\n- KPointData ↔ K_Vectors\n- GVectorData ↔ PW_Basis\n- NonlocalData ↔ pseudopot_cell_vnl",
+      "dependencies": [
+        "DFPT-003"
+      ],
+      "acceptance_criteria": [
+        "适配器类实现完成",
+        "单元测试覆盖所有转换",
+        "性能开销 < 5%",
+        "代码审核通过（6-agent review）"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/dfpt_adapters.h",
+        "source/module_dfpt/dfpt_adapters.cpp",
+        "source/module_dfpt/test/test_adapters.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "cpp-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-102",
+      "title": "迁移 DVQPsiUS 核心 kernel",
+      "layer": "core",
+      "type": "extend",
+      "description": "将 dvqpsi_cpp 的核心 DFPT kernel 迁移到 ABACUS：\n- 局部势贡献（local potential）\n- 非局部赝势贡献（nonlocal pseudopotential）\n- 超软赝势增强（ultrasoft augmentation）\n- FFT 操作集成（使用 ABACUS 的 UFFT）\n- OpenMP 并行化",
+      "dependencies": [
+        "DFPT-101"
+      ],
+      "acceptance_criteria": [
+        "DVQPsiUS 类实现完成",
+        "与 dvqpsi_cpp 数值结果一致（误差 < 1e-10）",
+        "单元测试通过",
+        "性能与 dvqpsi_cpp 相当",
+        "代码审核通过（物理正确性、算法匹配）"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/dvqpsi_us.h",
+        "source/module_dfpt/dvqpsi_us.cpp",
+        "source/module_dfpt/test/test_dvqpsi.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "physics-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-103",
+      "title": "迁移 Sternheimer 求解器",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "实现 Sternheimer 方程求解器 (H-ε)·Δψ = -ΔV·ψ：\n- 共轭梯度（CG）求解器\n- 预条件器（diagonal preconditioning）\n- Hamiltonian 算符应用\n- 收敛判据和迭代控制",
+      "dependencies": [
+        "DFPT-102"
+      ],
+      "acceptance_criteria": [
+        "Sternheimer 求解器实现完成",
+        "与 QE 参考结果一致",
+        "收敛性测试通过",
+        "性能基准达标",
+        "代码审核通过",
+        "Sternheimer 求解器残差 < 1e-10",
+        "与 QE cgsolve_all 结果逐分量误差 < 1e-8",
+        "M2 冒烟测试：Si 体系 DVQPsiUS + Sternheimer 端到端数据流通畅"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/sternheimer_solver.h",
+        "source/module_dfpt/sternheimer_solver.cpp",
+        "source/module_dfpt/cg_solver.h",
+        "source/module_dfpt/cg_solver.cpp",
+        "source/module_dfpt/test/test_sternheimer.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "algorithm-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-201",
+      "title": "实现 DFPT 自洽场迭代",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "实现 DFPT 的 SCF 循环：\n- 电荷密度响应计算（Δρ）\n- 势能响应计算（ΔV_SCF = ΔV_H + ΔV_xc）\n- 势能混合（charge mixing）\n- 对称化操作\n- 收敛判据",
+      "dependencies": [
+        "DFPT-103"
+      ],
+      "acceptance_criteria": [
+        "DFPT SCF 循环实现完成",
+        "与 QE 收敛行为一致",
+        "支持多种混合方案（linear, Broyden）",
+        "单元测试和集成测试通过",
+        "代码审核通过",
+        "DFPT SCF 收敛到 drho < 1e-10 所需迭代次数与 QE 偏差 ≤ 2 次"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/dfpt_scf.h",
+        "source/module_dfpt/dfpt_scf.cpp",
+        "source/module_dfpt/potential_mixer.h",
+        "source/module_dfpt/potential_mixer.cpp",
+        "source/module_dfpt/test/test_dfpt_scf.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "physics-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-202",
+      "title": "实现动力学矩阵计算",
+      "layer": "algorithm",
+      "type": "new",
+      "description": "计算声子动力学矩阵：\n- 力常数矩阵计算\n- 对称化和约化\n- 本征值求解（声子频率）\n- 本征向量计算（声子模式）\n- LO-TO 劈裂处理（极性材料）",
+      "dependencies": [
+        "DFPT-201"
+      ],
+      "acceptance_criteria": [
+        "动力学矩阵计算正确",
+        "声子频率与 QE 一致（误差 < 0.1 cm⁻¹）",
+        "支持声学和规范和",
+        "单元测试通过",
+        "代码审核通过",
+        "M3 冒烟测试：Si 体系完整 DFPT SCF + 动力学矩阵，声子频率与 QE 偏差 < 0.1 cm⁻¹"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/dynmat.h",
+        "source/module_dfpt/dynmat.cpp",
+        "source/module_dfpt/symmetry_dfpt.h",
+        "source/module_dfpt/symmetry_dfpt.cpp",
+        "source/module_dfpt/test/test_dynmat.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "physics-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-203",
+      "title": "实现电声耦合计算",
+      "layer": "algorithm",
+      "type": "extend",
+      "description": "计算电声耦合矩阵元和相关物理量：\n- EPC 矩阵元 g(k,q,ν)\n- 声子线宽 γ(q,ν)\n- Eliashberg 函数 α²F(ω)\n- 耦合常数 λ\n- Tc 估算（McMillan 公式）",
+      "dependencies": [
+        "DFPT-202"
+      ],
+      "acceptance_criteria": [
+        "EPC 计算实现完成",
+        "与 QE 结果一致",
+        "支持 Brillouin zone 积分",
+        "单元测试通过",
+        "代码审核通过",
+        "EPC 矩阵元 |g| 与 QE 相对误差 < 1%",
+        "λ 与 QE 相对误差 < 5%"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/elphon.h",
+        "source/module_dfpt/elphon.cpp",
+        "source/module_dfpt/bz_integration.h",
+        "source/module_dfpt/bz_integration.cpp",
+        "source/module_dfpt/test/test_elphon.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "physics-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-301",
+      "title": "实现 MPI 并行化",
+      "layer": "infra",
+      "type": "new",
+      "description": "添加 MPI 并行支持：\n- k 点并行（pool parallelization）\n- q 点并行（image parallelization）\n- 不可约表示并行\n- 数据通信优化",
+      "dependencies": [
+        "DFPT-202"
+      ],
+      "acceptance_criteria": [
+        "MPI 并行实现完成",
+        "并行效率 > 80%（16 进程）",
+        "负载均衡良好",
+        "并行测试通过",
+        "代码审核通过"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/dfpt_parallel.h",
+        "source/module_dfpt/dfpt_parallel.cpp",
+        "source/module_dfpt/test/test_parallel.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "hpc-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-302",
+      "title": "性能优化和基准测试",
+      "layer": "infra",
+      "type": "new",
+      "description": "性能优化和基准测试：\n- 热点分析和优化\n- 内存使用优化\n- 与 QE 性能对比\n- 生成性能基准报告",
+      "dependencies": [
+        "DFPT-301",
+        "DFPT-203"
+      ],
+      "acceptance_criteria": [
+        "性能与 QE 相当或更优",
+        "内存使用合理",
+        "性能基准报告完成",
+        "优化文档完成",
+        "单 q 点计算时间 ≤ 1.2× QE",
+        "内存峰值 ≤ 1.5× QE"
+      ],
+      "files_to_touch": [
+        "docs/DFPT_PERFORMANCE.md",
+        "benchmarks/dfpt_benchmark.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "performance-engineer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-401",
+      "title": "创建 ESolver_DFPT 类",
+      "layer": "workflow",
+      "type": "new",
+      "description": "创建 DFPT ESolver 并集成到 ABACUS 主流程：\n- 实现 ESolver_DFPT 类\n- 集成到 Driver 流程\n- 输入参数处理\n- 输出文件生成",
+      "dependencies": [
+        "DFPT-301"
+      ],
+      "acceptance_criteria": [
+        "ESolver_DFPT 实现完成",
+        "可通过 INPUT 文件调用",
+        "输出格式与 ABACUS 一致",
+        "集成测试通过"
+      ],
+      "files_to_touch": [
+        "source/module_esolver/esolver_dfpt.h",
+        "source/module_esolver/esolver_dfpt.cpp",
+        "source/module_esolver/esolver.cpp",
+        "source/driver.cpp"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "integration-engineer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-402",
+      "title": "实现 q 点网格和工作流",
+      "layer": "workflow",
+      "type": "new",
+      "description": "实现完整的声子计算工作流：\n- q 点网格生成\n- q 点循环驱动\n- 对称性约化\n- 恢复/检查点机制\n- 后处理工具（q2r, matdyn 等效功能）",
+      "dependencies": [
+        "DFPT-401"
+      ],
+      "acceptance_criteria": [
+        "q 点网格工作流实现完成",
+        "支持恢复中断的计算",
+        "后处理工具可用",
+        "端到端测试通过"
+      ],
+      "files_to_touch": [
+        "source/module_dfpt/qpoint_grid.h",
+        "source/module_dfpt/qpoint_grid.cpp",
+        "source/module_dfpt/phonon_driver.h",
+        "source/module_dfpt/phonon_driver.cpp",
+        "tools/dfpt_postprocess.cpp"
+      ],
+      "estimated_scope": "large",
+      "specialist": "workflow-developer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-501",
+      "title": "创建集成测试套件",
+      "layer": "validation",
+      "type": "test",
+      "description": "创建完整的集成测试套件：\n- 简单系统测试（Si, Al 等）\n- 与 QE 结果对比验证\n- 极性材料测试（LO-TO 劈裂）\n- 金属系统测试\n- 电声耦合测试\n- 集成到 abacustest 框架",
+      "dependencies": [
+        "DFPT-402"
+      ],
+      "acceptance_criteria": [
+        "集成测试套件完成（≥10 个测试用例）",
+        "所有测试通过",
+        "与 QE 结果一致性验证完成",
+        "测试文档完成"
+      ],
+      "files_to_touch": [
+        "tests/integrate/dfpt_*/",
+        "tests/integrate/CASES_DFPT.txt",
+        "docs/DFPT_TESTING.md"
+      ],
+      "estimated_scope": "large",
+      "specialist": "test-engineer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-502",
+      "title": "编写用户文档",
+      "layer": "validation",
+      "type": "new",
+      "description": "编写完整的用户文档：\n- 用户手册（如何使用 DFPT 功能）\n- 输入参数说明\n- 示例计算\n- 常见问题解答\n- 与 QE 的差异说明",
+      "dependencies": [
+        "DFPT-501"
+      ],
+      "acceptance_criteria": [
+        "用户文档完成",
+        "示例计算可复现",
+        "文档评审通过"
+      ],
+      "files_to_touch": [
+        "docs/DFPT_USER_GUIDE.md",
+        "docs/DFPT_INPUT_PARAMETERS.md",
+        "examples/dfpt_*/README.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "technical-writer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    },
+    {
+      "id": "DFPT-503",
+      "title": "编写开发者文档",
+      "layer": "validation",
+      "type": "new",
+      "description": "编写开发者文档：\n- 架构设计文档\n- 算法实现细节\n- 代码审核报告汇总\n- 性能分析报告\n- 未来扩展建议",
+      "dependencies": [
+        "DFPT-501"
+      ],
+      "acceptance_criteria": [
+        "开发者文档完成",
+        "代码审核报告汇总完成",
+        "文档评审通过"
+      ],
+      "files_to_touch": [
+        "docs/DFPT_DEVELOPER_GUIDE.md",
+        "docs/DFPT_ALGORITHM_DETAILS.md",
+        "docs/DFPT_CODE_REVIEW_SUMMARY.md"
+      ],
+      "estimated_scope": "medium",
+      "specialist": "technical-writer",
+      "gates": [],
+      "status": "pending",
+      "branch_name": "",
+      "commit_hash": "",
+      "worktree_path": "",
+      "risk_level": "",
+      "defer_trigger": "",
+      "original_dependencies": [],
+      "suspended_dependencies": [],
+      "started_at": "",
+      "completed_at": ""
+    }
+  ],
+  "current_task_id": null,
+  "drafts": {},
+  "gate_results": {},
+  "integration_results": [],
+  "phase": "execute",
+  "human_decisions": [],
+  "review_results": [],
+  "human_approvals": [],
+  "brainstorm_results": [],
+  "blocked_reason": null,
+  "optimization_history": [],
+  "last_optimization": null,
+  "optimization_metadata": {},
+  "charter": {
+    "project_name": "QE PHonon DFPT Migration to ABACUS",
+    "project_id": "qe-dfpt-migration",
+    "created_at": "2026-02-20",
+    "version": "1.0",
+    "executive_summary": {
+      "overview": "将 Quantum ESPRESSO PHonon 包中的密度泛函微扰理论（DFPT）功能用 C++ 重新实现并集成到 ABACUS 电子结构计算软件包中。",
+      "business_value": "为 ABACUS 添加完整的声子计算和电声耦合功能，使其成为功能完备的第一性原理计算软件包，支持材料的动力学性质研究。",
+      "strategic_alignment": "支持 deepmodeling 生态系统的完整性，为多尺度材料模拟提供基础能力。"
+    },
+    "objectives": {
+      "primary": [
+        "将 QE PHonon 的 DFPT 功能完整迁移到 ABACUS",
+        "保持与 QE 相同的物理精度（声子频率误差 < 0.1 cm⁻¹）",
+        "性能达到或超过 QE 水平",
+        "建立完整的测试和验证体系"
+      ],
+      "secondary": [
+        "建立代码审核工作流（6-agent 并发 + 3-agent 串行迁移）",
+        "创建完整的用户和开发者文档",
+        "为未来扩展（如 Raman 光谱、介电常数）奠定基础"
+      ]
+    },
+    "scope": {
+      "in_scope": [
+        "核心 DFPT kernel 迁移（dV/dτ·ψ）",
+        "Sternheimer 求解器实现",
+        "DFPT 自洽场迭代",
+        "声子动力学矩阵计算",
+        "电声耦合矩阵元计算",
+        "MPI + OpenMP 并行化",
+        "与 ABACUS 现有模块集成（module_pw, module_hamilt_pw）",
+        "单元测试和集成测试",
+        "用户文档和开发者文档"
+      ],
+      "out_of_scope": [
+        "Raman 光谱计算（未来扩展）",
+        "介电常数计算（未来扩展）",
+        "GPU 加速（未来优化）",
+        "非线性声子效应",
+        "QE 的所有后处理工具（仅实现核心功能等效）"
+      ],
+      "assumptions": [
+        "ABACUS 现有模块（module_pw, module_hamilt_pw）功能稳定",
+        "dvqpsi_cpp 的核心 kernel 实现正确且可复用",
+        "code-review-agent 工具可用且配置正确",
+        "有足够的计算资源进行性能基准测试"
+      ],
+      "constraints": [
+        "必须保持与 QE 的数值一致性",
+        "必须遵循 ABACUS 的代码风格和架构",
+        "性能不能显著低于 QE",
+        "必须通过多维度代码审核"
+      ]
+    },
+    "milestones": [
+      {
+        "id": "M1",
+        "name": "基础设施就绪",
+        "description": "完成架构设计、代码审核工作流和构建系统",
+        "tasks": [
+          "DFPT-001",
+          "DFPT-002",
+          "DFPT-003"
+        ],
+        "target_date": "2026-03-31",
+        "deliverables": [
+          "DFPT_ARCHITECTURE.md",
+          "code-review-agent 配置",
+          "module_dfpt 骨架和构建系统"
+        ],
+        "success_criteria": [
+          "架构设计通过技术评审",
+          "代码审核工作流测试通过",
+          "空模块可以成功编译"
+        ]
+      },
+      {
+        "id": "M2",
+        "name": "核心 Kernel 迁移完成",
+        "description": "完成数据适配层、DVQPsiUS kernel 和 Sternheimer 求解器",
+        "tasks": [
+          "DFPT-101",
+          "DFPT-102",
+          "DFPT-103"
+        ],
+        "target_date": "2026-06-30",
+        "deliverables": [
+          "数据结构适配器",
+          "DVQPsiUS 核心 kernel",
+          "Sternheimer 求解器"
+        ],
+        "success_criteria": [
+          "与 dvqpsi_cpp 数值结果一致（误差 < 1e-10）",
+          "与 QE 参考结果一致",
+          "单元测试全部通过",
+          "代码审核通过"
+        ]
+      },
+      {
+        "id": "M3",
+        "name": "声子计算功能完成",
+        "description": "完成 DFPT SCF、动力学矩阵和电声耦合计算",
+        "tasks": [
+          "DFPT-201",
+          "DFPT-202",
+          "DFPT-203"
+        ],
+        "target_date": "2026-09-30",
+        "deliverables": [
+          "DFPT SCF 循环",
+          "动力学矩阵计算",
+          "电声耦合计算"
+        ],
+        "success_criteria": [
+          "声子频率与 QE 一致（误差 < 0.1 cm⁻¹）",
+          "支持声学和规范和",
+          "EPC 矩阵元与 QE 一致",
+          "集成测试通过"
+        ]
+      },
+      {
+        "id": "M4",
+        "name": "并行化和性能优化",
+        "description": "完成 MPI 并行化和性能优化",
+        "tasks": [
+          "DFPT-301",
+          "DFPT-302"
+        ],
+        "target_date": "2026-11-30",
+        "deliverables": [
+          "MPI 并行实现",
+          "性能基准报告"
+        ],
+        "success_criteria": [
+          "并行效率 > 80%（16 进程）",
+          "性能与 QE 相当或更优",
+          "负载均衡良好"
+        ]
+      },
+      {
+        "id": "M5",
+        "name": "集成和用户接口",
+        "description": "完成 ESolver 集成和 q 点工作流",
+        "tasks": [
+          "DFPT-401",
+          "DFPT-402"
+        ],
+        "target_date": "2027-01-31",
+        "deliverables": [
+          "ESolver_DFPT 类",
+          "q 点网格工作流",
+          "后处理工具"
+        ],
+        "success_criteria": [
+          "可通过 INPUT 文件调用",
+          "支持恢复中断的计算",
+          "端到端测试通过"
+        ]
+      },
+      {
+        "id": "M6",
+        "name": "项目交付",
+        "description": "完成测试和文档",
+        "tasks": [
+          "DFPT-501",
+          "DFPT-502",
+          "DFPT-503"
+        ],
+        "target_date": "2027-03-31",
+        "deliverables": [
+          "集成测试套件（≥10 个测试用例）",
+          "用户文档",
+          "开发者文档",
+          "性能基准报告",
+          "代码审核报告汇总"
+        ],
+        "success_criteria": [
+          "所有测试通过",
+          "与 QE 结果一致性验证完成",
+          "文档评审通过",
+          "项目可以正式发布"
+        ]
+      }
+    ],
+    "risks": [
+      {
+        "id": "R1",
+        "category": "technical",
+        "description": "物理正确性验证困难",
+        "impact": "high",
+        "probability": "medium",
+        "mitigation": [
+          "与 QE 详细对比每个中间结果",
+          "使用多个测试体系验证",
+          "建立自动化验证流程",
+          "咨询 QE 和 ABACUS 领域专家"
+        ]
+      },
+      {
+        "id": "R2",
+        "category": "technical",
+        "description": "性能无法达到 QE 水平",
+        "impact": "high",
+        "probability": "medium",
+        "mitigation": [
+          "参考 dvqpsi_cpp 的优化经验",
+          "使用性能分析工具识别热点",
+          "优化关键循环和数据访问模式",
+          "考虑使用更高效的数学库"
+        ]
+      },
+      {
+        "id": "R3",
+        "category": "technical",
+        "description": "MPI 并行化复杂度高",
+        "impact": "medium",
+        "probability": "high",
+        "mitigation": [
+          "参考 QE 和 ABACUS 现有并行方案",
+          "先实现简单的 k 点并行",
+          "逐步添加 q 点和不可约表示并行",
+          "充分测试并行正确性和效率"
+        ]
+      },
+      {
+        "id": "R4",
+        "category": "technical",
+        "description": "对称性操作实现错误",
+        "impact": "high",
+        "probability": "medium",
+        "mitigation": [
+          "复用 ABACUS 现有对称性模块",
+          "与 QE 对称性处理逐步对比",
+          "使用高对称性体系测试",
+          "代码审核重点关注对称性部分"
+        ]
+      },
+      {
+        "id": "R5",
+        "category": "resource",
+        "description": "开发时间超出预期",
+        "impact": "medium",
+        "probability": "medium",
+        "mitigation": [
+          "优先实现核心功能",
+          "将非关键功能标记为未来扩展",
+          "定期评估进度并调整计划",
+          "必要时增加开发资源"
+        ]
+      },
+      {
+        "id": "R6",
+        "category": "integration",
+        "description": "ABACUS 模块接口变化",
+        "impact": "medium",
+        "probability": "low",
+        "mitigation": [
+          "与 ABACUS 核心开发团队保持沟通",
+          "使用稳定的 ABACUS 版本",
+          "设计适配层隔离接口变化",
+          "及时跟踪 ABACUS 更新"
+        ]
+      }
+    ],
+    "success_criteria": {
+      "technical": [
+        "声子频率与 QE 一致（误差 < 0.1 cm⁻¹）",
+        "EPC 矩阵元与 QE 一致",
+        "性能与 QE 相当或更优",
+        "MPI 并行效率 > 80%（16 进程）",
+        "所有单元测试和集成测试通过",
+        "代码审核通过（6 个维度）"
+      ],
+      "quality": [
+        "代码覆盖率 > 80%",
+        "无已知的严重 bug",
+        "代码风格符合 ABACUS 规范",
+        "文档完整且准确"
+      ],
+      "deliverables": [
+        "集成到 ABACUS 的 module_dfpt 模块",
+        "≥10 个集成测试用例",
+        "用户手册和开发者文档",
+        "性能基准报告",
+        "代码审核报告汇总"
+      ]
+    },
+    "resources": {
+      "team": [
+        {
+          "role": "architect",
+          "allocation": "20%",
+          "duration": "1 month"
+        },
+        {
+          "role": "physics-developer",
+          "allocation": "100%",
+          "duration": "9 months"
+        },
+        {
+          "role": "algorithm-developer",
+          "allocation": "100%",
+          "duration": "6 months"
+        },
+        {
+          "role": "cpp-developer",
+          "allocation": "50%",
+          "duration": "4 months"
+        },
+        {
+          "role": "hpc-developer",
+          "allocation": "100%",
+          "duration": "3 months"
+        },
+        {
+          "role": "test-engineer",
+          "allocation": "50%",
+          "duration": "6 months"
+        },
+        {
+          "role": "technical-writer",
+          "allocation": "30%",
+          "duration": "2 months"
+        }
+      ],
+      "infrastructure": [
+        "HPC 集群（用于性能测试和基准对比）",
+        "code-review-agent 工具",
+        "CI/CD 系统（自动化测试）",
+        "QE 和 ABACUS 开发环境"
+      ],
+      "external_dependencies": [
+        "QE PHonon 源代码（/root/q-e/PHonon/）",
+        "dvqpsi_cpp 参考实现（/root/q-e/PHonon/dvqpsi_cpp/）",
+        "ABACUS 代码库（/root/abacus-dfpt/abacus-develop/）",
+        "code-review-agent（/root/code-review-agent/）"
+      ]
+    },
+    "timeline": {
+      "start_date": "2026-02-20",
+      "target_end_date": "2027-03-31",
+      "total_duration": "13 months",
+      "phases": [
+        {
+          "phase": "Phase 1",
+          "name": "基础设施和架构设计",
+          "duration": "1.5 months",
+          "tasks": 3
+        },
+        {
+          "phase": "Phase 2",
+          "name": "核心 DFPT Kernel 迁移",
+          "duration": "3 months",
+          "tasks": 3
+        },
+        {
+          "phase": "Phase 3",
+          "name": "自洽场和声子计算",
+          "duration": "3 months",
+          "tasks": 3
+        },
+        {
+          "phase": "Phase 4",
+          "name": "并行化和优化",
+          "duration": "2 months",
+          "tasks": 2
+        },
+        {
+          "phase": "Phase 5",
+          "name": "ESolver 集成和用户接口",
+          "duration": "2 months",
+          "tasks": 2
+        },
+        {
+          "phase": "Phase 6",
+          "name": "测试和文档",
+          "duration": "1.5 months",
+          "tasks": 3
+        }
+      ]
+    },
+    "governance": {
+      "review_frequency": "bi-weekly",
+      "stakeholders": [
+        {
+          "name": "ABACUS Core Team",
+          "role": "Technical Review",
+          "involvement": "high"
+        },
+        {
+          "name": "QE PHonon Experts",
+          "role": "Domain Consultation",
+          "involvement": "medium"
+        },
+        {
+          "name": "deepmodeling Community",
+          "role": "User Feedback",
+          "involvement": "low"
+        }
+      ],
+      "decision_authority": "ABACUS Core Team",
+      "escalation_path": "Project Lead → ABACUS Core Team → deepmodeling Steering Committee"
+    }
+  },
+  "closure": {}
+}
