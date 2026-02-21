@@ -416,6 +416,49 @@ run_brainstorm(state, "after_decompose",
 
 After task completion, `check_deferred_triggers(state, completed_task_id)` automatically promotes deferred tasks whose trigger conditions are met. Trigger format: `"TASK-ID:condition"` (e.g., `"FE-304:accuracy_below_threshold"`).
 
+## Task Specification Documents
+
+**Core Principle:** During the planning phase, creating per-task specification documents with explicit context indexes (reference code paths, target code patterns, algorithm mappings) is the key to decomposing context complexity in complex multi-task projects. This enables:
+
+1. **Context isolation** — Each task executor only needs to read one spec doc (~300-500 lines) instead of understanding the entire project
+2. **Reusable reference indexes** — Source/target code paths are cataloged once, reused across tasks
+3. **TDD-ready acceptance** — Concrete test code written upfront drives implementation quality
+4. **Reduced ambiguity** — Fortran→C++ mappings, data structure correspondences, and algorithm flow are explicit
+
+### Spec Doc Structure
+
+Each task gets `docs/tasks/{TASK_ID}.md` with these sections:
+
+| Section | Purpose | Content |
+|---------|---------|---------|
+| **Objective** | What this task delivers | 2-3 sentences, no ambiguity |
+| **Reference Code** | Context index for executor | Source paths (QE/Fortran), target patterns (ABACUS/C++), prior art (dvqpsi_cpp) with specific file:function references |
+| **Implementation Guide** | Development advice | Architecture decisions, key equations with code mapping, data structure correspondence tables, critical pitfalls |
+| **TDD Test Plan** | Tests to write FIRST | Concrete GoogleTest/pytest code snippets with expected values and tolerances |
+| **Acceptance Criteria** | Quantitative pass/fail | Numerical tolerances, performance targets, checklist items |
+
+### Generating Spec Docs
+
+```bash
+# Generate skeleton spec docs for all tasks in a project
+python -m tools.generate_task_specs projects/qe-dfpt-migration
+
+# Generate for a specific task
+python -m tools.generate_task_specs projects/qe-dfpt-migration --task DFPT-001
+
+# Overwrite existing docs (default: skip existing)
+python -m tools.generate_task_specs projects/qe-dfpt-migration --force
+```
+
+The generator reads `project_state.json`, creates skeleton docs in `docs/tasks/`, and updates each task's `spec_doc` field in the state file. Skeletons must then be filled in with actual reference code paths and implementation details by a human or AI agent who understands the codebase.
+
+### Writing Guidelines
+
+1. **Reference Code** must contain actual file paths, not placeholders. Every path must be verified to exist.
+2. **Implementation Guide** should include Fortran→C++ mapping tables where applicable (variable names, data structures, function signatures).
+3. **TDD Test Plan** should contain runnable test code, not pseudocode. Include expected numerical values with tolerances.
+4. **Acceptance Criteria** should be machine-checkable where possible (frequency error < 0.1 cm⁻¹, not "frequencies are correct").
+
 ## Related Repositories
 
 - `/root/abacus-develop` — ABACUS C++ DFT package (see its CLAUDE.md for architecture)
