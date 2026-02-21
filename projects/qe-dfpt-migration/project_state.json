@@ -519,7 +519,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-001.md"
     },
     {
       "id": "DFPT-002a",
@@ -554,7 +555,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-002a.md"
     },
     {
       "id": "DFPT-002b",
@@ -598,7 +600,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-002b.md"
     },
     {
       "id": "DFPT-002c",
@@ -633,7 +636,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-002c.md"
     },
     {
       "id": "DFPT-002d",
@@ -669,7 +673,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-002d.md"
     },
     {
       "id": "DFPT-003",
@@ -703,7 +708,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-003.md"
     },
     {
       "id": "DFPT-101",
@@ -737,7 +743,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-101.md"
     },
     {
       "id": "DFPT-102",
@@ -772,7 +779,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-102.md"
     },
     {
       "id": "DFPT-103",
@@ -812,7 +820,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-103.md"
     },
     {
       "id": "DFPT-201",
@@ -850,7 +859,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-201.md"
     },
     {
       "id": "DFPT-202",
@@ -888,7 +898,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-202.md"
     },
     {
       "id": "DFPT-203",
@@ -927,7 +938,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-203.md"
     },
     {
       "id": "DFPT-301",
@@ -962,7 +974,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-301.md"
     },
     {
       "id": "DFPT-302",
@@ -998,7 +1011,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-302.md"
     },
     {
       "id": "DFPT-401",
@@ -1033,7 +1047,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-401.md"
     },
     {
       "id": "DFPT-402",
@@ -1069,7 +1084,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-402.md"
     },
     {
       "id": "DFPT-501",
@@ -1103,7 +1119,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-501.md"
     },
     {
       "id": "DFPT-502",
@@ -1136,7 +1153,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-502.md"
     },
     {
       "id": "DFPT-503",
@@ -1169,7 +1187,8 @@
       "original_dependencies": [],
       "suspended_dependencies": [],
       "started_at": "",
-      "completed_at": ""
+      "completed_at": "",
+      "spec_doc": "docs/tasks/DFPT-503.md"
     }
   ],
   "current_task_id": null,
