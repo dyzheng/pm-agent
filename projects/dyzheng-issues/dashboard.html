@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dyzheng-issues — PM Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#06080c;--bg2:#090c12;--surface:#0d1018;
+  --card:#111520;--card2:#161b26;
+  --border:#1c2235;--border2:#242d42;
+  --text:#d4cfc4;--text2:#7a7d8a;--text3:#4a4d5a;
+  --amber:#f5a623;--amber2:#e8941a;--amber-dim:#c47d10;
+  --amber-bg:rgba(245,166,35,.07);--amber-glow:rgba(245,166,35,.15);
+  --green:#4ade80;--green-bg:rgba(74,222,128,.07);
+  --blue:#60a5fa;--blue-bg:rgba(96,165,250,.07);
+  --orange:#fb923c;--orange-bg:rgba(251,146,60,.07);
+  --red:#f87171;--red-bg:rgba(248,113,113,.07);
+  --purple:#c084fc;--purple-bg:rgba(192,132,252,.07);
+  --gray:#4b5563;--gray-bg:rgba(75,85,99,.07);
+  --mono:'JetBrains Mono',monospace;
+  --serif:'Crimson Pro',Georgia,serif;
+}
+body::before{
+  content:'';position:fixed;top:0;left:0;width:100%;height:100%;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.06) 2px,rgba(0,0,0,.06) 4px);
+  pointer-events:none;z-index:9999;
+}
+body{
+  font-family:var(--mono);background:var(--bg);color:var(--text);
+  line-height:1.6;min-height:100vh;
+  background-image:radial-gradient(ellipse 80% 50% at 50% -10%,rgba(245,166,35,.04) 0%,transparent 60%);
+}
+
+/* ── HEADER ── */
+.header{
+  padding:28px 48px 22px;border-bottom:1px solid var(--border);
+  display:flex;align-items:flex-end;justify-content:space-between;gap:24px;
+  position:relative;overflow:hidden;
+}
+.header::after{content:'';position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--amber-dim),transparent)}
+.header-label{font-size:10px;letter-spacing:.2em;color:var(--amber-dim);text-transform:uppercase;margin-bottom:6px;font-weight:500}
+.header h1{font-family:var(--serif);font-size:26px;font-weight:300;color:var(--text);letter-spacing:.02em;line-height:1.2}
+.header h1 em{font-style:italic;color:var(--amber)}
+.header-right{text-align:right;font-size:11px;color:var(--text3);line-height:1.8}
+.header-right .proj-id{font-size:13px;color:var(--amber-dim);letter-spacing:.05em}
+
+/* ── STATS BAR ── */
+.stats-bar{display:flex;gap:1px;border-bottom:1px solid var(--border);background:var(--border)}
+.stat-card{background:var(--surface);padding:18px 28px;flex:1;min-width:100px;position:relative;transition:background .15s}
+.stat-card:hover{background:var(--card)}
+.stat-card .label{font-size:9px;letter-spacing:.18em;color:var(--text3);text-transform:uppercase;margin-bottom:8px;font-weight:500}
+.stat-card .value{font-size:32px;font-weight:300;font-family:var(--mono);line-height:1}
+.stat-card .unit{font-size:9px;color:var(--text3);margin-top:4px;letter-spacing:.1em}
+.stat-card .value.total{color:var(--amber)}
+.stat-card .value.pending{color:var(--blue)}
+.stat-card .value.progress{color:var(--orange)}
+.stat-card .value.review{color:var(--purple)}
+.stat-card .value.done{color:var(--green)}
+.stat-card .value.deferred{color:var(--gray)}
+.stat-card .value.failed{color:var(--red)}
+.stat-bar{position:absolute;bottom:0;left:0;height:2px;background:currentColor;opacity:.4;transition:width .6s cubic-bezier(.4,0,.2,1)}
+
+/* ── TABS ── */
+.tabs{display:flex;gap:0;border-bottom:1px solid var(--border);background:var(--bg2);padding:0 48px;overflow-x:auto}
+.tab{padding:13px 20px;cursor:pointer;font-size:10px;font-weight:500;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);border:none;background:none;border-bottom:2px solid transparent;transition:all .15s;position:relative;white-space:nowrap}
+.tab:hover{color:var(--text2)}
+.tab.active{color:var(--amber);border-bottom-color:var(--amber)}
+
+/* ── CONTENT ── */
+.content{padding:32px 48px 80px}
+.view{display:none}
+.view.active{display:block}
+
+/* ── SECTION HEADER ── */
+.section-h{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber-dim);margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--border);font-weight:500}
+
+/* ── OVERVIEW ── */
+.overview-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:900px){.overview-grid{grid-template-columns:1fr}}
+.overview-card{background:var(--surface);border:1px solid var(--border);padding:24px}
+.overview-card h3{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--amber-dim);margin-bottom:14px;font-weight:500}
+.overview-card p{font-size:13px;line-height:1.8;color:var(--text2);font-family:var(--serif)}
+.overview-card .mono{font-family:var(--mono);font-size:11px;color:var(--text);line-height:2}
+.overview-full{grid-column:1/-1}
+.critical-path{font-family:var(--mono);font-size:11px;color:var(--text2);background:var(--card);padding:14px 18px;border:1px solid var(--border);overflow-x:auto;white-space:nowrap;line-height:1.8}
+.critical-path .arrow{color:var(--amber-dim);margin:0 4px}
+
+/* ── MILESTONES ── */
+.milestones{display:grid;gap:0;border:1px solid var(--border)}
+.milestone-row{display:grid;grid-template-columns:80px 1fr;border-bottom:1px solid var(--border);transition:background .12s}
+.milestone-row:last-child{border-bottom:none}
+.milestone-row:hover{background:var(--card)}
+.milestone-id{padding:16px 20px;background:var(--surface);border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center}
+.milestone-id span{font-size:14px;font-weight:500;color:var(--amber)}
+.milestone-body{padding:14px 20px}
+.milestone-body .ms-desc{font-size:13px;color:var(--text);font-family:var(--serif);line-height:1.6}
+.milestone-body .ms-gate{font-size:11px;color:var(--text3);margin-top:6px}
+.milestone-body .ms-gate em{color:var(--text2);font-style:normal}
+.ms-progress{height:3px;background:var(--border);margin-top:10px;position:relative}
+.ms-progress-fill{height:100%;background:var(--amber);transition:width .6s}
+
+/* ── KANBAN ── */
+.kanban{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+.column{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--border2)}
+.column-header{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--card)}
+.column-header .title{font-size:10px;letter-spacing:.15em;text-transform:uppercase;color:var(--text2);font-weight:500}
+.column-header .count{font-size:11px;color:var(--amber-dim);font-family:var(--mono)}
+.column-body{padding:12px}
+
+/* ── TASK CARD ── */
+.task-card{background:var(--card);border:1px solid var(--border);padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:border-color .12s,background .12s;position:relative;clip-path:polygon(0 0,calc(100% - 10px) 0,100% 10px,100% 100%,0 100%)}
+.task-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,var(--status-color,var(--border2)),transparent);opacity:.6}
+.task-card:hover{background:var(--card2);border-color:var(--border2)}
+.task-card:hover::before{opacity:1}
+.task-card.status-pending{--status-color:var(--blue)}
+.task-card.status-in_progress{--status-color:var(--orange)}
+.task-card.status-in_review{--status-color:var(--purple)}
+.task-card.status-done{--status-color:var(--green)}
+.task-card.status-deferred{--status-color:var(--gray)}
+.task-card.status-failed,.task-card.status-terminated{--status-color:var(--red)}
+.task-card .task-header{display:flex;align-items:center;gap:8px;margin-bottom:7px}
+.task-card .task-id{font-size:10px;color:var(--amber-dim);letter-spacing:.06em;font-weight:500}
+.status-dot{width:6px;height:6px;border-radius:50%;background:var(--status-color,var(--border2));flex-shrink:0}
+.status-dot.pulse{animation:pulse 2s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1;box-shadow:0 0 0 0 var(--status-color)}50%{opacity:.7;box-shadow:0 0 0 4px transparent}}
+.task-card .task-title{font-size:12px;line-height:1.5;color:var(--text);font-family:var(--serif);font-weight:300;letter-spacing:.01em;margin-bottom:8px}
+.task-card .task-meta{display:flex;gap:5px;flex-wrap:wrap}
+
+/* ── BADGES ── */
+.badge{font-size:9px;padding:2px 7px;letter-spacing:.08em;text-transform:uppercase;font-weight:500;font-family:var(--mono);border:1px solid currentColor;opacity:.8}
+.badge.layer{color:var(--orange);border-color:rgba(251,146,60,.3);background:var(--orange-bg)}
+.badge.risk-low{color:var(--green);border-color:rgba(74,222,128,.3);background:var(--green-bg)}
+.badge.risk-medium{color:var(--orange);border-color:rgba(251,146,60,.3);background:var(--orange-bg)}
+.badge.risk-high{color:var(--red);border-color:rgba(248,113,113,.3);background:var(--red-bg)}
+.badge.type{color:var(--purple);border-color:rgba(192,132,252,.3);background:var(--purple-bg)}
+.badge.batch{color:var(--blue);border-color:rgba(96,165,250,.3);background:var(--blue-bg)}
+.badge.phase{color:var(--amber-dim);border-color:rgba(245,166,35,.3);background:var(--amber-bg)}
+.badge.novelty-frontier{color:var(--amber);border-color:rgba(245,166,35,.4);background:var(--amber-bg)}
+.badge.novelty-advanced{color:var(--purple);border-color:rgba(192,132,252,.3);background:var(--purple-bg)}
+.badge.novelty-incremental{color:var(--text3);border-color:var(--border2);background:var(--gray-bg)}
+
+/* ── TIMELINE ── */
+.phase-section{margin-bottom:32px}
+.phase-header{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber-dim);font-weight:500;padding:10px 0;border-bottom:1px solid var(--border);margin-bottom:14px;display:flex;align-items:center;gap:12px}
+.phase-header::before{content:'';width:20px;height:1px;background:var(--amber-dim)}
+.phase-tasks{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:8px;padding-left:32px}
+
+/* ── REFERENCES ── */
+.ref-grid{display:grid;gap:16px}
+.ref-card{background:var(--surface);border:1px solid var(--border);padding:20px 24px;transition:background .12s}
+.ref-card:hover{background:var(--card)}
+.ref-card-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.ref-card-header .ref-tid{font-size:11px;color:var(--amber);font-weight:500}
+.ref-card-header .ref-title{font-size:13px;color:var(--text);font-family:var(--serif)}
+.ref-meta{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.ref-section{margin-bottom:14px}
+.ref-section h5{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--text3);margin-bottom:6px;font-weight:500}
+.ref-section p{font-size:12px;line-height:1.7;color:var(--text2)}
+.ref-section ul{padding-left:16px;list-style:none}
+.ref-section ul li{font-size:12px;line-height:1.8;color:var(--text2);position:relative;padding-left:12px}
+.ref-section ul li::before{content:'';position:absolute;left:0;top:9px;width:4px;height:4px;background:var(--amber-dim);border-radius:50%}
+.ref-papers{border-top:1px solid var(--border);padding-top:12px;margin-top:12px}
+.ref-papers h5{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;font-weight:500}
+.ref-paper{font-size:11px;line-height:1.7;color:var(--text2);margin-bottom:4px;padding-left:12px;position:relative}
+.ref-paper::before{content:'';position:absolute;left:0;top:8px;width:4px;height:1px;background:var(--amber-dim)}
+.ref-paper a{color:var(--blue);text-decoration:none;border-bottom:1px solid rgba(96,165,250,.2)}
+.ref-paper a:hover{border-bottom-color:var(--blue)}
+
+/* ── GRAPH ── */
+.graph-container h2{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--amber-dim);margin-bottom:20px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+#dep-graph-svg{width:100%;min-height:400px;border:1px solid var(--border);background:var(--surface);padding:20px;overflow:auto}
+#dep-graph-svg svg{max-width:100%}
+.graph-fallback{padding:48px;text-align:center;color:var(--text3)}
+.graph-fallback p{font-size:12px;margin-bottom:16px}
+.graph-fallback pre{text-align:left;background:var(--card);padding:16px;border:1px solid var(--border);overflow-x:auto;font-size:11px;color:var(--text2);line-height:1.7}
+
+/* ── DEFERRED ── */
+.deferred-card{background:var(--surface);border:1px solid var(--border);border-left:2px solid var(--orange);padding:16px 20px;margin-bottom:10px;cursor:pointer;transition:background .12s;clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,0 100%)}
+.deferred-card:hover{background:var(--card)}
+.deferred-card .task-id{font-size:10px;color:var(--amber-dim);margin-bottom:6px}
+.deferred-card .task-title{font-size:14px;font-family:var(--serif);font-weight:300;margin-bottom:10px}
+.deferred-card .task-meta{display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px}
+.trigger-info{background:rgba(251,146,60,.05);border:1px solid rgba(251,146,60,.15);padding:10px 14px;font-size:11px}
+.trigger-label{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--orange);margin-bottom:4px;font-weight:500}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:1000;align-items:center;justify-content:center;backdrop-filter:blur(2px)}
+.modal-overlay.active{display:flex}
+.modal{background:var(--surface);border:1px solid var(--border2);padding:0;max-width:660px;width:90%;max-height:82vh;overflow-y:auto;position:relative}
+.modal::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:linear-gradient(90deg,transparent,var(--amber),transparent)}
+.modal-header{display:flex;justify-content:space-between;align-items:flex-start;padding:24px 28px 18px;border-bottom:1px solid var(--border)}
+.modal-header .modal-id{font-size:10px;color:var(--amber-dim);letter-spacing:.1em;margin-bottom:6px}
+.modal-header h3{font-family:var(--serif);font-size:18px;font-weight:300;color:var(--text);line-height:1.3}
+.modal-close{background:none;border:1px solid var(--border);color:var(--text3);font-size:16px;cursor:pointer;padding:4px 10px;transition:all .12s;flex-shrink:0;margin-left:16px}
+.modal-close:hover{border-color:var(--amber-dim);color:var(--amber)}
+.modal-body{padding:20px 28px 28px}
+.modal-section{margin-bottom:20px}
+.modal-section h4{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:var(--text3);margin-bottom:8px;font-weight:500}
+.modal-section p,.modal-section li{font-size:13px;line-height:1.7;color:var(--text2)}
+.modal-section ul{padding-left:18px}
+.modal-section code{background:var(--card);border:1px solid var(--border);padding:1px 6px;font-size:11px;color:var(--amber-dim)}
+.modal-kv{display:grid;grid-template-columns:auto 1fr;gap:4px 16px}
+.modal-kv .k{font-size:11px;color:var(--text3)}
+.modal-kv .v{font-size:11px;color:var(--text)}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:var(--bg)}
+::-webkit-scrollbar-thumb{background:var(--border2)}
+::-webkit-scrollbar-thumb:hover{background:var(--amber-dim)}
+.empty{padding:60px;text-align:center;color:var(--text3);font-size:12px;letter-spacing:.1em}
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="header-label">PM Agent / Project Dashboard</div>
+    <h1>dyzheng-issues</h1>
+  </div>
+  <div class="header-right">
+    <div class="proj-id">dyzheng-issues</div>
+    <div>Generated by pm-agent</div>
+  </div>
+</div>
+
+<div class="stats-bar" id="stats-bar"></div>
+
+<div class="tabs" id="tabs-bar">
+  <button class="tab active" data-view="overview">Overview</button>
+  <button class="tab" data-view="milestones">Milestones</button>
+  <button class="tab" data-view="kanban">Kanban</button>
+  <button class="tab" data-view="timeline">Timeline</button>
+  <button class="tab" data-view="references">References</button>
+  <button class="tab" data-view="graph">Dependencies</button>
+  <button class="tab" data-view="deferred">Deferred</button>
+  <button class="tab" data-view="burndown">Burndown</button>
+</div>
+
+<div class="content">
+  <div id="overview-view" class="view active"></div>
+  <div id="milestones-view" class="view"></div>
+  <div id="kanban-view" class="view"></div>
+  <div id="timeline-view" class="view"></div>
+  <div id="references-view" class="view"></div>
+  <div id="graph-view" class="view"></div>
+  <div id="deferred-view" class="view"></div>
+  <div id="burndown-view" class="view"></div>
+</div>
+
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-id" id="modal-id"></div>
+        <h3 id="modal-title"></h3>
+      </div>
+      <button class="modal-close" onclick="closeModal()">&#x2715;</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+  </div>
+</div>
+<script>
+let tasks = [{"id": "DZ-001", "title": "修复 nspin=4 noncolin=0 时磁矩解析错误", "layer": "core", "type": "bugfix", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["DZ-005"], "description": "GitHub Issue #5021。当 STRU 中设置初始 x y z 磁矩，INPUT 中设 nspin=4 但未设 noncolin=1 时，ABACUS 错误地将非共线磁矩旋转到 Z 轴。例如初始磁矩 `1 1 1` 被输出为 `0 0 1.732`。\n\n根因：STRU 文件解析逻辑在 nspin=4 时未正确处理非共线磁矩的初始化，仅在 noncolin=1 时才保留 xyz 分量。\n\n修复方向：(1) 在 STRU 解析中，nspin=4 时无论 noncolin 设置如何都应保留 xyz 磁矩分量；(2) 或者在 nspin=4 且未设 noncolin 时给出明确警告/自动启用 noncolin。", "acceptance_criteria": ["nspin=4 noncolin=0 时初始磁矩 (1,1,1) 正确保留为 (1,1,1) 而非 (0,0,1.732)", "添加单元测试覆盖 nspin=4 + noncolin=0/1 两种情况", "不影响 nspin=1/2 的现有行为", "CI 全部通过"], "files_to_touch": ["source/module_io/read_stru.cpp", "source/module_io/read_stru.h", "source/module_cell/unitcell.cpp"], "estimated_effort": "2-3 days", "specialist": "abacus-develop", "risk_level": "medium", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/5021", "github_issue_number": 5021, "priority": "P0"}, {"id": "DZ-002", "title": "修复单精度 PW 计算 CUDA 运行时错误", "layer": "core", "type": "bugfix", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["DZ-007"], "description": "GitHub Issue #6768。ABACUS 3.10.1 中启用 `precision single` 进行 PW 基组计算时，出现 CUDA 运行时错误：`cudaErrorInvalidValue, invalid argument` (memory_op.cu:87)。此问题在之前版本中也存在。\n\n修复方向：(1) 检查 module_base/module_device/cuda/memory_op.cu 第87行附近的内存分配逻辑；(2) 排查单精度模式下数据类型不匹配导致的 CUDA API 参数错误；(3) 检查 PW 模块中 float/double 模板实例化是否完整。", "acceptance_criteria": ["si16_pw 示例在 precision=single 模式下正常运行完成", "CUDA 和 CPU 两种后端均测试通过", "添加单精度 PW 的回归测试", "不影响双精度计算结果"], "files_to_touch": ["source/module_base/module_device/cuda/memory_op.cu", "source/module_basis/module_pw/"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "medium", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6768", "github_issue_number": 6768, "priority": "P0"}, {"id": "DZ-003", "title": "诊断并修复 OpenMPI v4 toolchain 编译问题", "layer": "infra", "type": "bugfix", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": [], "description": "GitHub Issue #6195。用户使用 toolchain 中的 openmpi-v4 编译 ABACUS LTS v3.10.0 时遇到 OFI Libfabric 错误：`fi_endpoint` 调用失败，`Failed to modify UD QP to INIT on mlx5_0: Operation not permitted`。\n\n分析方向：(1) 这可能是 OpenMPI 与 Mellanox InfiniBand 驱动的兼容性问题，非 ABACUS 代码 bug；(2) 检查 toolchain 中 OpenMPI 的编译配置是否正确设置了 OFI/UCX 传输层；(3) 可能需要更新文档说明 InfiniBand 环境下的编译注意事项。", "acceptance_criteria": ["确认问题根因（ABACUS 代码 vs 环境配置）", "如果是环境问题，提供解决方案文档", "如果是 toolchain 问题，修复编译脚本", "在 issue 中回复用户解决方案"], "files_to_touch": ["toolchain/", "docs/advanced/install.md"], "estimated_effort": "1-2 days", "specialist": "abacus-develop", "risk_level": "low", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6195", "github_issue_number": 6195, "priority": "P0"}, {"id": "DZ-004", "title": "实现 nspin=2 时 init_chg=dm 功能", "layer": "core", "type": "new", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["DZ-005", "DZ-007"], "description": "GitHub Issue #6974。当前 init_chg=dm（从密度矩阵初始化电荷密度）不支持 nspin=2（自旋极化）情况。需要重构代码使其支持。\n\n实现方向：(1) 分析当前 init_chg=dm 的实现路径（ElecState 中的电荷密度初始化）；(2) 扩展密度矩阵读取逻辑以处理 spin-up/spin-down 两个分量；(3) 确保与 LCAO 和 PW 基组都兼容；(4) 需要修改 ESolver/ElecState/相关 IO 模块。", "acceptance_criteria": ["nspin=2 时 init_chg=dm 正常工作", "密度矩阵正确读取 spin-up 和 spin-down 分量", "SCF 从密度矩阵初始化后收敛步数明显减少", "LCAO 和 PW 基组均测试通过", "添加回归测试", "不影响 nspin=1/4 的现有行为"], "files_to_touch": ["source/module_elecstate/elecstate_init.cpp", "source/module_io/read_dm.cpp", "source/module_io/read_dm.h", "source/module_esolver/"], "estimated_effort": "1-2 weeks", "specialist": "abacus-develop", "risk_level": "medium", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6974", "github_issue_number": 6974, "priority": "P1"}, {"id": "DZ-005", "title": "审查并改进非共线磁性初始化流程", "layer": "core", "type": "enhancement", "scope": "abacus", "status": "pending", "dependencies": ["DZ-001", "DZ-004"], "blocks": [], "description": "综合 #5021 和 #6974 的修复经验，对 ABACUS 的磁性初始化流程进行整体审查和改进：(1) 统一 nspin=1/2/4 + noncolin + SOC 各种组合下的磁矩初始化逻辑；(2) 对不合理的参数组合给出清晰的警告或错误信息；(3) 改进文档说明各参数的含义和推荐用法。", "acceptance_criteria": ["nspin/noncolin/soc 所有合法组合的磁矩初始化行为正确且一致", "不合法组合给出明确错误信息", "添加参数组合的集成测试矩阵", "更新用户文档"], "files_to_touch": ["source/module_io/read_stru.cpp", "source/module_cell/unitcell.cpp", "source/module_elecstate/", "docs/advanced/input_files/input-main.md"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "medium", "github_issue": null, "priority": "P1"}, {"id": "DZ-006", "title": "优化 SOC 开启时的内存占用", "layer": "algorithm", "type": "enhancement", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": [], "description": "GitHub Issue #6377。用户报告开启自旋轨道耦合（SOC）后内存占用显著增大。\n\n分析方向：(1) SOC 开启时 nspin=4，矩阵维度翻倍（2x2 spinor），内存增长是预期行为但可能有优化空间；(2) 检查是否有不必要的中间矩阵拷贝；(3) 检查 Hamiltonian/Overlap 矩阵的存储是否可以利用对称性压缩；(4) 对比 VASP/QE 在类似体系下的内存占用作为参考。\n\n可能的优化：(a) 延迟分配策略；(b) 稀疏矩阵存储；(c) 分块计算减少峰值内存。", "acceptance_criteria": ["分析并记录 SOC 模式下各模块的内存占用分布", "识别至少一个可优化的内存热点", "实现优化后内存降低 ≥20%（或证明当前已是最优）", "SOC 计算结果不变（数值一致性验证）", "在 issue 中回复分析结果"], "files_to_touch": ["source/module_hamilt_lcao/", "source/module_basis/", "source/module_elecstate/"], "estimated_effort": "1-2 weeks", "specialist": "abacus-develop", "risk_level": "high", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6377", "github_issue_number": 6377, "priority": "P1"}, {"id": "DZ-007", "title": "单精度 PW 全面测试与加固", "layer": "core", "type": "test", "scope": "abacus", "status": "pending", "dependencies": ["DZ-002", "DZ-004"], "blocks": [], "description": "在 DZ-002 修复 CUDA 错误后，对单精度 PW 计算进行全面测试加固：(1) 覆盖 CPU/GPU 两种后端；(2) 测试 nspin=1/2/4 各种自旋模式；(3) 验证单精度与双精度结果的数值偏差在可接受范围内；(4) 添加 CI 回归测试。", "acceptance_criteria": ["单精度 PW 在 CPU 和 GPU 后端均通过标准测试集", "单精度 vs 双精度能量偏差 < 1e-4 Ry", "nspin=1/2 均测试通过", "CI 中添加单精度 PW 测试用例"], "files_to_touch": ["tests/integrate/", "source/module_basis/module_pw/"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "low", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6768", "github_issue_number": 6768, "priority": "P1"}, {"id": "DZ-008", "title": "回复 NO 配体电荷/磁性控制问题并提供工作流建议", "layer": "workflow", "type": "support", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["DZ-009"], "description": "GitHub Issue #6824。用户在 Cu-Histidine-Fe(CN)₅NO 体系的自旋极化 DFT 计算中，无法控制 NO 配体的电荷态和磁性。relax 过程中 NO⁺ 自发弯曲并获得自旋密度（变为 NO⁰/NO⁻），DFT+U 无法收敛。\n\n需要：(1) 调研 ABACUS 是否支持局域磁矩约束（constrained DFT / penalty functional）；(2) 如果不支持，建议替代工作流（如固定 NO 几何、分步优化、使用 init_chg 控制初始电子态）；(3) 检查 DFT+U 不收敛的可能原因。", "acceptance_criteria": ["在 issue 中提供详细的技术回复", "说明 ABACUS 当前支持的局域磁矩/电荷约束方法", "提供至少一种可行的工作流建议", "如果发现 DFT+U 收敛 bug，创建单独的 issue 跟踪"], "files_to_touch": [], "estimated_effort": "1-2 days", "specialist": "abacus-develop", "risk_level": "low", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6824", "github_issue_number": 6824, "priority": "P2"}, {"id": "DZ-009", "title": "评估并规划 constrained DFT / 局域磁矩约束功能", "layer": "algorithm", "type": "new", "scope": "abacus", "status": "pending", "dependencies": ["DZ-008"], "blocks": [], "description": "基于 #6824 用户需求，评估在 ABACUS 中实现 constrained DFT 或局域磁矩约束功能的可行性：(1) 调研 VASP LAMBDA / QE constrained_magnetization 的实现方式；(2) 评估在 ABACUS LCAO/PW 框架下的实现难度；(3) 如果可行，输出设计文档和任务分解。\n\n注意：这是一个评估任务，不一定需要立即实现。", "acceptance_criteria": ["完成技术可行性评估文档", "对比 VASP/QE 的实现方案", "给出 ABACUS 实现的推荐方案和工作量估计", "如果决定实施，输出详细的任务分解"], "files_to_touch": ["docs/tasks/DZ-009.md"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "medium", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6824", "github_issue_number": 6824, "priority": "P2"}, {"id": "DZ-010", "title": "更新 toolchain 文档：InfiniBand/OFI 环境编译指南", "layer": "infra", "type": "docs", "scope": "abacus", "status": "pending", "dependencies": ["DZ-003"], "blocks": [], "description": "基于 #6195 的诊断结果，更新 ABACUS 编译文档：(1) 添加 InfiniBand 环境下使用 toolchain 编译的注意事项；(2) 说明 OpenMPI OFI/UCX 传输层的配置方法；(3) 常见错误的排查步骤。", "acceptance_criteria": ["文档中包含 InfiniBand 环境编译的专门章节", "包含常见 OFI/UCX 错误的排查步骤", "至少一位用户确认文档有帮助"], "files_to_touch": ["docs/advanced/install.md"], "estimated_effort": "1 day", "specialist": "abacus-develop", "risk_level": "low", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6195", "github_issue_number": 6195, "priority": "P2"}];
+let extra = {"meta": {"request": "解决 deepmodeling/abacus-develop 仓库中所有 assign 给 dyzheng 的 open issues，涵盖 bug 修复、功能增强和用户支持。", "project_id": "dyzheng-issues", "phase": "execute", "parsed_intent": {"domain": "ABACUS DFT package maintenance and development", "method": "Bug fixes, feature implementation, user support", "validation": "Regression tests, user confirmation, CI/CD pass", "keywords": ["spin-orbit coupling", "noncollinear magnetism", "density matrix initialization", "single-precision PW", "memory optimization", "DFT+U", "compilation", "constrained magnetism"]}, "metadata": {"created": "2026-02-22T12:00:00Z", "last_updated": "2026-02-22T12:00:00Z", "source": "GitHub issues assigned to dyzheng in deepmodeling/abacus-develop", "strategy": "按优先级分三批：P0 紧急 bug 修复、P1 功能增强、P2 用户支持与编译问题", "id_scheme": "DZ-{seq:03d}", "statistics": {"total_tasks": 10, "active_tasks": 10, "terminated_tasks": 0, "in_review": 0, "in_progress": 0, "done": 0, "pending": 10}, "phases": {"P0-紧急Bug修复": ["DZ-001", "DZ-002", "DZ-003"], "P1-功能增强": ["DZ-004", "DZ-005", "DZ-006", "DZ-007"], "P2-用户支持与文档": ["DZ-008", "DZ-009", "DZ-010"]}, "critical_path": "DZ-001 → DZ-004 → DZ-005 → DZ-007", "parallel_opportunities": ["DZ-001 || DZ-002 || DZ-003 (三个独立 bug 可并行修复)", "DZ-004 || DZ-006 (init_chg=dm 与 SOC 内存优化可并行)", "DZ-008 || DZ-009 || DZ-010 (用户支持任务互相独立)"]}, "tasks": [{"id": "DZ-001", "title": "修复 nspin=4 noncolin=0 时磁矩解析错误", "layer": "core", "type": "bugfix", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["DZ-005"], "description": "GitHub Issue #5021。当 STRU 中设置初始 x y z 磁矩，INPUT 中设 nspin=4 但未设 noncolin=1 时，ABACUS 错误地将非共线磁矩旋转到 Z 轴。例如初始磁矩 `1 1 1` 被输出为 `0 0 1.732`。\n\n根因：STRU 文件解析逻辑在 nspin=4 时未正确处理非共线磁矩的初始化，仅在 noncolin=1 时才保留 xyz 分量。\n\n修复方向：(1) 在 STRU 解析中，nspin=4 时无论 noncolin 设置如何都应保留 xyz 磁矩分量；(2) 或者在 nspin=4 且未设 noncolin 时给出明确警告/自动启用 noncolin。", "acceptance_criteria": ["nspin=4 noncolin=0 时初始磁矩 (1,1,1) 正确保留为 (1,1,1) 而非 (0,0,1.732)", "添加单元测试覆盖 nspin=4 + noncolin=0/1 两种情况", "不影响 nspin=1/2 的现有行为", "CI 全部通过"], "files_to_touch": ["source/module_io/read_stru.cpp", "source/module_io/read_stru.h", "source/module_cell/unitcell.cpp"], "estimated_effort": "2-3 days", "specialist": "abacus-develop", "risk_level": "medium", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/5021", "github_issue_number": 5021, "priority": "P0"}, {"id": "DZ-002", "title": "修复单精度 PW 计算 CUDA 运行时错误", "layer": "core", "type": "bugfix", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["DZ-007"], "description": "GitHub Issue #6768。ABACUS 3.10.1 中启用 `precision single` 进行 PW 基组计算时，出现 CUDA 运行时错误：`cudaErrorInvalidValue, invalid argument` (memory_op.cu:87)。此问题在之前版本中也存在。\n\n修复方向：(1) 检查 module_base/module_device/cuda/memory_op.cu 第87行附近的内存分配逻辑；(2) 排查单精度模式下数据类型不匹配导致的 CUDA API 参数错误；(3) 检查 PW 模块中 float/double 模板实例化是否完整。", "acceptance_criteria": ["si16_pw 示例在 precision=single 模式下正常运行完成", "CUDA 和 CPU 两种后端均测试通过", "添加单精度 PW 的回归测试", "不影响双精度计算结果"], "files_to_touch": ["source/module_base/module_device/cuda/memory_op.cu", "source/module_basis/module_pw/"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "medium", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6768", "github_issue_number": 6768, "priority": "P0"}, {"id": "DZ-003", "title": "诊断并修复 OpenMPI v4 toolchain 编译问题", "layer": "infra", "type": "bugfix", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": [], "description": "GitHub Issue #6195。用户使用 toolchain 中的 openmpi-v4 编译 ABACUS LTS v3.10.0 时遇到 OFI Libfabric 错误：`fi_endpoint` 调用失败，`Failed to modify UD QP to INIT on mlx5_0: Operation not permitted`。\n\n分析方向：(1) 这可能是 OpenMPI 与 Mellanox InfiniBand 驱动的兼容性问题，非 ABACUS 代码 bug；(2) 检查 toolchain 中 OpenMPI 的编译配置是否正确设置了 OFI/UCX 传输层；(3) 可能需要更新文档说明 InfiniBand 环境下的编译注意事项。", "acceptance_criteria": ["确认问题根因（ABACUS 代码 vs 环境配置）", "如果是环境问题，提供解决方案文档", "如果是 toolchain 问题，修复编译脚本", "在 issue 中回复用户解决方案"], "files_to_touch": ["toolchain/", "docs/advanced/install.md"], "estimated_effort": "1-2 days", "specialist": "abacus-develop", "risk_level": "low", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6195", "github_issue_number": 6195, "priority": "P0"}, {"id": "DZ-004", "title": "实现 nspin=2 时 init_chg=dm 功能", "layer": "core", "type": "new", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["DZ-005", "DZ-007"], "description": "GitHub Issue #6974。当前 init_chg=dm（从密度矩阵初始化电荷密度）不支持 nspin=2（自旋极化）情况。需要重构代码使其支持。\n\n实现方向：(1) 分析当前 init_chg=dm 的实现路径（ElecState 中的电荷密度初始化）；(2) 扩展密度矩阵读取逻辑以处理 spin-up/spin-down 两个分量；(3) 确保与 LCAO 和 PW 基组都兼容；(4) 需要修改 ESolver/ElecState/相关 IO 模块。", "acceptance_criteria": ["nspin=2 时 init_chg=dm 正常工作", "密度矩阵正确读取 spin-up 和 spin-down 分量", "SCF 从密度矩阵初始化后收敛步数明显减少", "LCAO 和 PW 基组均测试通过", "添加回归测试", "不影响 nspin=1/4 的现有行为"], "files_to_touch": ["source/module_elecstate/elecstate_init.cpp", "source/module_io/read_dm.cpp", "source/module_io/read_dm.h", "source/module_esolver/"], "estimated_effort": "1-2 weeks", "specialist": "abacus-develop", "risk_level": "medium", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6974", "github_issue_number": 6974, "priority": "P1"}, {"id": "DZ-005", "title": "审查并改进非共线磁性初始化流程", "layer": "core", "type": "enhancement", "scope": "abacus", "status": "pending", "dependencies": ["DZ-001", "DZ-004"], "blocks": [], "description": "综合 #5021 和 #6974 的修复经验，对 ABACUS 的磁性初始化流程进行整体审查和改进：(1) 统一 nspin=1/2/4 + noncolin + SOC 各种组合下的磁矩初始化逻辑；(2) 对不合理的参数组合给出清晰的警告或错误信息；(3) 改进文档说明各参数的含义和推荐用法。", "acceptance_criteria": ["nspin/noncolin/soc 所有合法组合的磁矩初始化行为正确且一致", "不合法组合给出明确错误信息", "添加参数组合的集成测试矩阵", "更新用户文档"], "files_to_touch": ["source/module_io/read_stru.cpp", "source/module_cell/unitcell.cpp", "source/module_elecstate/", "docs/advanced/input_files/input-main.md"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "medium", "github_issue": null, "priority": "P1"}, {"id": "DZ-006", "title": "优化 SOC 开启时的内存占用", "layer": "algorithm", "type": "enhancement", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": [], "description": "GitHub Issue #6377。用户报告开启自旋轨道耦合（SOC）后内存占用显著增大。\n\n分析方向：(1) SOC 开启时 nspin=4，矩阵维度翻倍（2x2 spinor），内存增长是预期行为但可能有优化空间；(2) 检查是否有不必要的中间矩阵拷贝；(3) 检查 Hamiltonian/Overlap 矩阵的存储是否可以利用对称性压缩；(4) 对比 VASP/QE 在类似体系下的内存占用作为参考。\n\n可能的优化：(a) 延迟分配策略；(b) 稀疏矩阵存储；(c) 分块计算减少峰值内存。", "acceptance_criteria": ["分析并记录 SOC 模式下各模块的内存占用分布", "识别至少一个可优化的内存热点", "实现优化后内存降低 ≥20%（或证明当前已是最优）", "SOC 计算结果不变（数值一致性验证）", "在 issue 中回复分析结果"], "files_to_touch": ["source/module_hamilt_lcao/", "source/module_basis/", "source/module_elecstate/"], "estimated_effort": "1-2 weeks", "specialist": "abacus-develop", "risk_level": "high", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6377", "github_issue_number": 6377, "priority": "P1"}, {"id": "DZ-007", "title": "单精度 PW 全面测试与加固", "layer": "core", "type": "test", "scope": "abacus", "status": "pending", "dependencies": ["DZ-002", "DZ-004"], "blocks": [], "description": "在 DZ-002 修复 CUDA 错误后，对单精度 PW 计算进行全面测试加固：(1) 覆盖 CPU/GPU 两种后端；(2) 测试 nspin=1/2/4 各种自旋模式；(3) 验证单精度与双精度结果的数值偏差在可接受范围内；(4) 添加 CI 回归测试。", "acceptance_criteria": ["单精度 PW 在 CPU 和 GPU 后端均通过标准测试集", "单精度 vs 双精度能量偏差 < 1e-4 Ry", "nspin=1/2 均测试通过", "CI 中添加单精度 PW 测试用例"], "files_to_touch": ["tests/integrate/", "source/module_basis/module_pw/"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "low", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6768", "github_issue_number": 6768, "priority": "P1"}, {"id": "DZ-008", "title": "回复 NO 配体电荷/磁性控制问题并提供工作流建议", "layer": "workflow", "type": "support", "scope": "abacus", "status": "pending", "dependencies": [], "blocks": ["DZ-009"], "description": "GitHub Issue #6824。用户在 Cu-Histidine-Fe(CN)₅NO 体系的自旋极化 DFT 计算中，无法控制 NO 配体的电荷态和磁性。relax 过程中 NO⁺ 自发弯曲并获得自旋密度（变为 NO⁰/NO⁻），DFT+U 无法收敛。\n\n需要：(1) 调研 ABACUS 是否支持局域磁矩约束（constrained DFT / penalty functional）；(2) 如果不支持，建议替代工作流（如固定 NO 几何、分步优化、使用 init_chg 控制初始电子态）；(3) 检查 DFT+U 不收敛的可能原因。", "acceptance_criteria": ["在 issue 中提供详细的技术回复", "说明 ABACUS 当前支持的局域磁矩/电荷约束方法", "提供至少一种可行的工作流建议", "如果发现 DFT+U 收敛 bug，创建单独的 issue 跟踪"], "files_to_touch": [], "estimated_effort": "1-2 days", "specialist": "abacus-develop", "risk_level": "low", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6824", "github_issue_number": 6824, "priority": "P2"}, {"id": "DZ-009", "title": "评估并规划 constrained DFT / 局域磁矩约束功能", "layer": "algorithm", "type": "new", "scope": "abacus", "status": "pending", "dependencies": ["DZ-008"], "blocks": [], "description": "基于 #6824 用户需求，评估在 ABACUS 中实现 constrained DFT 或局域磁矩约束功能的可行性：(1) 调研 VASP LAMBDA / QE constrained_magnetization 的实现方式；(2) 评估在 ABACUS LCAO/PW 框架下的实现难度；(3) 如果可行，输出设计文档和任务分解。\n\n注意：这是一个评估任务，不一定需要立即实现。", "acceptance_criteria": ["完成技术可行性评估文档", "对比 VASP/QE 的实现方案", "给出 ABACUS 实现的推荐方案和工作量估计", "如果决定实施，输出详细的任务分解"], "files_to_touch": ["docs/tasks/DZ-009.md"], "estimated_effort": "3-5 days", "specialist": "abacus-develop", "risk_level": "medium", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6824", "github_issue_number": 6824, "priority": "P2"}, {"id": "DZ-010", "title": "更新 toolchain 文档：InfiniBand/OFI 环境编译指南", "layer": "infra", "type": "docs", "scope": "abacus", "status": "pending", "dependencies": ["DZ-003"], "blocks": [], "description": "基于 #6195 的诊断结果，更新 ABACUS 编译文档：(1) 添加 InfiniBand 环境下使用 toolchain 编译的注意事项；(2) 说明 OpenMPI OFI/UCX 传输层的配置方法；(3) 常见错误的排查步骤。", "acceptance_criteria": ["文档中包含 InfiniBand 环境编译的专门章节", "包含常见 OFI/UCX 错误的排查步骤", "至少一位用户确认文档有帮助"], "files_to_touch": ["docs/advanced/install.md"], "estimated_effort": "1 day", "specialist": "abacus-develop", "risk_level": "low", "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6195", "github_issue_number": 6195, "priority": "P2"}], "audit_items": [], "decisions": [], "drafts": [], "gate_results": [], "integration_results": []}, "milestones": [], "literature": [], "description": "解决 deepmodeling/abacus-develop 仓库中所有 assign 给 dyzheng 的 open issues，涵盖 bug 修复、功能增强和用户支持。", "timeline": "", "critical_path": "DZ-001 → DZ-004 → DZ-005 → DZ-007", "phases": {"P0-紧急Bug修复": ["DZ-001", "DZ-002", "DZ-003"], "P1-功能增强": ["DZ-004", "DZ-005", "DZ-006", "DZ-007"], "P2-用户支持与文档": ["DZ-008", "DZ-009", "DZ-010"]}, "burndown": {}};
+
+/* ── INIT ── */
+function init() {
+  renderStats();
+  renderOverview();
+  renderMilestones();
+  renderKanban();
+  renderTimeline();
+  renderReferences();
+  renderGraph();
+  renderDeferred();
+  bindTabs();
+}
+
+/* ── STATS ── */
+function renderStats() {
+  const bar = document.getElementById('stats-bar');
+  const total = tasks.length;
+  const counts = {
+    pending:     tasks.filter(t => t.status === 'pending').length,
+    in_progress: tasks.filter(t => t.status === 'in_progress').length,
+    in_review:   tasks.filter(t => t.status === 'in_review').length,
+    done:        tasks.filter(t => t.status === 'done').length,
+    deferred:    tasks.filter(t => t.status === 'deferred').length,
+    failed:      tasks.filter(t => t.status === 'failed' || t.status === 'terminated').length,
+  };
+  const specs = [
+    {label:'Total',    val:total,             cls:'total',    pct:1},
+    {label:'Pending',  val:counts.pending,    cls:'pending',  pct:total?counts.pending/total:0},
+    {label:'Active',   val:counts.in_progress,cls:'progress', pct:total?counts.in_progress/total:0},
+    {label:'Review',   val:counts.in_review,  cls:'review',   pct:total?counts.in_review/total:0},
+    {label:'Done',     val:counts.done,       cls:'done',     pct:total?counts.done/total:0},
+    {label:'Deferred', val:counts.deferred,   cls:'deferred', pct:total?counts.deferred/total:0},
+    {label:'Failed',   val:counts.failed,     cls:'failed',   pct:total?counts.failed/total:0},
+  ];
+  bar.innerHTML = specs.map(s =>
+    `<div class="stat-card">
+      <div class="label">${s.label}</div>
+      <div class="value ${s.cls}">${s.val}</div>
+      <div class="unit">tasks</div>
+      <div class="stat-bar" style="width:${(s.pct*100).toFixed(1)}%;color:var(--${s.cls==='total'?'amber':s.cls==='progress'?'orange':s.cls==='review'?'purple':s.cls})"></div>
+    </div>`
+  ).join('');
+}
+
+/* ── OVERVIEW ── */
+function renderOverview() {
+  const view = document.getElementById('overview-view');
+  const desc = extra.description || '';
+  const timeline = extra.timeline || '';
+  const cp = extra.critical_path || '';
+  const phases = extra.phases || {};
+
+  let html = '<h2 class="section-h">Project Overview</h2>';
+  html += '<div class="overview-grid">';
+
+  // Description card
+  html += `<div class="overview-card">
+    <h3>Description</h3>
+    <p>${esc(desc)}</p>
+    ${timeline ? `<div style="margin-top:14px"><span style="color:var(--text3);font-size:10px;letter-spacing:.12em;text-transform:uppercase">Timeline</span><div class="mono" style="margin-top:6px;color:var(--amber)">${esc(timeline)}</div></div>` : ''}
+  </div>`;
+
+  // Phase summary card
+  html += '<div class="overview-card"><h3>Phase Summary</h3><div class="mono">';
+  for (const [pname, tids] of Object.entries(phases)) {
+    const ids = Array.isArray(tids) ? tids : [];
+    const done = ids.filter(id => {
+      const t = tasks.find(x => x.id === id);
+      return t && t.status === 'done';
+    }).length;
+    const pct = ids.length ? Math.round(done / ids.length * 100) : 0;
+    html += `<div style="margin-bottom:8px">
+      <span style="color:var(--text2)">${esc(pname)}</span>
+      <span style="color:var(--text3);margin:0 8px">${ids.length} tasks</span>
+      <span style="color:${pct > 0 ? 'var(--green)' : 'var(--text3)'}">${pct}%</span>
+    </div>`;
+  }
+  html += '</div></div>';
+
+  // Deliverables card
+  const deliverables = [
+    {phase:'Phase 1', items:['DFT+U PW SCF (nspin=1/2/4)', 'DeltaSpin LCAO/PW', 'GPU/DCU acceleration']},
+    {phase:'Phase 2', items:['Adaptive Kerker preconditioning', 'Occupation matrix mixing', 'Constrained DFT framework']},
+    {phase:'Phase 3', items:['CeO2/Gd2O3/La2O3 benchmarks', 'ABACUS vs VASP cross-validation (<3%)', 'Convergence reliability (>90%)']},
+    {phase:'Phase 4', items:['Auto parameter selection', 'abacustest workflow integration', 'Documentation & examples']},
+  ];
+  html += '<div class="overview-card"><h3>Key Deliverables</h3>';
+  deliverables.forEach(d => {
+    html += `<div style="margin-bottom:12px">
+      <div style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--amber-dim);margin-bottom:4px">${d.phase}</div>`;
+    d.items.forEach(item => {
+      html += `<div style="font-size:12px;color:var(--text2);padding-left:12px;line-height:1.8;position:relative">
+        <span style="position:absolute;left:0;top:8px;width:4px;height:4px;background:var(--amber-dim);border-radius:50%"></span>
+        ${esc(item)}
+      </div>`;
+    });
+    html += '</div>';
+  });
+  html += '</div>';
+
+  // Critical path card
+  if (cp) {
+    html += '<div class="overview-card"><h3>Critical Path</h3>';
+    const parts = cp.split(/\s*→\s*/);
+    html += '<div class="critical-path">';
+    html += parts.map(p => `<span style="color:var(--text)">${esc(p)}</span>`).join('<span class="arrow">→</span>');
+    html += '</div></div>';
+  }
+
+  html += '</div>';
+  view.innerHTML = html;
+}
+
+/* ── MILESTONES ── */
+function renderMilestones() {
+  const view = document.getElementById('milestones-view');
+  const milestones = extra.milestones || [];
+  const phases = extra.phases || {};
+
+  let html = '<h2 class="section-h">Milestones & Gates</h2>';
+
+  if (milestones.length === 0) {
+    html += '<div class="empty">No milestone data available</div>';
+    view.innerHTML = html;
+    return;
+  }
+
+  html += '<div class="milestones">';
+  milestones.forEach(ms => {
+    // Try to compute progress for this milestone
+    let progress = 0;
+    let totalTasks = 0;
+    let doneTasks = 0;
+
+    // Map milestone to phase tasks
+    const msNum = ms.id.replace(/[^0-9]/g, '');
+    for (const [pname, tids] of Object.entries(phases)) {
+      const phaseNum = pname.match(/Phase\s*(\d)/i);
+      if (phaseNum) {
+        const pn = parseInt(phaseNum[1]);
+        // M1 covers Phase 0+1, M2 covers Phase 2, M3 covers Phase 3, etc.
+        let covers = false;
+        if (msNum === '1' && pn <= 1) covers = true;
+        if (msNum === '2' && pn <= 2) covers = true;
+        if (msNum === '3' && pn <= 3) covers = true;
+        if (msNum === '4' && pn <= 4) covers = true;
+        if (msNum === '5' && pn <= 4) covers = true;
+        if (covers) {
+          const ids = Array.isArray(tids) ? tids : [];
+          totalTasks += ids.length;
+          doneTasks += ids.filter(id => {
+            const t = tasks.find(x => x.id === id);
+            return t && t.status === 'done';
+          }).length;
+        }
+      }
+    }
+    progress = totalTasks ? Math.round(doneTasks / totalTasks * 100) : 0;
+
+    html += `<div class="milestone-row">
+      <div class="milestone-id"><span>${esc(ms.id)}</span></div>
+      <div class="milestone-body">
+        <div class="ms-desc">${esc(ms.description)}</div>
+        <div class="ms-gate">Coverage: <em>${doneTasks}/${totalTasks} tasks</em></div>
+        <div class="ms-progress"><div class="ms-progress-fill" style="width:${progress}%"></div></div>
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  view.innerHTML = html;
+}
+
+/* ── GROUPING ── */
+function detectGrouping() {
+  const hasPhase = tasks.some(t => t.phase || (t.id && /^[A-Z]+-\d/.test(t.id)));
+  const hasBatch = tasks.some(t => t.batch !== undefined && t.batch !== null);
+  if (hasPhase) return 'phase';
+  if (hasBatch) return 'batch';
+  return 'status';
+}
+function groupByPhase() {
+  const groups = {};
+  tasks.forEach(t => {
+    let phase = t.phase || '';
+    if (!phase && t.id) {
+      const m = t.id.match(/^[A-Z]+-(\d)/);
+      if (m) phase = 'Phase ' + m[1];
+      else if (t.id.match(/^[A-Z]+-D/)) phase = 'Deferred';
+    }
+    if (!phase) phase = 'Other';
+    (groups[phase] = groups[phase] || []).push(t);
+  });
+  return groups;
+}
+function groupByBatch() {
+  const groups = {};
+  tasks.forEach(t => {
+    const batch = t.batch !== undefined ? 'Batch ' + t.batch : 'Unassigned';
+    (groups[batch] = groups[batch] || []).push(t);
+  });
+  return groups;
+}
+function groupByStatus() {
+  const order = ['pending','in_progress','in_review','done','deferred','failed'];
+  const labels = {pending:'Pending',in_progress:'In Progress',in_review:'In Review',done:'Done',deferred:'Deferred',failed:'Failed'};
+  const groups = {};
+  order.forEach(s => { groups[labels[s]] = []; });
+  tasks.forEach(t => {
+    const label = labels[t.status] || t.status || 'Pending';
+    (groups[label] = groups[label] || []).push(t);
+  });
+  return groups;
+}
+
+/* ── TASK CARD ── */
+function statusDot(status) {
+  const pulse = status === 'in_progress' || status === 'in_review';
+  const colorMap = {pending:'blue',in_progress:'orange',in_review:'purple',done:'green',deferred:'gray'};
+  return `<span class="status-dot${pulse?' pulse':''}" style="--status-color:var(--${colorMap[status]||'red'})"></span>`;
+}
+function taskCard(t) {
+  let meta = '';
+  if (t.layer)       meta += `<span class="badge layer">${t.layer}</span>`;
+  if (t.type)        meta += `<span class="badge type">${t.type}</span>`;
+  if (t.risk_level)  meta += `<span class="badge risk-${t.risk_level}">${t.risk_level}</span>`;
+  if (t.batch !== undefined && t.batch !== null) meta += `<span class="badge batch">B${t.batch}</span>`;
+  return `<div class="task-card status-${t.status}" data-id="${esc(t.id)}">
+    <div class="task-header">${statusDot(t.status)}<span class="task-id">${esc(t.id)}</span></div>
+    <div class="task-title">${esc(t.title)}</div>
+    <div class="task-meta">${meta}</div>
+  </div>`;
+}
+
+/* ── KANBAN ── */
+function renderKanban() {
+  const view = document.getElementById('kanban-view');
+  const strategy = detectGrouping();
+  const groups = strategy === 'phase' ? groupByPhase() : strategy === 'batch' ? groupByBatch() : groupByStatus();
+  let html = '<div class="kanban">';
+  for (const [name, items] of Object.entries(groups)) {
+    if (items.length === 0) continue;
+    html += `<div class="column"><div class="column-header"><span class="title">${esc(name)}</span><span class="count">${items.length}</span></div><div class="column-body">`;
+    items.forEach(t => { html += taskCard(t); });
+    html += '</div></div>';
+  }
+  html += '</div>';
+  view.innerHTML = html;
+  bindCardClicks(view);
+}
+
+/* ── TIMELINE ── */
+function renderTimeline() {
+  const view = document.getElementById('timeline-view');
+  const groups = groupByPhase();
+  let html = '';
+  for (const [name, items] of Object.entries(groups)) {
+    const active = items.filter(t => t.status !== 'deferred');
+    if (active.length === 0) continue;
+    html += `<div class="phase-section"><div class="phase-header">${esc(name)} <span style="color:var(--text3)">(${active.length})</span></div><div class="phase-tasks">`;
+    active.forEach(t => { html += taskCard(t); });
+    html += '</div></div>';
+  }
+  view.innerHTML = html || '<div class="empty">No tasks</div>';
+  bindCardClicks(view);
+}
+
+/* ── REFERENCES ── */
+function renderReferences() {
+  const view = document.getElementById('references-view');
+  const lit = extra.literature || [];
+
+  let html = '<h2 class="section-h">Literature & Technical References</h2>';
+
+  if (lit.length === 0) {
+    html += '<div class="empty">No literature review data available</div>';
+    view.innerHTML = html;
+    return;
+  }
+
+  html += '<div class="ref-grid">';
+  lit.forEach(entry => {
+    const tid = entry.task_id || '';
+    const task = tasks.find(t => t.id === tid);
+    const title = task ? task.title : tid;
+    const novelty = entry.novelty_level || '';
+
+    html += '<div class="ref-card">';
+    html += `<div class="ref-card-header">
+      <span class="ref-tid">${esc(tid)}</span>
+      <span class="ref-title">${esc(title)}</span>
+    </div>`;
+
+    // Badges
+    html += '<div class="ref-meta">';
+    if (novelty) html += `<span class="badge novelty-${novelty}">${novelty}</span>`;
+    html += '</div>';
+
+    // State of art
+    if (entry.state_of_art) {
+      html += `<div class="ref-section"><h5>State of the Art</h5><p>${esc(entry.state_of_art)}</p></div>`;
+    }
+    // Recent advances
+    if (entry.recent_advances) {
+      html += `<div class="ref-section"><h5>Recent Advances</h5><p>${esc(entry.recent_advances)}</p></div>`;
+    }
+    // Gaps
+    if (entry.gaps_identified) {
+      html += `<div class="ref-section"><h5>Gaps Identified</h5><p>${esc(entry.gaps_identified)}</p></div>`;
+    }
+    // Improvement suggestions
+    const suggestions = entry.improvement_suggestions || [];
+    if (suggestions.length) {
+      html += '<div class="ref-section"><h5>Improvement Suggestions</h5><ul>';
+      suggestions.forEach(s => { html += `<li>${esc(s)}</li>`; });
+      html += '</ul></div>';
+    }
+    // Alternative approaches
+    const alts = entry.alternative_approaches || [];
+    if (alts.length) {
+      html += '<div class="ref-section"><h5>Alternative Approaches</h5><ul>';
+      alts.forEach(a => { html += `<li>${esc(a)}</li>`; });
+      html += '</ul></div>';
+    }
+    // Key papers
+    const papers = entry.key_papers || [];
+    const detailedRefs = entry.detailed_refs || [];
+    if (papers.length || detailedRefs.length) {
+      html += '<div class="ref-papers"><h5>Key Papers</h5>';
+      const allRefs = detailedRefs.length ? detailedRefs : papers;
+      allRefs.forEach(p => {
+        // Try to extract URL from markdown link
+        const linkMatch = p.match(/\[([^\]]+)\]\(([^)]+)\)/);
+        if (linkMatch) {
+          html += `<div class="ref-paper"><a href="${esc(linkMatch[2])}" target="_blank">${esc(linkMatch[1])}</a></div>`;
+        } else {
+          html += `<div class="ref-paper">${esc(p.replace(/^\d+\.\s*/, ''))}</div>`;
+        }
+      });
+      html += '</div>';
+    }
+    html += '</div>';
+  });
+  html += '</div>';
+  view.innerHTML = html;
+}
+
+/* ── GRAPH ── */
+function renderGraph() {
+  const view = document.getElementById('graph-view');
+  const withDeps = tasks.filter(t => (t.dependencies && t.dependencies.length > 0) || tasks.some(o => (o.dependencies || []).includes(t.id)));
+  let dot = 'digraph G {\\n  rankdir=LR;\\n';
+  const statusColor = {pending:'#60a5fa',in_progress:'#fb923c',in_review:'#c084fc',done:'#4ade80',deferred:'#4b5563',failed:'#f87171'};
+  tasks.forEach(t => {
+    const c = statusColor[t.status] || '#60a5fa';
+    const label = t.id + '\\\\n' + (t.title||'').substring(0,24);
+    dot += `  "${t.id}" [label="${label}" fillcolor="${c}" style="filled,rounded" shape=box fontname="monospace" fontsize=10];\\n`;
+  });
+  tasks.forEach(t => {
+    (t.dependencies||[]).forEach(d => { dot += `  "${d}" -> "${t.id}";\\n`; });
+    (t.suspended_dependencies||[]).forEach(d => { dot += `  "${d}" -> "${t.id}" [style=dashed color="#4b5563"];\\n`; });
+  });
+  dot += '}';
+  let html = '<div class="graph-container"><h2>Task Dependencies</h2><div id="dep-graph-svg">';
+  const inlineSvg = document.getElementById('embedded-svg');
+  if (inlineSvg && inlineSvg.textContent.trim()) {
+    html += inlineSvg.textContent;
+  } else if (withDeps.length === 0) {
+    html += '<div class="graph-fallback"><p>No dependency information available.</p></div>';
+  } else {
+    html += `<div class="graph-fallback"><p>Run <code>python -m tools.generate_graph</code> to render SVG.</p><pre>${dot.replace(/\\n/g,'\n')}</pre></div>`;
+  }
+  html += '</div></div>';
+  view.innerHTML = html;
+}
+
+/* ── DEFERRED ── */
+function renderDeferred() {
+  const view = document.getElementById('deferred-view');
+  const deferred = tasks.filter(t => t.status === 'deferred');
+  let html = '<h2 class="section-h">Deferred Tasks</h2>';
+  if (deferred.length === 0) {
+    html += '<div class="empty">No deferred tasks</div>';
+  } else {
+    deferred.forEach(t => {
+      let meta = '';
+      if (t.layer)      meta += `<span class="badge layer">${t.layer}</span>`;
+      if (t.risk_level) meta += `<span class="badge risk-${t.risk_level}">${t.risk_level}</span>`;
+      html += `<div class="deferred-card" data-id="${esc(t.id)}">
+        <div class="task-id">${esc(t.id)}</div>
+        <div class="task-title">${esc(t.title)}</div>
+        <div class="task-meta">${meta}</div>`;
+      if (t.defer_trigger) {
+        html += `<div class="trigger-info"><div class="trigger-label">Trigger Condition</div><div>${esc(t.defer_trigger)}</div></div>`;
+      }
+      if (t.description) {
+        html += `<div style="margin-top:10px;font-size:12px;color:var(--text3)">${esc(t.description).substring(0,200)}</div>`;
+      }
+      html += '</div>';
+    });
+  }
+  view.innerHTML = html;
+  bindCardClicks(view);
+}
+
+/* ── MODAL ── */
+function showModal(task) {
+  document.getElementById('modal-id').textContent = task.id;
+  document.getElementById('modal-title').textContent = task.title;
+  const statusLabels = {pending:'Pending',in_progress:'In Progress',in_review:'In Review',done:'Done',deferred:'Deferred',failed:'Failed',terminated:'Terminated'};
+  let body = '';
+  if (task.description) body += `<div class="modal-section"><h4>Description</h4><p>${esc(task.description)}</p></div>`;
+  body += `<div class="modal-section"><h4>Metadata</h4><div class="modal-kv">`;
+  body += `<span class="k">Status</span><span class="v">${statusLabels[task.status]||task.status}</span>`;
+  if (task.layer)     body += `<span class="k">Layer</span><span class="v">${task.layer}</span>`;
+  if (task.type)      body += `<span class="k">Type</span><span class="v">${task.type}</span>`;
+  if (task.risk_level)body += `<span class="k">Risk</span><span class="v">${task.risk_level}</span>`;
+  if (task.specialist)body += `<span class="k">Specialist</span><span class="v">${task.specialist}</span>`;
+  if (task.batch !== undefined) body += `<span class="k">Batch</span><span class="v">${task.batch}</span>`;
+  body += `</div></div>`;
+  if (task.defer_trigger) body += `<div class="modal-section"><h4>Trigger Condition</h4><p style="background:var(--orange-bg);border:1px solid rgba(251,146,60,.2);padding:10px 14px;font-size:12px">${esc(task.defer_trigger)}</p></div>`;
+  const deps = task.dependencies || [];
+  if (deps.length) body += `<div class="modal-section"><h4>Dependencies (${deps.length})</h4><ul>${deps.map(d=>`<li>${esc(d)}</li>`).join('')}</ul></div>`;
+  const criteria = task.acceptance_criteria || [];
+  if (criteria.length) body += `<div class="modal-section"><h4>Acceptance Criteria</h4><ul>${criteria.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`;
+  const files = task.files_to_touch || [];
+  if (files.length) body += `<div class="modal-section"><h4>Files</h4><ul>${files.map(f=>`<li><code>${esc(f)}</code></li>`).join('')}</ul></div>`;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+function closeModal() { document.getElementById('modal-overlay').classList.remove('active'); }
+document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target.id === 'modal-overlay') closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+/* ── TABS ── */
+function bindTabs() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.view + '-view').classList.add('active');
+    });
+  });
+}
+
+/* ── HELPERS ── */
+function esc(s) { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+function bindCardClicks(container) {
+  container.querySelectorAll('.task-card, .deferred-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const task = tasks.find(t => t.id === card.dataset.id);
+      if (task) showModal(task);
+    });
+  });
+}
+
+init();
+</script>
+<script>
+/* ── BURNDOWN (separate block to keep main JS clean) ── */
+function renderBurndown() {
+  const view = document.getElementById('burndown-view');
+  const bd = extra.burndown || {};
+  const points = bd.burndown || [];
+  const vel = bd.velocity || {};
+  const fc = bd.forecast || {};
+
+  let html = '<h2 class="section-h">Velocity & Burndown</h2>';
+
+  // Velocity stats row
+  html += '<div class="overview-grid">';
+  html += `<div class="overview-card"><h3>Velocity</h3><div class="mono">
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">Tasks/week (${vel.window_weeks||4}w window):</span> <span style="color:var(--amber);font-size:18px">${vel.tasks_per_week||0}</span></div>
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">Completed in window:</span> <span style="color:var(--text)">${vel.completed_in_window||0}</span></div>
+    <div><span style="color:var(--text3)">Total completed:</span> <span style="color:var(--green)">${vel.total_completed||0}</span> / ${vel.total_tasks||0}</div>
+  </div></div>`;
+
+  // Forecast card
+  const onTrack = fc.on_track;
+  const fcColor = onTrack ? 'var(--green)' : 'var(--red)';
+  const fcLabel = onTrack ? 'ON TRACK' : 'BEHIND SCHEDULE';
+  html += `<div class="overview-card"><h3>Forecast</h3><div class="mono">
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">Status:</span> <span style="color:${fcColor};font-size:14px;font-weight:500">${fcLabel}</span></div>
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">Forecast date:</span> <span style="color:var(--text)">${fc.forecast_date ? fc.forecast_date.split('T')[0] : 'N/A'}</span></div>
+    <div style="margin-bottom:6px"><span style="color:var(--text3)">Deadline:</span> <span style="color:var(--text)">${fc.deadline||'N/A'}</span></div>
+    <div><span style="color:var(--text3)">Tasks remaining:</span> <span style="color:var(--orange)">${fc.tasks_remaining||0}</span></div>
+  </div></div>`;
+  html += '</div>';
+
+  // Burndown chart (CSS-only bar chart)
+  if (points.length > 0) {
+    const maxVal = Math.max(...points.map(p => Math.max(p.remaining, p.ideal)));
+    html += '<div style="margin-top:24px"><h3 class="section-h">Burndown Chart</h3>';
+    html += '<div style="display:flex;align-items:flex-end;gap:2px;height:200px;padding:16px 0;border-bottom:1px solid var(--border)">';
+    points.forEach(p => {
+      const rH = maxVal > 0 ? (p.remaining / maxVal * 160) : 0;
+      const iH = maxVal > 0 ? (p.ideal / maxVal * 160) : 0;
+      const w = Math.max(8, Math.floor(600 / points.length));
+      html += `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;flex:1;max-width:${w+20}px" title="Week ${p.week}: ${p.remaining} remaining (ideal: ${p.ideal})">
+        <div style="display:flex;align-items:flex-end;gap:1px;height:164px">
+          <div style="width:${w/2}px;height:${rH}px;background:var(--amber);opacity:.7;transition:height .3s"></div>
+          <div style="width:${w/2}px;height:${iH}px;background:var(--border2);transition:height .3s"></div>
+        </div>
+        <div style="font-size:8px;color:var(--text3)">W${p.week}</div>
+      </div>`;
+    });
+    html += '</div>';
+    html += '<div style="display:flex;gap:16px;margin-top:8px;font-size:10px;color:var(--text3)">';
+    html += '<span><span style="display:inline-block;width:10px;height:10px;background:var(--amber);opacity:.7;vertical-align:middle;margin-right:4px"></span>Actual remaining</span>';
+    html += '<span><span style="display:inline-block;width:10px;height:10px;background:var(--border2);vertical-align:middle;margin-right:4px"></span>Ideal burndown</span>';
+    html += '</div></div>';
+  } else {
+    html += '<div class="empty" style="margin-top:24px">No burndown data. Run <code>python -m tools.generate_burndown</code> to generate.</div>';
+  }
+
+  view.innerHTML = html;
+}
+if (typeof renderBurndown === 'function') renderBurndown();
+</script>
+<script type="text/plain" id="embedded-svg"></script>
+</body>
+</html>

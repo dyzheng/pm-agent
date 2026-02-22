@@ -12,6 +12,7 @@ projects/*
 !projects/f-electron-scf/
 !projects/f-electron-multiscale/
 !projects/qe-dfpt-migration/
+!projects/dyzheng-issues/
 
 # Ignore temp files in tracked projects
 projects/**/.DS_Store

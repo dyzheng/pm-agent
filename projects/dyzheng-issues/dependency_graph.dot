@@ -1,0 +1,23 @@
+digraph Dependencies {
+  rankdir=LR;
+  node [shape=box, style=rounded, fontsize=11];
+  label="dyzheng-issues Dependency Graph";
+
+  "DZ-001" [label="DZ-001\n修复 nspin=4 noncolin=0 时磁矩解析错误", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "DZ-002" [label="DZ-002\n修复单精度 PW 计算 CUDA 运行时错误", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "DZ-003" [label="DZ-003\n诊断并修复 OpenMPI v4 toolchain 编译问...", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DZ-004" [label="DZ-004\n实现 nspin=2 时 init_chg=dm 功能", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "DZ-005" [label="DZ-005\n审查并改进非共线磁性初始化流程", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "DZ-006" [label="DZ-006\n优化 SOC 开启时的内存占用", fillcolor="#3498db", style="filled,rounded", penwidth=3];
+  "DZ-007" [label="DZ-007\n单精度 PW 全面测试与加固", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DZ-008" [label="DZ-008\n回复 NO 配体电荷/磁性控制问题并提供工作流建议", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+  "DZ-009" [label="DZ-009\n评估并规划 constrained DFT / 局域磁矩约束...", fillcolor="#3498db", style="filled,rounded", penwidth=2];
+  "DZ-010" [label="DZ-010\n更新 toolchain 文档：InfiniBand/OFI...", fillcolor="#3498db", style="filled,rounded", penwidth=1];
+
+  "DZ-001" -> "DZ-005";
+  "DZ-004" -> "DZ-005";
+  "DZ-002" -> "DZ-007";
+  "DZ-004" -> "DZ-007";
+  "DZ-008" -> "DZ-009";
+  "DZ-003" -> "DZ-010";
+}

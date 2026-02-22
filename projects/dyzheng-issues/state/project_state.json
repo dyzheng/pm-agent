@@ -1,0 +1,391 @@
+{
+  "request": "解决 deepmodeling/abacus-develop 仓库中所有 assign 给 dyzheng 的 open issues，涵盖 bug 修复、功能增强和用户支持。",
+  "project_id": "dyzheng-issues",
+  "phase": "execute",
+  "parsed_intent": {
+    "domain": "ABACUS DFT package maintenance and development",
+    "method": "Bug fixes, feature implementation, user support",
+    "validation": "Regression tests, user confirmation, CI/CD pass",
+    "keywords": [
+      "spin-orbit coupling",
+      "noncollinear magnetism",
+      "density matrix initialization",
+      "single-precision PW",
+      "memory optimization",
+      "DFT+U",
+      "compilation",
+      "constrained magnetism"
+    ]
+  },
+  "metadata": {
+    "created": "2026-02-22T12:00:00Z",
+    "last_updated": "2026-02-22T21:30:00Z",
+    "source": "GitHub issues assigned to dyzheng in deepmodeling/abacus-develop",
+    "strategy": "按优先级分三批：P0 紧急 bug 修复、P1 功能增强、P2 用户支持与编译问题",
+    "id_scheme": "DZ-{seq:03d}",
+    "statistics": {
+      "total_tasks": 10,
+      "active_tasks": 10,
+      "terminated_tasks": 0,
+      "in_review": 0,
+      "in_progress": 0,
+      "done": 0,
+      "pending": 10
+    },
+    "phases": {
+      "P0-紧急Bug修复": [
+        "DZ-001",
+        "DZ-002",
+        "DZ-003"
+      ],
+      "P1-功能增强": [
+        "DZ-004",
+        "DZ-005",
+        "DZ-006",
+        "DZ-007"
+      ],
+      "P2-用户支持与文档": [
+        "DZ-008",
+        "DZ-009",
+        "DZ-010"
+      ]
+    },
+    "critical_path": "DZ-001 → DZ-004 → DZ-005 → DZ-007",
+    "parallel_opportunities": [
+      "DZ-001 || DZ-002 || DZ-003 (三个独立 bug 可并行修复)",
+      "DZ-004 || DZ-006 (init_chg=dm 与 SOC 内存优化可并行)",
+      "DZ-008 || DZ-009 || DZ-010 (用户支持任务互相独立)"
+    ]
+  },
+  "tasks": [
+    {
+      "id": "DZ-001",
+      "title": "修复 nspin=4 noncolin=0 时磁矩解析错误",
+      "layer": "core",
+      "type": "bugfix",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": [
+        "DZ-005"
+      ],
+      "description": "GitHub Issue #5021。当 STRU 中设置初始 x y z 磁矩，INPUT 中设 nspin=4 但未设 noncolin=1 时，ABACUS 错误地将非共线磁矩旋转到 Z 轴。例如初始磁矩 `1 1 1` 被输出为 `0 0 1.732`。\n\n根因：STRU 文件解析逻辑在 nspin=4 时未正确处理非共线磁矩的初始化，仅在 noncolin=1 时才保留 xyz 分量。\n\n修复方向：(1) 在 STRU 解析中，nspin=4 时无论 noncolin 设置如何都应保留 xyz 磁矩分量；(2) 或者在 nspin=4 且未设 noncolin 时给出明确警告/自动启用 noncolin。",
+      "acceptance_criteria": [
+        "nspin=4 noncolin=0 时初始磁矩 (1,1,1) 正确保留为 (1,1,1) 而非 (0,0,1.732)",
+        "添加单元测试覆盖 nspin=4 + noncolin=0/1 两种情况",
+        "不影响 nspin=1/2 的现有行为",
+        "CI 全部通过"
+      ],
+      "files_to_touch": [
+        "source/source_cell/read_atoms_helper.cpp",
+        "source/source_cell/read_atoms.cpp",
+        "source/source_cell/atom_spec.h",
+        "source/source_cell/test/unitcell_test.cpp"
+      ],
+      "estimated_effort": "2-3 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/5021",
+      "github_issue_number": 5021,
+      "priority": "P0",
+      "spec_doc": "docs/tasks/DZ-001.md"
+    },
+    {
+      "id": "DZ-002",
+      "title": "修复单精度 PW 计算 CUDA 运行时错误",
+      "layer": "core",
+      "type": "bugfix",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": [
+        "DZ-007"
+      ],
+      "description": "GitHub Issue #6768。ABACUS 3.10.1 中启用 `precision single` 进行 PW 基组计算时，出现 CUDA 运行时错误：`cudaErrorInvalidValue, invalid argument` (memory_op.cu:87)。此问题在之前版本中也存在。\n\n修复方向：(1) 检查 module_base/module_device/cuda/memory_op.cu 第87行附近的内存分配逻辑；(2) 排查单精度模式下数据类型不匹配导致的 CUDA API 参数错误；(3) 检查 PW 模块中 float/double 模板实例化是否完整。",
+      "acceptance_criteria": [
+        "si16_pw 示例在 precision=single 模式下正常运行完成",
+        "CUDA 和 CPU 两种后端均测试通过",
+        "添加单精度 PW 的回归测试",
+        "不影响双精度计算结果"
+      ],
+      "files_to_touch": [
+        "source/source_base/module_device/cuda/memory_op.cu",
+        "source/source_base/module_device/memory_op.h",
+        "source/source_basis/module_pw/pw_basis_k.cpp",
+        "source/source_basis/module_pw/pw_basis_k.h",
+        "source/source_basis/module_pw/pw_basis.cpp"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6768",
+      "github_issue_number": 6768,
+      "priority": "P0",
+      "spec_doc": "docs/tasks/DZ-002.md"
+    },
+    {
+      "id": "DZ-003",
+      "title": "诊断并修复 OpenMPI v4 toolchain 编译问题",
+      "layer": "infra",
+      "type": "bugfix",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": [],
+      "description": "GitHub Issue #6195。用户使用 toolchain 中的 openmpi-v4 编译 ABACUS LTS v3.10.0 时遇到 OFI Libfabric 错误：`fi_endpoint` 调用失败，`Failed to modify UD QP to INIT on mlx5_0: Operation not permitted`。\n\n分析方向：(1) 这可能是 OpenMPI 与 Mellanox InfiniBand 驱动的兼容性问题，非 ABACUS 代码 bug；(2) 检查 toolchain 中 OpenMPI 的编译配置是否正确设置了 OFI/UCX 传输层；(3) 可能需要更新文档说明 InfiniBand 环境下的编译注意事项。",
+      "acceptance_criteria": [
+        "确认问题根因（ABACUS 代码 vs 环境配置）",
+        "如果是环境问题，提供解决方案文档",
+        "如果是 toolchain 问题，修复编译脚本",
+        "在 issue 中回复用户解决方案"
+      ],
+      "files_to_touch": [
+        "toolchain/scripts/stage1/install_openmpi.sh",
+        "toolchain/scripts/common_vars.sh",
+        "docs/advanced/install.md"
+      ],
+      "estimated_effort": "1-2 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6195",
+      "github_issue_number": 6195,
+      "priority": "P0",
+      "spec_doc": "docs/tasks/DZ-003.md"
+    },
+    {
+      "id": "DZ-004",
+      "title": "实现 nspin=2 时 init_chg=dm 功能",
+      "layer": "core",
+      "type": "new",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": [
+        "DZ-005",
+        "DZ-007"
+      ],
+      "description": "GitHub Issue #6974。当前 init_chg=dm（从密度矩阵初始化电荷密度）不支持 nspin=2（自旋极化）情况。需要重构代码使其支持。\n\n实现方向：(1) 分析当前 init_chg=dm 的实现路径（ElecState 中的电荷密度初始化）；(2) 扩展密度矩阵读取逻辑以处理 spin-up/spin-down 两个分量；(3) 确保与 LCAO 和 PW 基组都兼容；(4) 需要修改 ESolver/ElecState/相关 IO 模块。",
+      "acceptance_criteria": [
+        "nspin=2 时 init_chg=dm 正常工作",
+        "密度矩阵正确读取 spin-up 和 spin-down 分量",
+        "SCF 从密度矩阵初始化后收敛步数明显减少",
+        "LCAO 和 PW 基组均测试通过",
+        "添加回归测试",
+        "不影响 nspin=1/4 的现有行为"
+      ],
+      "files_to_touch": [
+        "source/source_esolver/esolver_ks_lcao.cpp",
+        "source/source_lcao/rho_tau_lcao.cpp",
+        "source/source_estate/module_dm/density_matrix.cpp",
+        "source/source_estate/module_dm/density_matrix.h",
+        "source/source_estate/module_dm/density_matrix_io.cpp",
+        "source/source_lcao/module_hcontainer/read_hcontainer.cpp"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6974",
+      "github_issue_number": 6974,
+      "priority": "P1",
+      "spec_doc": "docs/tasks/DZ-004.md"
+    },
+    {
+      "id": "DZ-005",
+      "title": "审查并改进非共线磁性初始化流程",
+      "layer": "core",
+      "type": "enhancement",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [
+        "DZ-001",
+        "DZ-004"
+      ],
+      "blocks": [],
+      "description": "综合 #5021 和 #6974 的修复经验，对 ABACUS 的磁性初始化流程进行整体审查和改进：(1) 统一 nspin=1/2/4 + noncolin + SOC 各种组合下的磁矩初始化逻辑；(2) 对不合理的参数组合给出清晰的警告或错误信息；(3) 改进文档说明各参数的含义和推荐用法。",
+      "acceptance_criteria": [
+        "nspin/noncolin/soc 所有合法组合的磁矩初始化行为正确且一致",
+        "不合法组合给出明确错误信息",
+        "添加参数组合的集成测试矩阵",
+        "更新用户文档"
+      ],
+      "files_to_touch": [
+        "source/source_cell/read_atoms_helper.cpp",
+        "source/source_cell/read_atoms.cpp",
+        "source/source_io/module_parameter/read_input_item_system.cpp",
+        "source/source_estate/magnetism.cpp",
+        "source/source_estate/magnetism.h"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "github_issue": null,
+      "priority": "P1",
+      "spec_doc": "docs/tasks/DZ-005.md"
+    },
+    {
+      "id": "DZ-006",
+      "title": "优化 SOC 开启时的内存占用",
+      "layer": "algorithm",
+      "type": "enhancement",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": [],
+      "description": "GitHub Issue #6377。用户报告开启自旋轨道耦合（SOC）后内存占用显著增大。\n\n分析方向：(1) SOC 开启时 nspin=4，矩阵维度翻倍（2x2 spinor），内存增长是预期行为但可能有优化空间；(2) 检查是否有不必要的中间矩阵拷贝；(3) 检查 Hamiltonian/Overlap 矩阵的存储是否可以利用对称性压缩；(4) 对比 VASP/QE 在类似体系下的内存占用作为参考。\n\n可能的优化：(a) 延迟分配策略；(b) 稀疏矩阵存储；(c) 分块计算减少峰值内存。",
+      "acceptance_criteria": [
+        "分析并记录 SOC 模式下各模块的内存占用分布",
+        "识别至少一个可优化的内存热点",
+        "实现优化后内存降低 ≥20%（或证明当前已是最优）",
+        "SOC 计算结果不变（数值一致性验证）",
+        "在 issue 中回复分析结果"
+      ],
+      "files_to_touch": [
+        "source/source_estate/module_dm/density_matrix.cpp",
+        "source/source_estate/module_dm/density_matrix.h",
+        "source/source_lcao/hamilt_lcao.cpp",
+        "source/source_lcao/module_hcontainer/hcontainer.cpp",
+        "source/source_lcao/LCAO_HS_arrays.hpp",
+        "source/source_lcao/spar_u.cpp",
+        "source/source_pw/module_pwdft/soc.h"
+      ],
+      "estimated_effort": "1-2 weeks",
+      "specialist": "abacus-develop",
+      "risk_level": "high",
+      "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6377",
+      "github_issue_number": 6377,
+      "priority": "P1",
+      "spec_doc": "docs/tasks/DZ-006.md"
+    },
+    {
+      "id": "DZ-007",
+      "title": "单精度 PW 全面测试与加固",
+      "layer": "core",
+      "type": "test",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [
+        "DZ-002",
+        "DZ-004"
+      ],
+      "blocks": [],
+      "description": "在 DZ-002 修复 CUDA 错误后，对单精度 PW 计算进行全面测试加固：(1) 覆盖 CPU/GPU 两种后端；(2) 测试 nspin=1/2/4 各种自旋模式；(3) 验证单精度与双精度结果的数值偏差在可接受范围内；(4) 添加 CI 回归测试。",
+      "acceptance_criteria": [
+        "单精度 PW 在 CPU 和 GPU 后端均通过标准测试集",
+        "单精度 vs 双精度能量偏差 < 1e-4 Ry",
+        "nspin=1/2 均测试通过",
+        "CI 中添加单精度 PW 测试用例"
+      ],
+      "files_to_touch": [
+        "source/source_basis/module_pw/pw_basis_k.cpp",
+        "source/source_base/module_fft/fft_bundle.cpp",
+        "source/source_psi/setup_psi_pw.cpp",
+        "source/source_basis/module_pw/pw_transform_gpu.cpp"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6768",
+      "github_issue_number": 6768,
+      "priority": "P1",
+      "spec_doc": "docs/tasks/DZ-007.md"
+    },
+    {
+      "id": "DZ-008",
+      "title": "回复 NO 配体电荷/磁性控制问题并提供工作流建议",
+      "layer": "workflow",
+      "type": "support",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [],
+      "blocks": [
+        "DZ-009"
+      ],
+      "description": "GitHub Issue #6824。用户在 Cu-Histidine-Fe(CN)₅NO 体系的自旋极化 DFT 计算中，无法控制 NO 配体的电荷态和磁性。relax 过程中 NO⁺ 自发弯曲并获得自旋密度（变为 NO⁰/NO⁻），DFT+U 无法收敛。\n\n需要：(1) 调研 ABACUS 是否支持局域磁矩约束（constrained DFT / penalty functional）；(2) 如果不支持，建议替代工作流（如固定 NO 几何、分步优化、使用 init_chg 控制初始电子态）；(3) 检查 DFT+U 不收敛的可能原因。",
+      "acceptance_criteria": [
+        "在 issue 中提供详细的技术回复",
+        "说明 ABACUS 当前支持的局域磁矩/电荷约束方法",
+        "提供至少一种可行的工作流建议",
+        "如果发现 DFT+U 收敛 bug，创建单独的 issue 跟踪"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_deltaspin/spin_constrain.h",
+        "source/source_lcao/module_deltaspin/spin_constrain.cpp",
+        "source/source_lcao/module_dftu/dftu.h",
+        "source/source_lcao/module_dftu/dftu.cpp"
+      ],
+      "estimated_effort": "1-2 days",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6824",
+      "github_issue_number": 6824,
+      "priority": "P2",
+      "spec_doc": "docs/tasks/DZ-008.md"
+    },
+    {
+      "id": "DZ-009",
+      "title": "评估并规划 constrained DFT / 局域磁矩约束功能",
+      "layer": "algorithm",
+      "type": "new",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [
+        "DZ-008"
+      ],
+      "blocks": [],
+      "description": "基于 #6824 用户需求，评估在 ABACUS 中实现 constrained DFT 或局域磁矩约束功能的可行性：(1) 调研 VASP LAMBDA / QE constrained_magnetization 的实现方式；(2) 评估在 ABACUS LCAO/PW 框架下的实现难度；(3) 如果可行，输出设计文档和任务分解。\n\n注意：这是一个评估任务，不一定需要立即实现。",
+      "acceptance_criteria": [
+        "完成技术可行性评估文档",
+        "对比 VASP/QE 的实现方案",
+        "给出 ABACUS 实现的推荐方案和工作量估计",
+        "如果决定实施，输出详细的任务分解"
+      ],
+      "files_to_touch": [
+        "source/source_lcao/module_deltaspin/",
+        "source/source_lcao/module_operator_lcao/dspin_lcao.cpp",
+        "source/source_lcao/module_operator_lcao/dspin_force_stress.hpp"
+      ],
+      "estimated_effort": "3-5 days",
+      "specialist": "abacus-develop",
+      "risk_level": "medium",
+      "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6824",
+      "github_issue_number": 6824,
+      "priority": "P2",
+      "spec_doc": "docs/tasks/DZ-009.md"
+    },
+    {
+      "id": "DZ-010",
+      "title": "更新 toolchain 文档：InfiniBand/OFI 环境编译指南",
+      "layer": "infra",
+      "type": "docs",
+      "scope": "abacus",
+      "status": "pending",
+      "dependencies": [
+        "DZ-003"
+      ],
+      "blocks": [],
+      "description": "基于 #6195 的诊断结果，更新 ABACUS 编译文档：(1) 添加 InfiniBand 环境下使用 toolchain 编译的注意事项；(2) 说明 OpenMPI OFI/UCX 传输层的配置方法；(3) 常见错误的排查步骤。",
+      "acceptance_criteria": [
+        "文档中包含 InfiniBand 环境编译的专门章节",
+        "包含常见 OFI/UCX 错误的排查步骤",
+        "至少一位用户确认文档有帮助"
+      ],
+      "files_to_touch": [
+        "toolchain/scripts/stage1/install_openmpi.sh",
+        "toolchain/scripts/common_vars.sh",
+        "docs/advanced/install.md"
+      ],
+      "estimated_effort": "1 day",
+      "specialist": "abacus-develop",
+      "risk_level": "low",
+      "github_issue": "https://github.com/deepmodeling/abacus-develop/issues/6195",
+      "github_issue_number": 6195,
+      "priority": "P2",
+      "spec_doc": "docs/tasks/DZ-010.md"
+    }
+  ],
+  "audit_items": [],
+  "decisions": [],
+  "drafts": [],
+  "gate_results": [],
+  "integration_results": []
+}
