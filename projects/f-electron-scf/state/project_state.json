@@ -133,7 +133,8 @@
       "old_ids": [
         "D-C1",
         "FE-300(旧)"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-D-C1.md"
     },
     {
       "id": "FE-D-C2",
@@ -165,7 +166,8 @@
       "old_ids": [
         "D-C2",
         "FE-301(旧)"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-D-C2.md"
     },
     {
       "id": "FE-D-C3",
@@ -197,7 +199,8 @@
       "old_ids": [
         "D-C3",
         "FE-302(旧)"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-D-C3.md"
     },
     {
       "id": "FE-000",
@@ -228,7 +231,8 @@
       "old_ids": [
         "T0-4",
         "FE-000"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-000.md"
     },
     {
       "id": "FE-001",
@@ -253,7 +257,8 @@
       "risk_level": "low",
       "old_ids": [
         "FE-002"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-001.md"
     },
     {
       "id": "FE-002",
@@ -281,7 +286,8 @@
       "risk_level": "low",
       "old_ids": [
         "T0-3"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-002.md"
     },
     {
       "id": "FE-005",
@@ -307,7 +313,8 @@
       ],
       "estimated_effort": "3-5 days",
       "specialist": "workflow",
-      "risk_level": "medium"
+      "risk_level": "medium",
+      "spec_doc": "docs/tasks/FE-005.md"
     },
     {
       "id": "FE-100",
@@ -342,7 +349,8 @@
         "PR-1"
       ],
       "commit_hash": "d2364165c",
-      "review_notes": "代码已提交但验收未通过：零单元测试、零集成测试、无编译日志。需补充测试。"
+      "review_notes": "代码已提交但验收未通过：零单元测试、零集成测试、无编译日志。需补充测试。",
+      "spec_doc": "docs/tasks/FE-100.md"
     },
     {
       "id": "FE-101",
@@ -380,7 +388,8 @@
       "risk_level": "medium",
       "old_ids": [
         "PR-2"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-101.md"
     },
     {
       "id": "FE-102",
@@ -411,7 +420,8 @@
       "risk_level": "medium",
       "old_ids": [
         "PR-3"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-102.md"
     },
     {
       "id": "FE-103",
@@ -442,7 +452,8 @@
       "risk_level": "medium",
       "old_ids": [
         "PR-4"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-103.md"
     },
     {
       "id": "FE-104",
@@ -472,7 +483,8 @@
       "risk_level": "low",
       "old_ids": [
         "PR-5"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-104.md"
     },
     {
       "id": "FE-105",
@@ -509,7 +521,8 @@
       "risk_level": "medium",
       "old_ids": [
         "PR-6"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-105.md"
     },
     {
       "id": "FE-106",
@@ -539,7 +552,8 @@
       "risk_level": "medium",
       "old_ids": [
         "PR-7"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-106.md"
     },
     {
       "id": "FE-107",
@@ -572,7 +586,8 @@
       "risk_level": "low",
       "old_ids": [
         "PR-8"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-107.md"
     },
     {
       "id": "FE-108",
@@ -604,7 +619,8 @@
       "risk_level": "medium",
       "old_ids": [
         "PR-9"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-108.md"
     },
     {
       "id": "FE-109",
@@ -635,7 +651,8 @@
       "risk_level": "medium",
       "old_ids": [
         "PR-10"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-109.md"
     },
     {
       "id": "FE-110",
@@ -662,7 +679,8 @@
       "risk_level": "medium",
       "old_ids": [
         "PR-11"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-110.md"
     },
     {
       "id": "FE-111",
@@ -691,7 +709,8 @@
       "risk_level": "medium",
       "old_ids": [
         "PR-12"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-111.md"
     },
     {
       "id": "FE-112",
@@ -720,7 +739,8 @@
       "risk_level": "low",
       "old_ids": [
         "PR-13"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-112.md"
     },
     {
       "id": "FE-113",
@@ -747,7 +767,8 @@
       "risk_level": "low",
       "old_ids": [
         "PR-14"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-113.md"
     },
     {
       "id": "FE-200",
@@ -781,7 +802,8 @@
       "old_ids": [
         "T1-1",
         "FE-200"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-200.md"
     },
     {
       "id": "FE-201",
@@ -812,7 +834,8 @@
       "old_ids": [
         "T1-2",
         "FE-201"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-201.md"
     },
     {
       "id": "FE-202",
@@ -843,7 +866,8 @@
         "T1-4",
         "T2-1",
         "FE-202"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-202.md"
     },
     {
       "id": "FE-203",
@@ -873,7 +897,8 @@
       "old_ids": [
         "T2-2",
         "FE-203"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-203.md"
     },
     {
       "id": "FE-204",
@@ -908,7 +933,8 @@
       "old_ids": [
         "T1-3",
         "FE-204"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-204.md"
     },
     {
       "id": "FE-205",
@@ -941,7 +967,8 @@
       "old_ids": [
         "T2-3",
         "FE-205"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-205.md"
     },
     {
       "id": "FE-205-1",
@@ -972,7 +999,8 @@
       "risk_level": "low",
       "old_ids": [
         "FE-205"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-205-1.md"
     },
     {
       "id": "FE-205-2",
@@ -1003,7 +1031,8 @@
       "risk_level": "medium",
       "old_ids": [
         "FE-205"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-205-2.md"
     },
     {
       "id": "FE-205-3",
@@ -1034,7 +1063,8 @@
       "risk_level": "medium",
       "old_ids": [
         "FE-205"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-205-3.md"
     },
     {
       "id": "FE-205-4",
@@ -1066,7 +1096,8 @@
       "risk_level": "medium",
       "old_ids": [
         "FE-205"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-205-4.md"
     },
     {
       "id": "FE-300",
@@ -1094,7 +1125,8 @@
       "risk_level": "low",
       "old_ids": [
         "T3-1"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-300.md"
     },
     {
       "id": "FE-301",
@@ -1124,7 +1156,8 @@
       "risk_level": "low",
       "old_ids": [
         "T3-2"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-301.md"
     },
     {
       "id": "FE-302",
@@ -1158,7 +1191,8 @@
       "risk_level": "medium",
       "old_ids": [
         "FE-400"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-302.md"
     },
     {
       "id": "FE-303",
@@ -1187,7 +1221,8 @@
       "risk_level": "medium",
       "old_ids": [
         "FE-401"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-303.md"
     },
     {
       "id": "FE-304",
@@ -1221,7 +1256,8 @@
       "risk_level": "medium",
       "old_ids": [
         "T3-3"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-304.md"
     },
     {
       "id": "FE-305",
@@ -1252,7 +1288,8 @@
       "risk_level": "low",
       "old_ids": [
         "T3-4"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-305.md"
     },
     {
       "id": "FE-306",
@@ -1278,7 +1315,8 @@
       ],
       "estimated_effort": "1 week",
       "specialist": "workflow",
-      "risk_level": "medium"
+      "risk_level": "medium",
+      "spec_doc": "docs/tasks/FE-306.md"
     },
     {
       "id": "FE-400",
@@ -1310,7 +1348,8 @@
       "risk_level": "low",
       "old_ids": [
         "T4-1"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-400.md"
     },
     {
       "id": "FE-401",
@@ -1340,7 +1379,8 @@
       "risk_level": "medium",
       "old_ids": [
         "T4-2"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-401.md"
     },
     {
       "id": "FE-402",
@@ -1369,7 +1409,8 @@
       "risk_level": "low",
       "old_ids": [
         "T4-3"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-402.md"
     },
     {
       "id": "FE-403",
@@ -1399,7 +1440,8 @@
       "risk_level": "low",
       "old_ids": [
         "T4-4"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-403.md"
     },
     {
       "id": "FE-404",
@@ -1426,7 +1468,8 @@
       "risk_level": "low",
       "old_ids": [
         "FE-500"
-      ]
+      ],
+      "spec_doc": "docs/tasks/FE-404.md"
     }
   ],
   "current_task_id": null,
