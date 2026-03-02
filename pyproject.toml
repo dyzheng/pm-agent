@@ -1,8 +1,12 @@
 [project]
 name = "pm-agent"
-version = "0.1.0"
-requires-python = ">=3.11"
-dependencies = ["pyyaml>=6.0"]
+version = "0.2.0"
+requires-python = ">=3.10"
+dependencies = [
+    "pyyaml>=6.0",
+    "pm-tools>=0.1.0",
+    "pm-core>=0.1.0",
+]
 
 [project.optional-dependencies]
 dev = ["pytest>=8.0", "pytest-cov>=7.0"]
