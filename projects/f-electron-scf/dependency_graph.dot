@@ -1,7 +1,7 @@
 digraph Dependencies {
   rankdir=LR;
   node [shape=box, style=rounded, fontsize=11];
-  label="Rare-Earth f-electron Norm-Conserving Pseudopotential SCF Convergence Dependency Graph";
+  label="ABACUS 稀土 DFT+U 计算能力完善（工程项目） Dependency Graph";
 
   "FE-D-C1" [label="FE-D-C1\nAI 训练数据收集", fillcolor="#3498db", style="filled,rounded", penwidth=3];
   "FE-D-C2" [label="FE-D-C2\nGNN 占据矩阵模型训练", fillcolor="#3498db", style="filled,rounded", penwidth=3];
