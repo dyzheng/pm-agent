@@ -103,7 +103,8 @@ class DecomposePhase:
 
         # Add integration task
         if tasks:
-            domain = parsed_intent.get("domain", ["workflow"])[0]
+            domain_list = parsed_intent.get("domain", [])
+            domain = domain_list[0] if domain_list else "workflow"
             integration_task = CoreTask(
                 id=f"{prefix}-{len(tasks) + 1:03d}",
                 title=f"Integration test: end-to-end {domain} validation",
