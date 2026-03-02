@@ -31,6 +31,20 @@ def migrate_state(old: ProjectState) -> BaseProjectState:
             "audit_results": [item.to_dict() for item in old.audit_results],
             "blocked_reason": old.blocked_reason,
             "project_id": old.project_id,
+            # Preserve pm-agent specific fields
+            "review_results": [r.to_dict() for r in old.review_results],
+            "human_approvals": [h.to_dict() for h in old.human_approvals],
+            "brainstorm_results": [b.to_dict() for b in old.brainstorm_results],
+            "human_decisions": [d.to_dict() for d in old.human_decisions],
+            "drafts": {k: v.to_dict() for k, v in old.drafts.items()},
+            "gate_results": {k: v.to_dict() for k, v in old.gate_results.items()},
+            "integration_results": [r.to_dict() for r in old.integration_results],
+            "current_task_id": old.current_task_id,
+            "optimization_history": old.optimization_history,
+            "last_optimization": old.last_optimization,
+            "optimization_metadata": old.optimization_metadata,
+            "charter": old.charter,
+            "closure": old.closure,
         },
         phase=old.phase.value,
         blocked_reason=old.blocked_reason,
@@ -95,7 +109,10 @@ def convert_to_old_state(new: BaseProjectState) -> ProjectState:
     Returns:
         pm-agent ProjectState with converted data
     """
-    from src.state import Phase, AuditItem
+    from src.state import (
+        Phase, AuditItem, ReviewResult, HumanApproval, BrainstormResult,
+        Decision, Draft, GateResult, IntegrationResult
+    )
 
     # Extract metadata
     metadata = new.metadata
@@ -105,6 +122,48 @@ def convert_to_old_state(new: BaseProjectState) -> ProjectState:
     if "audit_results" in metadata:
         for item_dict in metadata["audit_results"]:
             audit_results.append(AuditItem.from_dict(item_dict))
+
+    # Reconstruct review results
+    review_results = []
+    if "review_results" in metadata:
+        for item_dict in metadata["review_results"]:
+            review_results.append(ReviewResult.from_dict(item_dict))
+
+    # Reconstruct human approvals
+    human_approvals = []
+    if "human_approvals" in metadata:
+        for item_dict in metadata["human_approvals"]:
+            human_approvals.append(HumanApproval.from_dict(item_dict))
+
+    # Reconstruct brainstorm results
+    brainstorm_results = []
+    if "brainstorm_results" in metadata:
+        for item_dict in metadata["brainstorm_results"]:
+            brainstorm_results.append(BrainstormResult.from_dict(item_dict))
+
+    # Reconstruct human decisions
+    human_decisions = []
+    if "human_decisions" in metadata:
+        for item_dict in metadata["human_decisions"]:
+            human_decisions.append(Decision.from_dict(item_dict))
+
+    # Reconstruct drafts
+    drafts = {}
+    if "drafts" in metadata:
+        for task_id, draft_dict in metadata["drafts"].items():
+            drafts[task_id] = Draft.from_dict(draft_dict)
+
+    # Reconstruct gate results
+    gate_results = {}
+    if "gate_results" in metadata:
+        for task_id, result_dict in metadata["gate_results"].items():
+            gate_results[task_id] = GateResult.from_dict(result_dict)
+
+    # Reconstruct integration results
+    integration_results = []
+    if "integration_results" in metadata:
+        for item_dict in metadata["integration_results"]:
+            integration_results.append(IntegrationResult.from_dict(item_dict))
 
     # Get phase from new.phase (which is a string) and convert to Phase enum
     phase_str = new.phase if new.phase else metadata.get("phase", "intake")
@@ -117,6 +176,19 @@ def convert_to_old_state(new: BaseProjectState) -> ProjectState:
         tasks=[convert_to_old_task(t) for t in new.tasks],
         blocked_reason=new.blocked_reason,
         project_id=metadata.get("project_id", ""),
+        review_results=review_results,
+        human_approvals=human_approvals,
+        brainstorm_results=brainstorm_results,
+        human_decisions=human_decisions,
+        drafts=drafts,
+        gate_results=gate_results,
+        integration_results=integration_results,
+        current_task_id=metadata.get("current_task_id"),
+        optimization_history=metadata.get("optimization_history", []),
+        last_optimization=metadata.get("last_optimization"),
+        optimization_metadata=metadata.get("optimization_metadata", {}),
+        charter=metadata.get("charter", {}),
+        closure=metadata.get("closure", {}),
     )
 
 
