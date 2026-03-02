@@ -33,6 +33,19 @@ python -m pytest tests/test_pipeline.py -v
 
 ## Architecture
 
+**NEW (2026-03):** pm-agent now uses a three-layer architecture with pm-core protocols and pm-tools utilities. See `PHASE3_REFACTORING.md` for detailed migration documentation.
+
+### Three-Layer Design
+
+```
+pm-agent (Domain) ↔ Adapter ↔ pm-core (Framework) → pm-tools (Utilities)
+```
+
+- **pm-agent**: Domain-specific logic for scientific computing workflows
+- **pm-core**: Reusable orchestration framework with protocol-based extension points
+- **pm-tools**: Schema-agnostic utilities (state loader, dashboard, dependency graph)
+- **Adapter**: Bidirectional conversion layer (`src/adapters/state_adapter.py`)
+
 ### State Model (`src/state.py`)
 
 All data flows through `ProjectState`, a dataclass designed for 1:1 migration to LangGraph `TypedDict`. Key types:
@@ -45,12 +58,20 @@ All data flows through `ProjectState`, a dataclass designed for 1:1 migration to
 
 ### Phase Functions (`src/phases/`)
 
-Each phase is a pure function: `(ProjectState) -> ProjectState`. This signature maps directly to a LangGraph node.
+**NEW:** Planning phases now implement pm-core Phase protocol while maintaining backward-compatible legacy functions.
 
+#### Protocol-Based Phases (New API)
+- **`IntakePhase`** — Implements pm-core Phase protocol. Methods: `run()`, `can_run()`, `validate_output()`. Parses request into structured intent.
+- **`AuditPhase`** — Implements pm-core Phase protocol. Checks capabilities against parsed intent using CapabilityRegistry and BranchRegistry.
+- **`DecomposePhase`** — Implements pm-core Phase protocol. Generates ordered task list with bottom-up layer ordering (Core → Infra → Algorithm → Workflow).
+
+#### Legacy Functions (Backward Compatible)
 - **`run_intake(state)`** — Parses `state.request` into `state.parsed_intent` (domain, method, validation, keywords). Advances to `AUDIT`.
 - **`run_audit(state, registry=..., branch_registry=...)`** — Checks each keyword against `CapabilityRegistry`. Uses `BranchRegistry` to detect IN_PROGRESS capabilities. Classifies as AVAILABLE / EXTENSIBLE / MISSING / IN_PROGRESS. Advances to `DECOMPOSE`.
 - **`run_decompose(state)`** — Generates ordered `Task` list from audit results. Bottom-up ordering (Core → Infra → Algorithm → Workflow). Adds integration test task. Advances to `EXECUTE`.
 - **`run_execute_verify(state, specialist, gate_registry, reviewer, integration_runner)`** — Full orchestrator loop: task selection → specialist dispatch → human review → gate verification → integration validation. Retry loops for both revisions and gate failures.
+
+**Note:** Legacy functions internally use the new protocol-based implementations via the adapter layer. All existing code continues to work unchanged.
 
 ### Supporting Modules
 
