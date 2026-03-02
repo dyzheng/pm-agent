@@ -3,93 +3,177 @@
 Uses the static capability registry to determine what's available,
 extensible, or missing. Live code analysis can be layered on top
 for deeper inspection.
+
+Refactored to implement pm-core Phase protocol.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
+
+from pm_core.state import BaseProjectState
+
 from src.branches import BranchRegistry
 from src.registry import CapabilityRegistry
-from src.state import AuditItem, AuditStatus, Phase, ProjectState
+from src.state import AuditItem, AuditStatus
 
 
-def run_audit(
-    state: ProjectState,
-    *,
-    registry: CapabilityRegistry | None = None,
-    registry_path: str = "capabilities.yaml",
-    branch_registry: BranchRegistry | None = None,
-    branch_registry_path: str = "branches.yaml",
-) -> ProjectState:
-    """Audit capabilities against parsed intent, advance to DECOMPOSE phase."""
-    if registry is None:
-        registry = CapabilityRegistry.load(registry_path)
-    if branch_registry is None:
-        branch_registry = BranchRegistry.load(branch_registry_path)
+class AuditPhase:
+    """Audit phase implementation using pm-core Phase protocol."""
 
-    keywords = state.parsed_intent.get("keywords", [])
-    domain = state.parsed_intent.get("domain", [])
-    method = state.parsed_intent.get("method", [])
+    name = "audit"
 
-    all_terms = set(keywords + domain + method)
-    audit_items: list[AuditItem] = []
+    def __init__(
+        self,
+        registry: CapabilityRegistry | None = None,
+        registry_path: str = "capabilities.yaml",
+        branch_registry: BranchRegistry | None = None,
+        branch_registry_path: str = "branches.yaml",
+    ):
+        """Initialize audit phase with registries.
 
-    for term in sorted(all_terms):
-        # Check if capability is being developed in a branch
-        if branch_registry.has_in_progress(term):
-            audit_items.append(
-                AuditItem(
-                    component=_find_branch_component(branch_registry, term),
-                    status=AuditStatus.IN_PROGRESS,
-                    description=f"'{term}' is being developed in an active branch",
-                    details={"matched_term": term},
-                )
-            )
-            continue
+        Args:
+            registry: Capability registry (loaded from file if None)
+            registry_path: Path to capabilities.yaml
+            branch_registry: Branch registry (loaded from file if None)
+            branch_registry_path: Path to branches.yaml
+        """
+        self.registry = registry or CapabilityRegistry.load(registry_path)
+        self.branch_registry = branch_registry or BranchRegistry.load(branch_registry_path)
 
-        matches = registry.search(term)
-        if matches:
-            for match in matches:
+    def run(self, state: BaseProjectState) -> BaseProjectState:
+        """Audit capabilities against parsed intent, advance to decompose phase.
+
+        Args:
+            state: Current project state
+
+        Returns:
+            Updated state with audit_results in metadata and phase set to "decompose"
+        """
+        parsed_intent = state.metadata.get("parsed_intent", {})
+        keywords = parsed_intent.get("keywords", [])
+        domain = parsed_intent.get("domain", [])
+        method = parsed_intent.get("method", [])
+
+        all_terms = set(keywords + domain + method)
+        audit_items: list[AuditItem] = []
+
+        for term in sorted(all_terms):
+            # Check if capability is being developed in a branch
+            if self.branch_registry.has_in_progress(term):
                 audit_items.append(
                     AuditItem(
-                        component=match["component"],
-                        status=AuditStatus.AVAILABLE,
-                        description=(
-                            f"'{term}' found in {match['component']}.{match['category']}"
-                        ),
-                        details={
-                            "category": match["category"],
-                            "value": match["value"],
-                            "matched_term": term,
-                        },
+                        component=_find_branch_component(self.branch_registry, term),
+                        status=AuditStatus.IN_PROGRESS,
+                        description=f"'{term}' is being developed in an active branch",
+                        details={"matched_term": term},
                     )
                 )
-        else:
-            status = _classify_missing(term, registry)
-            # Check if the component is non-developable
-            comp = status["component"]
-            if comp != "unknown" and not registry.is_developable(comp):
-                status["description"] = f"'{term}': external dependency gap in {comp} (not developable)"
-            audit_items.append(
-                AuditItem(
-                    component=status["component"],
-                    status=status["status"],
-                    description=status["description"],
-                    details={"matched_term": term},
+                continue
+
+            matches = self.registry.search(term)
+            if matches:
+                for match in matches:
+                    audit_items.append(
+                        AuditItem(
+                            component=match["component"],
+                            status=AuditStatus.AVAILABLE,
+                            description=(
+                                f"'{term}' found in {match['component']}.{match['category']}"
+                            ),
+                            details={
+                                "category": match["category"],
+                                "value": match["value"],
+                                "matched_term": term,
+                            },
+                        )
+                    )
+            else:
+                status = _classify_missing(term, self.registry)
+                # Check if the component is non-developable
+                comp = status["component"]
+                if comp != "unknown" and not self.registry.is_developable(comp):
+                    status["description"] = f"'{term}': external dependency gap in {comp} (not developable)"
+                audit_items.append(
+                    AuditItem(
+                        component=status["component"],
+                        status=status["status"],
+                        description=status["description"],
+                        details={"matched_term": term},
+                    )
                 )
-            )
 
-    # Deduplicate by (component, matched_term)
-    seen = set()
-    deduped = []
-    for item in audit_items:
-        key = (item.component, item.details.get("matched_term", ""))
-        if key not in seen:
-            seen.add(key)
-            deduped.append(item)
+        # Deduplicate by (component, matched_term)
+        seen = set()
+        deduped = []
+        for item in audit_items:
+            key = (item.component, item.details.get("matched_term", ""))
+            if key not in seen:
+                seen.add(key)
+                deduped.append(item)
 
-    state.audit_results = deduped
-    state.phase = Phase.DECOMPOSE
-    return state
+        # Update metadata with audit results
+        new_metadata = {
+            **state.metadata,
+            "audit_results": [item.to_dict() for item in deduped],
+        }
+
+        return replace(
+            state,
+            metadata=new_metadata,
+            phase="decompose"
+        )
+
+    def can_run(self, state: BaseProjectState) -> bool:
+        """Check if audit phase can run.
+
+        Args:
+            state: Current project state
+
+        Returns:
+            True if phase is "audit", False otherwise
+        """
+        return state.phase == "audit"
+
+    def validate_output(self, state: BaseProjectState) -> list[str]:
+        """Validate that audit phase produced expected output.
+
+        Args:
+            state: State after running audit phase
+
+        Returns:
+            List of validation error messages (empty if valid)
+        """
+        errors = []
+
+        # Check that audit_results exists
+        if "audit_results" not in state.metadata:
+            errors.append("Missing audit_results in metadata")
+            return errors
+
+        audit_results = state.metadata["audit_results"]
+
+        # Check that audit_results is a list
+        if not isinstance(audit_results, list):
+            errors.append("audit_results must be a list")
+            return errors
+
+        # Check that each item has required fields
+        for i, item in enumerate(audit_results):
+            if not isinstance(item, dict):
+                errors.append(f"audit_results[{i}] must be a dict")
+                continue
+
+            required_fields = ["component", "status", "description"]
+            for field in required_fields:
+                if field not in item:
+                    errors.append(f"audit_results[{i}] missing {field}")
+
+        # Check that phase advanced to decompose
+        if state.phase != "decompose":
+            errors.append(f"Phase not advanced to decompose (current: {state.phase})")
+
+        return errors
 
 
 _EXTENSION_HINTS = {
@@ -144,3 +228,45 @@ def _find_branch_component(branch_registry: BranchRegistry, keyword: str) -> str
                 if any(keyword_lower in cap.lower() for cap in entry.target_capabilities):
                     return comp
     return "unknown"
+
+
+# Legacy function for backward compatibility
+def run_audit(
+    state,
+    *,
+    registry: CapabilityRegistry | None = None,
+    registry_path: str = "capabilities.yaml",
+    branch_registry: BranchRegistry | None = None,
+    branch_registry_path: str = "branches.yaml",
+):
+    """Legacy audit function for backward compatibility.
+
+    This function maintains the old API while using the new AuditPhase
+    implementation internally. It will be deprecated in a future version.
+
+    Args:
+        state: pm-agent ProjectState instance
+        registry: Capability registry
+        registry_path: Path to capabilities.yaml
+        branch_registry: Branch registry
+        branch_registry_path: Path to branches.yaml
+
+    Returns:
+        Updated pm-agent ProjectState
+    """
+    from src.adapters import migrate_state, convert_to_old_state
+
+    # Convert to pm-core state
+    new_state = migrate_state(state)
+
+    # Run new phase implementation
+    phase = AuditPhase(
+        registry=registry,
+        registry_path=registry_path,
+        branch_registry=branch_registry,
+        branch_registry_path=branch_registry_path,
+    )
+    result = phase.run(new_state)
+
+    # Convert back to old state
+    return convert_to_old_state(result)
