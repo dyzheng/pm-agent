@@ -106,8 +106,11 @@ def convert_to_old_state(new: BaseProjectState) -> ProjectState:
         for item_dict in metadata["audit_results"]:
             audit_results.append(AuditItem.from_dict(item_dict))
 
+    # Get phase from new.phase (which is a string) and convert to Phase enum
+    phase_str = new.phase if new.phase else metadata.get("phase", "intake")
+
     return ProjectState(
-        phase=Phase(metadata.get("phase", new.phase)),
+        phase=Phase(phase_str),
         request=metadata.get("request", ""),
         parsed_intent=metadata.get("parsed_intent", {}),
         audit_results=audit_results,
