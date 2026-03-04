@@ -164,6 +164,35 @@ python tools/literature_search.py FE-205 --output projects/f-electron-scf/resear
 
 The `regenerate` hook in `hooks.yaml` auto-triggers dashboard and graph regeneration after decompose and task completion when `project_dir` is passed to `run_pipeline()`.
 
+### Interactive Dashboard (`src/server/`)
+
+Real-time interactive dashboard with WebSocket push, task dispatching, human-in-the-loop approvals, and optimization controls.
+
+```bash
+# Start interactive dashboard
+python -m tools.serve projects/f-electron-scf
+python -m tools.serve projects/f-electron-scf --port 8080 --no-browser
+```
+
+**Architecture:**
+- `src/server/app.py` — FastAPI app factory, dashboard serving, WebSocket endpoint
+- `src/server/state_manager.py` — Thread-safe ProjectState wrapper with change notifications
+- `src/server/event_bus.py` — Publish-subscribe event bus for internal events
+- `src/server/websocket_hub.py` — WebSocket connection management + broadcast
+- `src/server/routes/projects.py` — Project info + task CRUD (`GET/PATCH /api/tasks`)
+- `src/server/routes/dispatch.py` — Task dispatch (`POST /api/dispatch`, `POST /api/dispatch/ready`)
+- `src/server/routes/approvals.py` — Human review (`GET /api/approvals/pending`, `POST /api/approvals/{id}`)
+- `src/server/routes/optimize.py` — Optimization trigger (`POST /api/optimize`)
+- `src/server/models.py` — Pydantic request/response models + ApprovalManager
+
+**Key features:**
+- Real-time task status updates via WebSocket (auto-reconnect with exponential backoff)
+- Task dispatching: single task or dependency-aware batch dispatch
+- Human-in-the-loop: yellow pulsing cards + notification bell + approval modal when review needed
+- Optimization trigger from Actions tab
+- Task lifecycle management: defer, dispatch, status changes from card hover buttons
+- All existing static dashboard views preserved (Kanban, Timeline, Dependencies, etc.)
+
 ## Key Patterns
 
 ### Running Research Review
